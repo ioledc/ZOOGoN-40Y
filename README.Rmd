@@ -84,27 +84,42 @@ print(standardized)
 # 5 Chiridius poppei Giesbrecht, 1893                     Chiridius poppei
 ```
 
-### Data Processing Workflow
+### Complete Data Processing Workflow
 
-The package implements a complete data processing pipeline for the LTER-MareChiara dataset:
+The package provides a comprehensive function that processes the entire LTER-MareChiara dataset from raw Excel files to Darwin Core format:
 
 ```{r workflow, eval = FALSE}
-# Load and process zooplankton abundance data
-# This workflow processes 40 years of Gulf of Naples data
+# Complete workflow in a single function call
+processed_data <- process_lter_data(
+  zoo_data_path = "data/lter_zoo_84_13.xlsx",
+  ids_data_path = "data/ids.xlsx", 
+  worms_validation = TRUE,
+  output_format = "list",
+  verbose = TRUE
+)
 
-# 1. Read raw Excel files
-raw_data <- readxl::read_xlsx("data/lter_zoo_84_13.xlsx")
-sample_ids <- readxl::read_xlsx("data/ids.xlsx")
+# Access Darwin Core formatted results
+event_table <- processed_data$event
+occurrence_table <- processed_data$occurrence
+measurements <- processed_data$emof
+```
 
-# 2. Apply taxonomic standardization
-standardized_data <- raw_data %>%
-  mutate(
-    standardized_taxa = extract_genus_species(TAXA)$genus_species
-  )
+This integrated workflow includes:
+- **Taxonomic standardization** using `extract_genus_species()`
+- **WoRMS validation** for taxonomic accuracy (optional)
+- **Darwin Core formatting** with Event, Occurrence, and eMoF tables
+- **Geographic metadata** for LTER-MareChiara station
+- **Quality control** and data validation
+- **CSV export** capabilities
 
-# 3. Convert to Darwin Core format
-# Creates event, occurrence, and eMoF (extended Measurement or Fact) tables
-# following international biodiversity data standards
+### Direct CSV Export
+
+```{r csv-export, eval = FALSE}
+# Export processed data directly to CSV files
+process_lter_data(
+  output_format = "csv",
+  output_dir = "processed_data/darwin_core"
+)
 ```
 
 ## Dataset Overview

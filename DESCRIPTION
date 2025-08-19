@@ -1,6 +1,6 @@
 Package: ZooGoN
 Title: Gulf of Naples 40-Year Zooplankton Biodiversity Assessment and Standardization
-Version: 0.1.0
+Version: 1.0.0
 Authors@R: 
     c(person(given = "Lorenzo",
              family = "Longobardi",
@@ -27,16 +27,20 @@ Depends:
 Imports: 
     dplyr,
     readxl,
+    readr,
     stringr,
     tibble,
     janitor,
     lubridate,
-    tidyr
+    tidyr,
+    magrittr,
+    rlang
 Suggests: 
     testthat (>= 3.0.0),
     knitr,
     rmarkdown,
-    pkgdown
+    pkgdown,
+    worrms
 Config/testthat/edition: 3
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

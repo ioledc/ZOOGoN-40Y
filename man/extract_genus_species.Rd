@@ -40,7 +40,7 @@ The standardization follows these rules:
 # Examples from Gulf of Naples zooplankton samples
 taxa_examples <- c(
   "Sardinella+Sardinops",                    # Species complex
-  "Clupeidae n.i.",                          # Family level identification  
+  "Clupeidae n.i.",                          # Family level identification
   "Engraulis - group",                       # Higher taxonomic group
   "Lutjanus (Paradies) argentimaculatus (Forsskål, 1775)",  # With subgenus & author
   "Chiridius poppei Giesbrecht, 1893",       # Standard binomial with author
@@ -53,7 +53,7 @@ print(result)
 # Expected output:
 # original_name                                          genus_species
 # "Sardinella+Sardinops"                                 "Sardinella spp"
-# "Clupeidae n.i."                                       "Clupegenus sp"  
+# "Clupeidae n.i."                                       "Clupegenus sp"
 # "Engraulis - group"                                     "Engraulis indet"
 # "Lutjanus (Paradies) argentimaculatus (Forsskål, 1775)" "Lutjanus argentimaculatus"
 # "Chiridius poppei Giesbrecht, 1893"                    "Chiridius poppei"

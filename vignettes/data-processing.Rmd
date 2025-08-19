@@ -42,21 +42,115 @@ The LTER-MareChiara station (40°81'N, 14°25'E) has been monitoring zooplankton
 
 # Data Processing Steps
 
-## 1. Loading Raw Data
+## Comprehensive Workflow with `process_lter_data()`
 
-The raw data consists of two main Excel files:
+The ZooGoN package provides a complete, integrated function that handles the entire processing pipeline from raw Excel files to Darwin Core format:
 
-```{r load-data}
-# Load zooplankton abundance data (1984-2019)
+```{r main-function}
+# Process LTER-MareChiara dataset with full workflow
+processed_data <- process_lter_data(
+  zoo_data_path = "data/lter_zoo_84_13.xlsx",
+  ids_data_path = "data/ids.xlsx",
+  worms_validation = TRUE,
+  output_format = "list",
+  verbose = TRUE
+)
+
+# Access the Darwin Core formatted results
+event_table <- processed_data$event
+occurrence_table <- processed_data$occurrence  
+emof_table <- processed_data$emof
+processing_info <- processed_data$processing_info
+```
+
+This single function performs all the following steps automatically:
+
+### 1. Data Loading and Validation
+- Reads Excel files with proper encoding and name repair
+- Validates file paths and parameters
+- Handles Excel date format conversion
+
+### 2. Taxonomic Standardization  
+- Applies `extract_genus_species()` for name standardization
+- Splits genus-species names into separate columns
+- Creates taxa suitable for WoRMS validation
+
+### 3. WoRMS Taxonomic Validation (Optional)
+```{r worms-validation}
+# Enable WoRMS validation for taxonomic accuracy
+processed_with_worms <- process_lter_data(
+  worms_validation = TRUE,
+  verbose = TRUE
+)
+
+# WoRMS validation provides:
+# - Taxonomic authorities and publication dates  
+# - LSIDs (Life Sciences Identifiers)
+# - Accepted names and synonymy information
+# - Classification hierarchy verification
+```
+
+### 4. Darwin Core Formatting
+The function automatically creates three core Darwin Core extensions:
+
+- **Event Extension**: Sampling events with temporal and spatial metadata
+- **Occurrence Extension**: Species occurrence records with life stage information  
+- **eMoF Extension**: Quantitative measurements (abundance as ind/m³)
+
+### 5. Geographic Metadata Integration
+```{r geographic-data}
+# LTER-MareChiara coordinates are automatically assigned:
+# - Latitude: 40.81°N
+# - Longitude: 14.25°E  
+# - Location: Gulf of Naples, Tyrrhenian Sea
+# - Sampling protocol: Vertical tow 0-50m depth
+```
+
+## Alternative Processing Options
+
+### Fast Processing (Skip WoRMS)
+```{r fast-processing}
+# Skip WoRMS validation for faster execution
+quick_data <- process_lter_data(
+  worms_validation = FALSE,
+  verbose = TRUE
+)
+```
+
+### Direct CSV Export
+```{r csv-export}
+# Export directly to CSV files
+process_lter_data(
+  output_format = "csv",
+  output_dir = "processed_data/darwin_core",
+  verbose = TRUE
+)
+
+# This creates:
+# - event.csv (sampling events)
+# - occurrence.csv (species occurrences)  
+# - emof.csv (measurements)
+# - raw_processed.csv (intermediate data)
+# - processing_metadata.csv (workflow metadata)
+```
+
+## Manual Step-by-Step Processing
+
+For users who prefer granular control, the individual processing steps can be performed manually:
+
+### 1. Basic Data Loading
+```{r manual-loading}
+# Load zooplankton abundance data
 zooplankton_data <- readxl::read_xlsx(
   "data/lter_zoo_84_13.xlsx",
   .name_repair = "minimal"
-)
+) %>%
+  dplyr::mutate(dat_id = seq_len(dplyr::n()))
 
-# Load sample identification data
+# Load sample identification data  
 sample_ids <- readxl::read_xlsx(
-  "data/ids.xlsx", 
-  .name_repair = "minimal"
+  "data/ids.xlsx",
+  .name_repair = "minimal"  
 ) %>%
   dplyr::mutate(
     date = lubridate::as_date(as.numeric(date), origin = "1899-12-30"),
@@ -64,131 +158,41 @@ sample_ids <- readxl::read_xlsx(
   )
 ```
 
-## 2. Data Restructuring
-
-Transform the wide-format abundance matrix to long-format for analysis:
-
-```{r restructure}
-# Convert from wide to long format
-tidy_data <- zooplankton_data %>%
-  # Remove metadata columns and notes
-  dplyr::select(-c(1:7, "NOTES")) %>%
-  
-  # Pivot to long format
-  tidyr::pivot_longer(
-    cols = -c("TAXA", "stage"),
-    names_to = "date",
-    values_to = "ind_m3"  # individuals per cubic meter
-  ) %>%
-  
-  # Clean column names
+### 2. Taxonomic Processing
+```{r manual-taxonomy}
+# Extract and standardize taxonomic information
+raw_taxa <- zooplankton_data %>%
   janitor::clean_names() %>%
-  
-  # Convert date from Excel numeric format
+  dplyr::select(phylum_o_subphylum:stage, dat_id) %>%
+  dplyr::mutate(
+    genus_species = extract_genus_species(taxa)$genus_species
+  ) %>%
+  tidyr::separate(
+    genus_species, 
+    into = c("genus", "species"), 
+    sep = " ", 
+    remove = FALSE, 
+    fill = "right"
+  )
+```
+
+### 3. Data Restructuring
+```{r manual-restructuring}
+# Convert from wide to long format
+dates <- zooplankton_data %>%
+  dplyr::select(-c(1:10), dat_id)
+
+tidy_data <- raw_taxa %>%
+  dplyr::left_join(dates, by = "dat_id") %>%
+  tidyr::pivot_longer(
+    -c(dat_id, taxa, genus_species, stage),
+    names_to = "date",
+    values_to = "ind_m3"
+  ) %>%
   dplyr::mutate(
     date = lubridate::as_date(as.numeric(date), origin = "1899-12-30")
   ) %>%
-  
-  # Join with sample IDs
-  dplyr::full_join(sample_ids, by = "date") %>%
-  
-  # Reorder columns logically
-  dplyr::relocate(sample_id, .before = "taxa") %>%
-  dplyr::relocate(date, .after = "sample_id") %>%
-  dplyr::relocate(stage, .after = "ind_m3") %>%
-  
-  # Sort by sample
-  dplyr::arrange(sample_id)
-```
-
-## 3. Taxonomic Standardization
-
-Apply the core ZooGoN function to standardize taxonomic names:
-
-```{r taxonomy}
-# Standardize taxonomic names using ZooGoN
-tidy_data <- tidy_data %>%
-  dplyr::mutate(
-    # Apply taxonomic standardization
-    standardized_taxonomy = extract_genus_species(taxa),
-    genus_species = standardized_taxonomy$genus_species
-  ) %>%
-  dplyr::select(-standardized_taxonomy)  # Remove temporary column
-
-# Examples of taxonomic standardization:
-# "Sardinella+Sardinops" → "Sardinella spp"
-# "Clupeidae n.i." → "Clupegenus sp"  
-# "Engraulis - group" → "Engraulis indet"
-# "Lutjanus argentimaculatus (Forsskål, 1775)" → "Lutjanus argentimaculatus"
-```
-
-## 4. Darwin Core Transformation
-
-Convert to Darwin Core standard with Event, Occurrence, and eMoF tables:
-
-```{r darwin-core}
-# Rename columns to Darwin Core terms
-darwin_core_data <- tidy_data %>%
-  dplyr::rename(
-    eventID = sample_id,
-    eventDate = date,
-    scientificName = taxa,
-    individualCount = ind_m3,
-    lifeStage = stage
-  ) %>%
-  # Add occurrence status
-  dplyr::mutate(
-    occurrenceStatus = dplyr::if_else(
-      individualCount > 0, 
-      "present", 
-      "absent"
-    ),
-    # Create unique occurrence IDs
-    occurrenceID = paste0(eventID, "-occ", 1:dplyr::n())
-  ) %>%
-  dplyr::relocate(occurrenceID, .after = "eventDate") %>%
-  dplyr::distinct()
-
-# Create Event extension table
-event_extension <- darwin_core_data %>%
-  dplyr::select(eventID, eventDate) %>%
-  dplyr::distinct() %>%
-  # Add sampling location coordinates
-  dplyr::mutate(
-    decimalLatitude = 40.81,
-    decimalLongitude = 14.25,
-    locality = "LTER-MareChiara station",
-    country = "Italy",
-    stateProvince = "Campania",
-    waterBody = "Mediterranean Sea",
-    samplingProtocol = "Vertical tow 0-50m, WP2 net, 200μm mesh"
-  )
-
-# Create Occurrence extension table  
-occurrence_extension <- darwin_core_data %>%
-  dplyr::select(
-    eventID,
-    occurrenceID, 
-    scientificName,
-    genus_species,
-    lifeStage,
-    occurrenceStatus
-  )
-
-# Create extended Measurement or Fact (eMoF) table
-emof_extension <- darwin_core_data %>%
-  dplyr::select(-c(scientificName, occurrenceStatus, genus_species)) %>%
-  dplyr::distinct() %>%
-  # Convert to character for pivoting
-  dplyr::mutate(dplyr::across(dplyr::everything(), as.character)) %>%
-  # Pivot measurements to long format
-  tidyr::pivot_longer(
-    cols = -c(eventID, eventDate, occurrenceID),
-    names_to = "measurementType",
-    values_to = "measurementValue"
-  ) %>%
-  # Filter out missing values
-  dplyr::filter(!is.na(measurementValue), measurementValue != "")
+  dplyr::left_join(sample_ids, by = "date")
 ```
 
 # Quality Control and Validation

@@ -1,3 +1,51 @@
+# ZooGoN 1.0.0
+
+## Major Release - Comprehensive Data Processing Pipeline
+
+This major release introduces a complete data processing workflow for the LTER-MareChiara zooplankton dataset, transforming ZooGoN from a basic taxonomic standardization tool into a comprehensive biodiversity data processing package.
+
+### New Features
+
+* **`process_lter_data()` Function**: Complete integrated workflow from raw Excel files to Darwin Core format
+* **WoRMS Taxonomic Validation**: Optional integration with World Register of Marine Species for taxonomic accuracy
+* **Flexible Output Options**: Support for both R list objects and direct CSV export
+* **Enhanced Error Handling**: Comprehensive validation and graceful error recovery
+* **Geographic Metadata Integration**: Automatic LTER-MareChiara station coordinates and sampling information
+* **Processing Metadata**: Detailed workflow information and data quality metrics
+
+### Technical Improvements
+
+* **Enhanced Dependencies**: Added `readr` and `worrms` packages for improved functionality
+* **Comprehensive Documentation**: Extensive function documentation with examples and parameter descriptions
+* **Quality Control**: Built-in data validation and processing verification
+* **Performance Optimization**: Efficient handling of large taxonomic datasets (40 years of data)
+
+### Data Processing Capabilities
+
+* **Complete Workflow**: Single function handles entire Excel → Darwin Core pipeline
+* **Taxonomic Standardization**: Enhanced `extract_genus_species()` integration with WoRMS validation
+* **Darwin Core Extensions**: Automatic generation of Event, Occurrence, and eMoF tables
+* **Temporal Data Handling**: Robust Excel date conversion and temporal metadata management
+* **Sample Identification**: Automated mapping between dates and standardized sample IDs
+
+### Documentation Updates
+
+* **Enhanced Vignettes**: Updated data processing workflow to demonstrate `process_lter_data()`
+* **README Improvements**: Showcases new comprehensive processing capabilities
+* **CLAUDE.md Updates**: Reflects new package architecture and main functions
+* **Function Examples**: Comprehensive usage examples for all processing scenarios
+
+### Breaking Changes
+
+* **Package Version**: Updated to 1.0.0 to reflect major functionality additions
+* **Enhanced Dependencies**: New required packages for full functionality
+
+### Performance
+
+* **Large Dataset Support**: Efficiently processes 1,506 samples with 148+ taxa
+* **Memory Management**: Optimized for 40-year temporal datasets
+* **Optional Processing**: WoRMS validation can be disabled for faster execution
+
 # ZooGoN 0.1.0
 
 ## Initial Release
