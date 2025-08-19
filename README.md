@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# ZooGoN <img src="man/figures/logo.png" align="right" height="139"/>
+# ZooGoN <img src="man/figures/logo.svg" align="right" height="139"/>
 
 <!-- badges: start -->
 
@@ -166,18 +166,12 @@ grant of €60,000.
 ## Contact
 
 - **Principal Investigator**: Iole Di Capua (<iole.dicapua@szn.it>)
-
-- **Institution**: Stazione Zoologica Anton Dohrn, Naples, Italy
-
-- **ORCID**:
+  **Institution**: Stazione Zoologica Anton Dohrn, Naples, Italy
+  **ORCID**:
   [0000-0003-2959-8977](https://orcid.org/0000-0003-2959-8977)
 
 - **Principal Analyst**: Lorenzo Longobardi
-  (<lorenzo.longobardi@gmail.com>)
-
-- **Institution**: WorldFish
-
-- **ORCID**:
+  (<lorenzo.longobardi@gmail.com>) **Institution**: WorldFish **ORCID**:
   [0000-0003-2959-8977](https://orcid.org/0000-0003-3126-7341) \##
   Acknowledgments
 
