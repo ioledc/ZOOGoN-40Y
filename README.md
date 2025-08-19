@@ -27,19 +27,15 @@ dataset from the Western Mediterranean Sea, including:
 
 - 📊 **1,506 zooplankton samples** (1984-2024)  
 - 🦐 **148 copepod species** + 61 other taxa
-- 📍 **LTER-MareChiara station**, Gulf of Naples, Tyrrhenian Sea
-- 🏛️ **Stazione Zoologica Anton Dohrn** (SZN)
 - 🌍 Integration with **European Digital Twin of the Ocean**
-- 💰 €60,000 DTO-BioFlow FSTP grant funding
 
 ## Key Features
 
 - **Taxonomic Standardization**: Robust genus-species extraction from
   complex taxonomic strings
-- **Species Complex Handling**: Converts multi-species entries (e.g.,
-  “Sardinella+Sardinops” → “Sardinella spp”)
+- **Species Complex Handling**: Converts multi-species entries
 - **Family-level Processing**: Creates standardized names from family
-  entries (e.g., “Clupeidae n.i.” → “Clupegenus sp”)
+  entries
 - **Darwin Core Compliance**: Converts datasets to international
   biodiversity standards
 - **FAIR Data Principles**: Ensures Findable, Accessible, Interoperable,
@@ -179,14 +175,19 @@ grant of €60,000.
 ## Contact
 
 - **Principal Investigator**: Iole Di Capua (<iole.dicapua@szn.it>)
-  **Institution**: Stazione Zoologica Anton Dohrn, Naples, Italy
-  **ORCID**:
-  [0000-0003-2959-8977](https://orcid.org/0000-0003-2959-8977)
+
+**Institution**: Stazione Zoologica Anton Dohrn, Naples, Italy
+
+**ORCID**: [0000-0003-2959-8977](https://orcid.org/0000-0003-2959-8977)
 
 - **Principal Analyst**: Lorenzo Longobardi
-  (<lorenzo.longobardi@gmail.com>) **Institution**: WorldFish **ORCID**:
-  [0000-0003-2959-8977](https://orcid.org/0000-0003-3126-7341) \##
-  Acknowledgments
+  (<lorenzo.longobardi@gmail.com>)
+
+**Institution**: WorldFish
+
+**ORCID**: [0000-0003-2959-8977](https://orcid.org/0000-0003-3126-7341)
+
+- ## Acknowledgments
 
 - LTER-MareChiara research station
 
