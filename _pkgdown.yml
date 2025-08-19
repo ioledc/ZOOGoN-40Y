@@ -1,0 +1,66 @@
+url: https://ioledc.github.io/ZOOGoN-40Y/
+template:
+  bootstrap: 5
+  bslib:
+    primary: "#0066cc"
+    secondary: "#6c757d"
+
+home:
+  title: ZooGoN • Gulf of Naples Zooplankton Biodiversity
+  description: >
+    Standardizes taxonomic names in Mediterranean zooplankton datasets from 
+    40 years of monitoring (1984-2024) at LTER-MareChiara station. Part of 
+    the EU DTO-BioFlow project for the Digital Twin of the Ocean.
+  
+navbar:
+  title: "ZooGoN"
+  type: default
+  left:
+    - icon: fa-home fa-lg
+      href: index.html
+    - text: "Reference"
+      href: reference/
+    - text: "Articles"
+      menu:
+        - text: "Data Processing Workflow"
+          href: articles/data-processing.html
+        - text: "Darwin Core Integration"  
+          href: articles/darwin-core.html
+    - text: "News"
+      href: news/
+  right:
+    - icon: fa-github fa-lg
+      href: https://github.com/ioledc/ZOOGoN-40Y
+    - icon: fa-globe fa-lg
+      href: https://dto-bioflow.eu
+
+reference:
+  - title: "Core Functions"
+    desc: "Main taxonomic standardization functions"
+    contents:
+      - extract_genus_species
+      
+  - title: "Data Processing"  
+    desc: "Functions for dataset processing and transformation"
+    contents:
+      - starts_with("process_")
+      - starts_with("convert_")
+
+articles:
+  - title: "Getting Started"
+    navbar: "Getting Started"
+    contents:
+      - data-processing
+      - darwin-core
+
+footer:
+  structure:
+    left: [developed_by, built_with, legal]
+    right: [funding]
+  components:
+    funding: >
+      <p>Funded by the EU DTO-BioFlow project (HORIZON-MISS-2022-OCEAN-01-07) 
+      under the Mission "Restore our Ocean & Waters by 2030"</p>
+    legal: >
+      <p>© 2025 Stazione Zoologica Anton Dohrn. 
+      Licensed under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL-3</a>.</p>

@@ -603,17 +603,193 @@ padding-top: 0px;
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-<h1 id="zoogon">ZooGoN</h1>
+<h1 id="zoogon-">ZooGoN
+<img role="img" src="man/figures/logo.png" align="right" height="139" /></h1>
 <!-- badges: start -->
 
-<p><a href="https://lifecycle.r-lib.org/articles/stages.html#experimental"><img role="img" aria-label="Lifecycle: experimental" src="data:image/svg+xml;charset=utf-8;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMzgiIGhlaWdodD0iMjAiIHJvbGU9ImltZyIgYXJpYS1sYWJlbD0ibGlmZWN5Y2xlOiBleHBlcmltZW50YWwiPjx0aXRsZT5saWZlY3ljbGU6IGV4cGVyaW1lbnRhbDwvdGl0bGU+PGxpbmVhckdyYWRpZW50IGlkPSJzIiB4Mj0iMCIgeTI9IjEwMCUiPjxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iI2JiYiIgc3RvcC1vcGFjaXR5PSIuMSIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1vcGFjaXR5PSIuMSIvPjwvbGluZWFyR3JhZGllbnQ+PGNsaXBQYXRoIGlkPSJyIj48cmVjdCB3aWR0aD0iMTM4IiBoZWlnaHQ9IjIwIiByeD0iMyIgZmlsbD0iI2ZmZiIvPjwvY2xpcFBhdGg+PGcgY2xpcC1wYXRoPSJ1cmwoI3IpIj48cmVjdCB3aWR0aD0iNTUiIGhlaWdodD0iMjAiIGZpbGw9IiM1NTUiLz48cmVjdCB4PSI1NSIgd2lkdGg9IjgzIiBoZWlnaHQ9IjIwIiBmaWxsPSIjZmU3ZDM3Ii8+PHJlY3Qgd2lkdGg9IjEzOCIgaGVpZ2h0PSIyMCIgZmlsbD0idXJsKCNzKSIvPjwvZz48ZyBmaWxsPSIjZmZmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iVmVyZGFuYSxHZW5ldmEsRGVqYVZ1IFNhbnMsc2Fucy1zZXJpZiIgdGV4dC1yZW5kZXJpbmc9Imdlb21ldHJpY1ByZWNpc2lvbiIgZm9udC1zaXplPSIxMTAiPjx0ZXh0IGFyaWEtaGlkZGVuPSJ0cnVlIiB4PSIyODUiIHk9IjE1MCIgZmlsbD0iIzAxMDEwMSIgZmlsbC1vcGFjaXR5PSIuMyIgdHJhbnNmb3JtPSJzY2FsZSguMSkiIHRleHRMZW5ndGg9IjQ1MCI+bGlmZWN5Y2xlPC90ZXh0Pjx0ZXh0IHg9IjI4NSIgeT0iMTQwIiB0cmFuc2Zvcm09InNjYWxlKC4xKSIgZmlsbD0iI2ZmZiIgdGV4dExlbmd0aD0iNDUwIj5saWZlY3ljbGU8L3RleHQ+PHRleHQgYXJpYS1oaWRkZW49InRydWUiIHg9Ijk1NSIgeT0iMTUwIiBmaWxsPSIjMDEwMTAxIiBmaWxsLW9wYWNpdHk9Ii4zIiB0cmFuc2Zvcm09InNjYWxlKC4xKSIgdGV4dExlbmd0aD0iNzMwIj5leHBlcmltZW50YWw8L3RleHQ+PHRleHQgeD0iOTU1IiB5PSIxNDAiIHRyYW5zZm9ybT0ic2NhbGUoLjEpIiBmaWxsPSIjZmZmIiB0ZXh0TGVuZ3RoPSI3MzAiPmV4cGVyaW1lbnRhbDwvdGV4dD48L2c+PC9zdmc+" alt="Lifecycle: experimental" /></a> <a href="https://CRAN.R-project.org/package=ZooGoN"><img role="img" aria-label="CRAN status" src="data:image/svg+xml; charset=utf-8;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMzEiIGhlaWdodD0iMjAiIGFyaWEtbGFiZWw9IkNSQU4gbm90IHB1Ymxpc2hlZCI+CiAgPGxpbmVhckdyYWRpZW50IGlkPSJiIiB4Mj0iMCIgeTI9IjEwMCUiPgogICAgPHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjYmJiIiBzdG9wLW9wYWNpdHk9Ii4xIi8+CiAgICA8c3RvcCBvZmZzZXQ9IjEiIHN0b3Atb3BhY2l0eT0iLjEiLz4KICA8L2xpbmVhckdyYWRpZW50PgogIDxtYXNrIGlkPSJhIj4KICAgIDxyZWN0IHdpZHRoPSIxMzEiIGhlaWdodD0iMjAiIHJ4PSIzIiBmaWxsPSIjZmZmIi8+CiAgPC9tYXNrPgogIDxnIG1hc2s9InVybCgjYSkiPgogICAgPHBhdGggZmlsbD0iIzU1NSIgZD0iTTAgMGg0M3YyMEgweiIvPgogICAgPHBhdGggZmlsbD0iI2UwNWQ0NCIgZD0iTTQzIDBoMTE0djIwSDQzeiIvPgogICAgPHBhdGggZmlsbD0idXJsKCNiKSIgZD0iTTAgMGgxMzF2MjBIMHoiLz4KICA8L2c+CiAgPGcgZmlsbD0iI2ZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSIKICAgICBmb250LWZhbWlseT0iRGVqYVZ1IFNhbnMsVmVyZGFuYSxHZW5ldmEsc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMSI+CiAgICA8dGV4dCB4PSIyMS41IiB5PSIxNSIgZmlsbD0iIzAxMDEwMSIgZmlsbC1vcGFjaXR5PSIuMyI+CiAgICAgIENSQU4KICAgIDwvdGV4dD4KICAgIDx0ZXh0IHg9IjIxLjUiIHk9IjE0Ij4KICAgICAgQ1JBTgogICAgPC90ZXh0PgogICAgPHRleHQgeD0iODYiIHk9IjE1IiBmaWxsPSIjMDEwMTAxIiBmaWxsLW9wYWNpdHk9Ii4zIj4KICAgICAgbm90IHB1Ymxpc2hlZAogICAgPC90ZXh0PgogICAgPHRleHQgeD0iODYiIHk9IjE0Ij4KICAgICAgbm90IHB1Ymxpc2hlZAogICAgPC90ZXh0PgogIDwvZz4KPC9zdmc+" alt="CRAN status" /></a></p>
+<p><a href="https://lifecycle.r-lib.org/articles/stages.html#experimental"><img role="img" aria-label="Lifecycle: experimental" src="data:image/svg+xml;charset=utf-8;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMzgiIGhlaWdodD0iMjAiIHJvbGU9ImltZyIgYXJpYS1sYWJlbD0ibGlmZWN5Y2xlOiBleHBlcmltZW50YWwiPjx0aXRsZT5saWZlY3ljbGU6IGV4cGVyaW1lbnRhbDwvdGl0bGU+PGxpbmVhckdyYWRpZW50IGlkPSJzIiB4Mj0iMCIgeTI9IjEwMCUiPjxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iI2JiYiIgc3RvcC1vcGFjaXR5PSIuMSIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1vcGFjaXR5PSIuMSIvPjwvbGluZWFyR3JhZGllbnQ+PGNsaXBQYXRoIGlkPSJyIj48cmVjdCB3aWR0aD0iMTM4IiBoZWlnaHQ9IjIwIiByeD0iMyIgZmlsbD0iI2ZmZiIvPjwvY2xpcFBhdGg+PGcgY2xpcC1wYXRoPSJ1cmwoI3IpIj48cmVjdCB3aWR0aD0iNTUiIGhlaWdodD0iMjAiIGZpbGw9IiM1NTUiLz48cmVjdCB4PSI1NSIgd2lkdGg9IjgzIiBoZWlnaHQ9IjIwIiBmaWxsPSIjZmU3ZDM3Ii8+PHJlY3Qgd2lkdGg9IjEzOCIgaGVpZ2h0PSIyMCIgZmlsbD0idXJsKCNzKSIvPjwvZz48ZyBmaWxsPSIjZmZmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iVmVyZGFuYSxHZW5ldmEsRGVqYVZ1IFNhbnMsc2Fucy1zZXJpZiIgdGV4dC1yZW5kZXJpbmc9Imdlb21ldHJpY1ByZWNpc2lvbiIgZm9udC1zaXplPSIxMTAiPjx0ZXh0IGFyaWEtaGlkZGVuPSJ0cnVlIiB4PSIyODUiIHk9IjE1MCIgZmlsbD0iIzAxMDEwMSIgZmlsbC1vcGFjaXR5PSIuMyIgdHJhbnNmb3JtPSJzY2FsZSguMSkiIHRleHRMZW5ndGg9IjQ1MCI+bGlmZWN5Y2xlPC90ZXh0Pjx0ZXh0IHg9IjI4NSIgeT0iMTQwIiB0cmFuc2Zvcm09InNjYWxlKC4xKSIgZmlsbD0iI2ZmZiIgdGV4dExlbmd0aD0iNDUwIj5saWZlY3ljbGU8L3RleHQ+PHRleHQgYXJpYS1oaWRkZW49InRydWUiIHg9Ijk1NSIgeT0iMTUwIiBmaWxsPSIjMDEwMTAxIiBmaWxsLW9wYWNpdHk9Ii4zIiB0cmFuc2Zvcm09InNjYWxlKC4xKSIgdGV4dExlbmd0aD0iNzMwIj5leHBlcmltZW50YWw8L3RleHQ+PHRleHQgeD0iOTU1IiB5PSIxNDAiIHRyYW5zZm9ybT0ic2NhbGUoLjEpIiBmaWxsPSIjZmZmIiB0ZXh0TGVuZ3RoPSI3MzAiPmV4cGVyaW1lbnRhbDwvdGV4dD48L2c+PC9zdmc+" alt="Lifecycle: experimental" /></a> <a href="https://github.com/ioledc/ZOOGoN-40Y/actions/workflows/R-CMD-check.yaml"><img role="img" aria-label="R-CMD-check" src="data:text/plain; charset=utf-8;charset=utf-8,Not%20Found" alt="R-CMD-check" /></a></p>
 <!-- badges: end -->
 
-<p>The goal of ZooGoN is to …</p>
+<p><strong>Gulf of Naples - 40 Years of Zooplankton Biodiversity
+Assessment</strong></p>
+<p>ZooGoN standardizes taxonomic names in Mediterranean zooplankton
+datasets spanning four decades (1984-2024) from the LTER-MareChiara
+station in the Gulf of Naples. This R package is part of the <a href="https://dto-bioflow.eu"><strong>DTO-BioFlow project</strong></a>
+(Digital Twin Ocean - Biodiversity Flow Integration) under the EU
+Horizon Mission “Restore our Ocean &amp; Waters by 2030”.</p>
+<h2 id="project-context">Project Context</h2>
+<p>This package processes the most comprehensive long-term zooplankton
+dataset from the Western Mediterranean Sea, including:</p>
+<ul>
+<li>📊 <strong>1,506 zooplankton samples</strong> (1984-2024)</li>
+<li>🦐 <strong>148 copepod species</strong> + 61 other taxa</li>
+<li>📍 <strong>LTER-MareChiara station</strong>, Gulf of Naples,
+Tyrrhenian Sea</li>
+<li>🏛️ <strong>Stazione Zoologica Anton Dohrn</strong> (SZN)</li>
+<li>🌍 Integration with <strong>European Digital Twin of the
+Ocean</strong></li>
+<li>💰 €60,000 DTO-BioFlow FSTP grant funding</li>
+</ul>
+<h2 id="key-features">Key Features</h2>
+<ul>
+<li><strong>Taxonomic Standardization</strong>: Robust genus-species
+extraction from complex taxonomic strings</li>
+<li><strong>Species Complex Handling</strong>: Converts multi-species
+entries (e.g., “Sardinella+Sardinops” → “Sardinella spp”)</li>
+<li><strong>Family-level Processing</strong>: Creates standardized names
+from family entries (e.g., “Clupeidae n.i.” → “Clupegenus sp”)</li>
+<li><strong>Darwin Core Compliance</strong>: Converts datasets to
+international biodiversity standards</li>
+<li><strong>FAIR Data Principles</strong>: Ensures Findable, Accessible,
+Interoperable, Reusable data</li>
+<li><strong>EMODnet Biology Integration</strong>: Quality-controlled
+data publication workflow</li>
+</ul>
 <h2 id="installation">Installation</h2>
 <p>You can install the development version of ZooGoN from <a href="https://github.com/">GitHub</a> with:</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="co"># install.packages(&quot;pak&quot;)</span></span>
 <span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>pak<span class="sc">::</span><span class="fu">pak</span>(<span class="st">&quot;ioledc/ZOOGoN-40Y&quot;</span>)</span></code></pre></div>
+<h2 id="usage">Usage</h2>
+<h3 id="basic-taxonomic-standardization">Basic Taxonomic
+Standardization</h3>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">library</span>(ZooGoN)</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co"># Example taxonomic names from Gulf of Naples zooplankton samples</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>taxa_examples <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  <span class="st">&quot;Sardinella+Sardinops&quot;</span>,                    <span class="co"># Species complex</span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>  <span class="st">&quot;Clupeidae n.i.&quot;</span>,                          <span class="co"># Family level  </span></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>  <span class="st">&quot;Engraulis - group&quot;</span>,                       <span class="co"># Higher group</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>  <span class="st">&quot;Lutjanus (Paradies) argentimaculatus (Forsskål, 1775)&quot;</span>,  <span class="co"># Full binomial</span></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>  <span class="st">&quot;Chiridius poppei Giesbrecht, 1893&quot;</span>       <span class="co"># Standard binomial</span></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>)</span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a><span class="co"># Standardize taxonomic names</span></span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>standardized <span class="ot">&lt;-</span> <span class="fu">extract_genus_species</span>(taxa_examples)</span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a><span class="fu">print</span>(standardized)</span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a></span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a><span class="co"># Expected output:</span></span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a><span class="co">#   original_name                                          genus_species</span></span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a><span class="co">#   &lt;chr&gt;                                                  &lt;chr&gt;        </span></span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a><span class="co"># 1 Sardinella+Sardinops                                   Sardinella spp</span></span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a><span class="co"># 2 Clupeidae n.i.                                         Clupegenus sp</span></span>
+<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a><span class="co"># 3 Engraulis - group                                      Engraulis indet</span></span>
+<span id="cb2-22"><a href="#cb2-22" tabindex="-1"></a><span class="co"># 4 Lutjanus (Paradies) argentimaculatus (Forsskål, 1775) Lutjanus argentimaculatus</span></span>
+<span id="cb2-23"><a href="#cb2-23" tabindex="-1"></a><span class="co"># 5 Chiridius poppei Giesbrecht, 1893                     Chiridius poppei</span></span></code></pre></div>
+<h3 id="data-processing-workflow">Data Processing Workflow</h3>
+<p>The package implements a complete data processing pipeline for the
+LTER-MareChiara dataset:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># Load and process zooplankton abundance data</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co"># This workflow processes 40 years of Gulf of Naples data</span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co"># 1. Read raw Excel files</span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>raw_data <span class="ot">&lt;-</span> readxl<span class="sc">::</span><span class="fu">read_xlsx</span>(<span class="st">&quot;data/lter_zoo_84_13.xlsx&quot;</span>)</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>sample_ids <span class="ot">&lt;-</span> readxl<span class="sc">::</span><span class="fu">read_xlsx</span>(<span class="st">&quot;data/ids.xlsx&quot;</span>)</span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co"># 2. Apply taxonomic standardization</span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>standardized_data <span class="ot">&lt;-</span> raw_data <span class="sc">%&gt;%</span></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>    <span class="at">standardized_taxa =</span> <span class="fu">extract_genus_species</span>(TAXA)<span class="sc">$</span>genus_species</span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>  )</span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="co"># 3. Convert to Darwin Core format</span></span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a><span class="co"># Creates event, occurrence, and eMoF (extended Measurement or Fact) tables</span></span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="co"># following international biodiversity data standards</span></span></code></pre></div>
+<h2 id="dataset-overview">Dataset Overview</h2>
+<p>The LTER-MareChiara zooplankton dataset represents one of the longest
+continuous time series in the Mediterranean Sea:</p>
+<table>
+<thead>
+<tr>
+<th>Period</th>
+<th>Frequency</th>
+<th>Samples</th>
+<th>Net Type</th>
+<th>Fixation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1984-1990</td>
+<td>Biweekly</td>
+<td>156</td>
+<td>Indian Ocean (200μm, 113cm)</td>
+<td>Formaldehyde 2-4%</td>
+</tr>
+<tr>
+<td>1991-1994</td>
+<td><em>Interruption</em></td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>1995-2015</td>
+<td>Weekly</td>
+<td>1,092</td>
+<td>Indian Ocean (200μm, 113cm)</td>
+<td>Formaldehyde 2-4%</td>
+</tr>
+<tr>
+<td>2016-2024</td>
+<td>Weekly</td>
+<td>258</td>
+<td>WP2 (200μm, 70cm)</td>
+<td>Ethanol 96%</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Total: 1,506 samples • 148 copepod species • 61 other
+taxa</strong></p>
+<h2 id="data-standards--compliance">Data Standards &amp; Compliance</h2>
+<p>ZooGoN ensures compatibility with international biodiversity data
+standards:</p>
+<ul>
+<li><strong>🗂️ Darwin Core Archive</strong>: International standard for
+biodiversity data</li>
+<li><strong>🌐 WoRMS Integration</strong>: World Register of Marine
+Species taxonomic validation</li>
+<li><strong>📊 BODC NERC Vocabulary</strong>: Standardized measurement
+terminology</li>
+<li><strong>⚡ EMODnet Biology</strong>: European marine biodiversity
+data infrastructure</li>
+<li><strong>🏷️ ISO19115 Metadata</strong>: International metadata
+standards</li>
+<li><strong>📄 FAIR Principles</strong>: Findable, Accessible,
+Interoperable, Reusable data</li>
+</ul>
+<h2 id="contributing">Contributing</h2>
+<p>This package is part of the DTO-BioFlow project timeline
+(2025-2026):</p>
+<ul>
+<li><strong>May 2025</strong>: Project initiation, Paris workshop</li>
+<li><strong>August 2025</strong>: First interim report, EMODnet training
+completion</li>
+<li><strong>December 2025</strong>: Second interim report</li>
+<li><strong>April 2026</strong>: Final deliverables and EMODnet Biology
+publication</li>
+</ul>
+<h2 id="citation">Citation</h2>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">citation</span>(<span class="st">&quot;ZooGoN&quot;</span>)</span></code></pre></div>
+<h2 id="funding">Funding</h2>
+<p>This work is supported by the DTO-BioFlow project
+(HORIZON-MISS-2022-OCEAN-01-07) under the EU Mission “Restore our Ocean
+&amp; Waters by 2030” through a Financial Support to Third Parties
+(FSTP) grant of €60,000.</p>
+<h2 id="contact">Contact</h2>
+<ul>
+<li><p><strong>Principal Investigator</strong>: Iole Di Capua (<a href="mailto:iole.dicapua@szn.it">iole.dicapua@szn.it</a>)</p></li>
+<li><p><strong>Institution</strong>: Stazione Zoologica Anton Dohrn,
+Naples, Italy</p></li>
+<li><p><strong>ORCID</strong>: <a href="https://orcid.org/0000-0003-2959-8977">0000-0003-2959-8977</a></p></li>
+<li><p><strong>Principal Analyst</strong>: Lorenzo Longobardi (<a href="mailto:lorenzo.longobardi@gmail.com">lorenzo.longobardi@gmail.com</a>)</p></li>
+<li><p><strong>Institution</strong>: WorldFish</p></li>
+<li><p><strong>ORCID</strong>: <a href="https://orcid.org/0000-0003-3126-7341">0000-0003-2959-8977</a> ##
+Acknowledgments</p></li>
+<li><p>LTER-MareChiara research station</p></li>
+<li><p>DTO-BioFlow project consortium</p></li>
+<li><p>EMODnet Biology data infrastructure</p></li>
+<li><p>European Digital Twin of the Ocean initiative</p></li>
+</ul>
 
 </body>
 </html>

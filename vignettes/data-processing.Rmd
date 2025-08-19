@@ -1,0 +1,291 @@
+---
+title: "LTER-MareChiara Data Processing Workflow"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{LTER-MareChiara Data Processing Workflow}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+```{r setup}
+library(ZooGoN)
+library(dplyr)
+library(readxl)
+library(janitor)
+library(lubridate)
+library(tidyr)
+```
+
+# Overview
+
+This vignette demonstrates the complete data processing workflow for the LTER-MareChiara zooplankton dataset, covering 40 years of monitoring (1984-2024) in the Gulf of Naples. The workflow transforms raw abundance data into Darwin Core-compliant format for integration with EMODnet Biology and the European Digital Twin of the Ocean.
+
+## Dataset Background
+
+The LTER-MareChiara station (40°81'N, 14°25'E) has been monitoring zooplankton communities since 1984 as part of the Long-Term Ecological Research network. This represents one of the longest continuous time series in the Mediterranean Sea.
+
+**Key Dataset Characteristics:**
+- **Temporal Coverage**: 1984-2024 (40 years)
+- **Total Samples**: 1,506 
+- **Taxonomic Diversity**: 148 copepod species + 61 other taxa
+- **Sampling Method**: Vertical tows (0-50m depth)
+- **Mesh Size**: 200 μm
+- **Location**: Gulf of Naples, Tyrrhenian Sea, Western Mediterranean
+
+# Data Processing Steps
+
+## 1. Loading Raw Data
+
+The raw data consists of two main Excel files:
+
+```{r load-data}
+# Load zooplankton abundance data (1984-2019)
+zooplankton_data <- readxl::read_xlsx(
+  "data/lter_zoo_84_13.xlsx",
+  .name_repair = "minimal"
+)
+
+# Load sample identification data
+sample_ids <- readxl::read_xlsx(
+  "data/ids.xlsx", 
+  .name_repair = "minimal"
+) %>%
+  dplyr::mutate(
+    date = lubridate::as_date(as.numeric(date), origin = "1899-12-30"),
+    sample_id = janitor::make_clean_names(sample_id)
+  )
+```
+
+## 2. Data Restructuring
+
+Transform the wide-format abundance matrix to long-format for analysis:
+
+```{r restructure}
+# Convert from wide to long format
+tidy_data <- zooplankton_data %>%
+  # Remove metadata columns and notes
+  dplyr::select(-c(1:7, "NOTES")) %>%
+  
+  # Pivot to long format
+  tidyr::pivot_longer(
+    cols = -c("TAXA", "stage"),
+    names_to = "date",
+    values_to = "ind_m3"  # individuals per cubic meter
+  ) %>%
+  
+  # Clean column names
+  janitor::clean_names() %>%
+  
+  # Convert date from Excel numeric format
+  dplyr::mutate(
+    date = lubridate::as_date(as.numeric(date), origin = "1899-12-30")
+  ) %>%
+  
+  # Join with sample IDs
+  dplyr::full_join(sample_ids, by = "date") %>%
+  
+  # Reorder columns logically
+  dplyr::relocate(sample_id, .before = "taxa") %>%
+  dplyr::relocate(date, .after = "sample_id") %>%
+  dplyr::relocate(stage, .after = "ind_m3") %>%
+  
+  # Sort by sample
+  dplyr::arrange(sample_id)
+```
+
+## 3. Taxonomic Standardization
+
+Apply the core ZooGoN function to standardize taxonomic names:
+
+```{r taxonomy}
+# Standardize taxonomic names using ZooGoN
+tidy_data <- tidy_data %>%
+  dplyr::mutate(
+    # Apply taxonomic standardization
+    standardized_taxonomy = extract_genus_species(taxa),
+    genus_species = standardized_taxonomy$genus_species
+  ) %>%
+  dplyr::select(-standardized_taxonomy)  # Remove temporary column
+
+# Examples of taxonomic standardization:
+# "Sardinella+Sardinops" → "Sardinella spp"
+# "Clupeidae n.i." → "Clupegenus sp"  
+# "Engraulis - group" → "Engraulis indet"
+# "Lutjanus argentimaculatus (Forsskål, 1775)" → "Lutjanus argentimaculatus"
+```
+
+## 4. Darwin Core Transformation
+
+Convert to Darwin Core standard with Event, Occurrence, and eMoF tables:
+
+```{r darwin-core}
+# Rename columns to Darwin Core terms
+darwin_core_data <- tidy_data %>%
+  dplyr::rename(
+    eventID = sample_id,
+    eventDate = date,
+    scientificName = taxa,
+    individualCount = ind_m3,
+    lifeStage = stage
+  ) %>%
+  # Add occurrence status
+  dplyr::mutate(
+    occurrenceStatus = dplyr::if_else(
+      individualCount > 0, 
+      "present", 
+      "absent"
+    ),
+    # Create unique occurrence IDs
+    occurrenceID = paste0(eventID, "-occ", 1:dplyr::n())
+  ) %>%
+  dplyr::relocate(occurrenceID, .after = "eventDate") %>%
+  dplyr::distinct()
+
+# Create Event extension table
+event_extension <- darwin_core_data %>%
+  dplyr::select(eventID, eventDate) %>%
+  dplyr::distinct() %>%
+  # Add sampling location coordinates
+  dplyr::mutate(
+    decimalLatitude = 40.81,
+    decimalLongitude = 14.25,
+    locality = "LTER-MareChiara station",
+    country = "Italy",
+    stateProvince = "Campania",
+    waterBody = "Mediterranean Sea",
+    samplingProtocol = "Vertical tow 0-50m, WP2 net, 200μm mesh"
+  )
+
+# Create Occurrence extension table  
+occurrence_extension <- darwin_core_data %>%
+  dplyr::select(
+    eventID,
+    occurrenceID, 
+    scientificName,
+    genus_species,
+    lifeStage,
+    occurrenceStatus
+  )
+
+# Create extended Measurement or Fact (eMoF) table
+emof_extension <- darwin_core_data %>%
+  dplyr::select(-c(scientificName, occurrenceStatus, genus_species)) %>%
+  dplyr::distinct() %>%
+  # Convert to character for pivoting
+  dplyr::mutate(dplyr::across(dplyr::everything(), as.character)) %>%
+  # Pivot measurements to long format
+  tidyr::pivot_longer(
+    cols = -c(eventID, eventDate, occurrenceID),
+    names_to = "measurementType",
+    values_to = "measurementValue"
+  ) %>%
+  # Filter out missing values
+  dplyr::filter(!is.na(measurementValue), measurementValue != "")
+```
+
+# Quality Control and Validation
+
+## Sample Size Verification
+
+```{r quality-control}
+# Verify sample counts
+cat("Total samples processed:", n_distinct(darwin_core_data$eventID), "\n")
+cat("Date range:", min(darwin_core_data$eventDate), "to", max(darwin_core_data$eventDate), "\n")
+cat("Unique taxa:", n_distinct(darwin_core_data$scientificName), "\n")
+cat("Total occurrences:", nrow(occurrence_extension), "\n")
+
+# Check for data completeness
+missing_coords <- event_extension %>% 
+  filter(is.na(decimalLatitude) | is.na(decimalLongitude))
+cat("Events missing coordinates:", nrow(missing_coords), "\n")
+
+# Verify taxonomic standardization success
+standardization_summary <- occurrence_extension %>%
+  summarise(
+    original_taxa = n_distinct(scientificName),
+    standardized_taxa = n_distinct(genus_species),
+    .groups = "drop"
+  )
+print(standardization_summary)
+```
+
+## Data Export
+
+Export the processed data in Darwin Core Archive format:
+
+```{r export}
+# Create output directory
+output_dir <- "processed_data/darwin_core"
+dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+
+# Export Darwin Core tables
+readr::write_csv(event_extension, 
+                 file.path(output_dir, "event.csv"))
+readr::write_csv(occurrence_extension, 
+                 file.path(output_dir, "occurrence.csv"))  
+readr::write_csv(emof_extension, 
+                 file.path(output_dir, "emof.csv"))
+
+# Export metadata
+readr::write_csv(
+  tibble::tibble(
+    dataset_title = "40 years of Zooplankton data at LTER MareChiara site (Gulf of Naples, Mediterranean Sea) 1984-2024",
+    contact = "Dr. Iole Di Capua (iole.dicapua@szn.it)",
+    institution = "Stazione Zoologica Anton Dohrn",
+    license = "CC-BY-NC",
+    project = "DTO-BioFlow FSTP Grant",
+    processing_date = Sys.Date()
+  ),
+  file.path(output_dir, "metadata.csv")
+)
+```
+
+# Integration with EMODnet Biology
+
+The processed Darwin Core data is ready for integration with EMODnet Biology following these standards:
+
+## Taxonomic Validation
+
+```{r worms-integration, eval=FALSE}
+# The data will be validated against WoRMS (World Register of Marine Species)
+# to obtain Life Sciences Identifiers (LSIDs) using the Taxon Match tool
+# This ensures taxonomic consistency with international databases
+
+# Example WoRMS integration workflow:
+# 1. Submit genus_species names to WoRMS Taxon Match
+# 2. Retrieve LSIDs and taxonomic hierarchy
+# 3. Add scientificNameID column with WoRMS LSIDs
+# 4. Validate against accepted names and synonyms
+```
+
+## Measurement Standardization  
+
+```{r bodc-vocab, eval=FALSE}
+# Measurements will be standardized using BODC NERC Vocabulary Server
+# to ensure consistent terminology for:
+# - Life stages (adult, juvenile, copepodite, etc.)
+# - Measurement units (individuals per cubic meter)
+# - Sampling instruments (WP2 net, Indian Ocean net)
+# - Sample preservation methods (ethanol, formaldehyde)
+
+# This enables interoperability with other marine biodiversity datasets
+```
+
+# Conclusion
+
+This workflow transforms 40 years of LTER-MareChiara zooplankton data into a FAIR-compliant, Darwin Core-formatted dataset suitable for:
+
+- **EMODnet Biology** publication and quality control
+- **European Digital Twin of the Ocean** integration
+- **International biodiversity databases** compatibility
+- **Long-term ecological research** and climate change studies
+
+The standardized dataset contributes to the EU Mission "Restore our Ocean & Waters by 2030" by providing essential biodiversity monitoring data for the Mediterranean Sea ecosystem.

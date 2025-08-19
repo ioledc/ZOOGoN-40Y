@@ -1,0 +1,339 @@
+---
+title: "Darwin Core Integration for Marine Biodiversity Data"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Darwin Core Integration for Marine Biodiversity Data}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+```{r setup}
+library(ZooGoN)
+library(dplyr)
+```
+
+# Darwin Core Standard for Biodiversity Data
+
+Darwin Core is an international standard for biodiversity data that enables interoperability between different datasets and systems. The ZooGoN package implements Darwin Core compliance to ensure the LTER-MareChiara zooplankton data can be integrated with global biodiversity infrastructures.
+
+## Why Darwin Core?
+
+Darwin Core provides:
+
+- **Standardized terminology** for biodiversity data
+- **Interoperability** between different data systems  
+- **FAIR principles** compliance (Findable, Accessible, Interoperable, Reusable)
+- **International recognition** by biodiversity informatics community
+- **EMODnet Biology compatibility** for European marine data
+
+# Core Darwin Core Extensions
+
+The ZooGoN package implements three main Darwin Core extensions:
+
+## 1. Event Extension
+
+The Event extension describes sampling events (when, where, how samples were collected):
+
+```{r event-structure}
+# Event extension structure for LTER-MareChiara data
+event_columns <- c(
+  "eventID",           # Unique identifier (e.g., "mc_1", "mc_2")  
+  "eventDate",         # Date of sampling (ISO 8601 format)
+  "decimalLatitude",   # 40.81 (LTER-MareChiara coordinates)
+  "decimalLongitude",  # 14.25 (LTER-MareChiara coordinates)
+  "locality",          # "LTER-MareChiara station"
+  "country",           # "Italy"
+  "stateProvince",     # "Campania"
+  "waterBody",         # "Mediterranean Sea"
+  "samplingProtocol"   # Detailed sampling methodology
+)
+```
+
+**Example Event Record:**
+```{r event-example}
+example_event <- tibble::tibble(
+  eventID = "mc_318",
+  eventDate = "2015-03-15",
+  decimalLatitude = 40.81,
+  decimalLongitude = 14.25,
+  locality = "LTER-MareChiara station",
+  country = "Italy", 
+  stateProvince = "Campania",
+  waterBody = "Mediterranean Sea",
+  samplingProtocol = "Vertical tow 0-50m, WP2 net (200μm mesh, 70cm diameter), ethanol fixation"
+)
+```
+
+## 2. Occurrence Extension
+
+The Occurrence extension describes species occurrences within each sampling event:
+
+```{r occurrence-structure}
+# Occurrence extension structure
+occurrence_columns <- c(
+  "eventID",          # Links to Event table
+  "occurrenceID",     # Unique occurrence identifier
+  "scientificName",   # Original taxonomic name
+  "genus_species",    # Standardized taxonomic name (ZooGoN output)
+  "lifeStage",        # Development stage (adult, juvenile, copepodite)
+  "occurrenceStatus"  # "present" or "absent"
+)
+```
+
+**Example Occurrence Record:**
+```{r occurrence-example}
+example_occurrence <- tibble::tibble(
+  eventID = "mc_318",
+  occurrenceID = "mc_318-occ1",
+  scientificName = "Chiridius poppei Giesbrecht, 1893",
+  genus_species = "Chiridius poppei",  # Standardized by ZooGoN
+  lifeStage = "adult",
+  occurrenceStatus = "present"
+)
+```
+
+## 3. Extended Measurement or Fact (eMoF)
+
+The eMoF extension stores quantitative measurements and additional facts:
+
+```{r emof-structure}
+# eMoF extension structure
+emof_columns <- c(
+  "eventID",           # Links to Event table
+  "occurrenceID",      # Links to Occurrence table
+  "measurementType",   # Type of measurement
+  "measurementValue",  # Numeric value
+  "measurementUnit",   # Unit of measurement
+  "measurementMethod"  # How measurement was obtained
+)
+```
+
+**Example eMoF Record:**
+```{r emof-example}
+example_emof <- tibble::tibble(
+  eventID = "mc_318",
+  occurrenceID = "mc_318-occ1",
+  measurementType = "abundance", 
+  measurementValue = "15.2",
+  measurementUnit = "individuals per cubic meter",
+  measurementMethod = "Microscopic counting in Mini-Bogorov chamber"
+)
+```
+
+# Taxonomic Standardization Integration
+
+ZooGoN's `extract_genus_species()` function enhances Darwin Core compliance by:
+
+## Handling Complex Taxonomic Entries
+
+```{r taxonomic-examples}
+# Examples of ZooGoN taxonomic standardization for Darwin Core
+taxonomic_cases <- tibble::tibble(
+  original_scientificName = c(
+    "Sardinella+Sardinops",                    # Species complex
+    "Clupeidae n.i.",                          # Family-level ID
+    "Engraulis - group",                       # Higher taxonomic group
+    "Lutjanus (Paradies) argentimaculatus (Forsskål, 1775)"  # With author
+  ),
+  standardized_scientificName = c(
+    "Sardinella spp",                          # Standardized complex
+    "Clupegenus sp",                           # Created genus name
+    "Engraulis indet",                         # Indeterminate group
+    "Lutjanus argentimaculatus"                # Clean binomial
+  ),
+  dwc_taxonomicStatus = c(
+    "species complex",
+    "family level identification", 
+    "genus level identification",
+    "accepted"
+  )
+)
+```
+
+## WoRMS Integration for Taxonomic Validation
+
+The Darwin Core output is designed for validation against the World Register of Marine Species (WoRMS):
+
+```{r worms-integration}
+# WoRMS integration workflow (conceptual)
+# This would be implemented in the data processing pipeline
+
+validate_against_worms <- function(scientific_names) {
+  # 1. Submit names to WoRMS Taxon Match tool
+  # 2. Retrieve Life Sciences Identifiers (LSIDs)  
+  # 3. Get accepted names and taxonomic hierarchy
+  # 4. Add scientificNameID field with WoRMS LSIDs
+  
+  # Example result structure:
+  tibble::tibble(
+    scientificName = "Chiridius poppei",
+    scientificNameID = "urn:lsid:marinespecies.org:taxname:104689",
+    acceptedNameUsage = "Chiridius poppei Giesbrecht, 1893",
+    taxonomicStatus = "accepted",
+    kingdom = "Animalia",
+    phylum = "Arthropoda", 
+    class = "Copepoda",
+    order = "Calanoida",
+    family = "Aetideidae",
+    genus = "Chiridius",
+    specificEpithet = "poppei"
+  )
+}
+```
+
+# BODC NERC Vocabulary Integration
+
+Measurements and methodology terms are standardized using the British Oceanographic Data Centre (BODC) NERC Vocabulary Server:
+
+```{r bodc-vocab}
+# BODC vocabulary standardization examples
+bodc_terms <- tibble::tibble(
+  local_term = c(
+    "individuals per cubic meter",
+    "adult",
+    "WP2 net",
+    "ethanol fixation"
+  ),
+  bodc_preferred_term = c(
+    "Abundance of biota per unit volume of the water column",
+    "Adult development stage",
+    "WP2 net (mouth diameter 0.57m, mesh aperture 200um)",
+    "Ethanol preservation"
+  ),
+  bodc_uri = c(
+    "http://vocab.nerc.ac.uk/collection/P01/current/SDBIOL01/",
+    "http://vocab.nerc.ac.uk/collection/S11/current/S1127/", 
+    "http://vocab.nerc.ac.uk/collection/L22/current/TOOL0653/",
+    "http://vocab.nerc.ac.uk/collection/S04/current/S0404/"
+  )
+)
+```
+
+# EMODnet Biology Quality Control
+
+The Darwin Core output meets EMODnet Biology quality control requirements:
+
+## Required Fields Validation
+
+```{r qc-validation}
+# EMODnet Biology required fields check
+validate_emodnet_requirements <- function(darwin_core_data) {
+  
+  required_event_fields <- c(
+    "eventID", "eventDate", "decimalLatitude", "decimalLongitude"
+  )
+  
+  required_occurrence_fields <- c(
+    "eventID", "occurrenceID", "scientificName", "occurrenceStatus"
+  )
+  
+  # Check for required fields
+  event_check <- all(required_event_fields %in% names(darwin_core_data$event))
+  occurrence_check <- all(required_occurrence_fields %in% names(darwin_core_data$occurrence))
+  
+  # Validate data completeness
+  completeness_check <- darwin_core_data$event %>%
+    summarise(
+      missing_coords = sum(is.na(decimalLatitude) | is.na(decimalLongitude)),
+      missing_dates = sum(is.na(eventDate)),
+      total_events = n()
+    )
+  
+  return(list(
+    event_fields_complete = event_check,
+    occurrence_fields_complete = occurrence_check, 
+    completeness = completeness_check
+  ))
+}
+```
+
+## Geographic Coverage Validation
+
+```{r geo-validation}
+# Validate geographic coordinates for Mediterranean Sea
+validate_coordinates <- function(lat, lon) {
+  # Mediterranean Sea approximate bounds
+  med_bounds <- list(
+    lat_min = 30.0, lat_max = 46.0,
+    lon_min = -6.0, lon_max = 36.0
+  )
+  
+  valid_lat <- lat >= med_bounds$lat_min & lat <= med_bounds$lat_max
+  valid_lon <- lon >= med_bounds$lon_min & lon <= med_bounds$lon_max
+  
+  return(valid_lat & valid_lon)
+}
+```
+
+# Data Publication Workflow
+
+The complete Darwin Core workflow for EMODnet Biology publication:
+
+```{r publication-workflow}
+# Step 1: Process raw data with ZooGoN
+process_zoogon_data <- function(raw_data) {
+  raw_data %>%
+    # Apply taxonomic standardization
+    mutate(genus_species = extract_genus_species(taxa)$genus_species) %>%
+    # Convert to Darwin Core format
+    create_darwin_core_tables()
+}
+
+# Step 2: Validate against standards
+validate_darwin_core <- function(dwc_data) {
+  # WoRMS validation
+  validated_taxonomy <- validate_against_worms(dwc_data$occurrence$scientificName)
+  
+  # BODC vocabulary standardization  
+  standardized_measurements <- standardize_bodc_terms(dwc_data$emof)
+  
+  # EMODnet QC validation
+  qc_results <- validate_emodnet_requirements(dwc_data)
+  
+  return(list(
+    taxonomy = validated_taxonomy,
+    measurements = standardized_measurements,
+    qc_status = qc_results
+  ))
+}
+
+# Step 3: Generate Darwin Core Archive
+create_dwc_archive <- function(validated_data) {
+  # Package as Darwin Core Archive with:
+  # - meta.xml descriptor
+  # - eml.xml metadata
+  # - CSV data files
+  # - Rights and license information
+}
+```
+
+# Integration with Digital Twin Ocean
+
+The Darwin Core-compliant LTER-MareChiara dataset contributes to the European Digital Twin of the Ocean by providing:
+
+- **Standardized biodiversity data** for ecosystem modeling
+- **Long-term time series** for climate change assessment  
+- **Quality-controlled observations** for model validation
+- **FAIR-compliant data streams** for automated ingestion
+
+This integration supports the EU Mission "Restore our Ocean & Waters by 2030" through enhanced biodiversity monitoring and evidence-based decision making.
+
+# Conclusion
+
+Darwin Core standardization ensures that 40 years of LTER-MareChiara zooplankton data becomes a valuable resource for:
+
+- **Global biodiversity databases** (GBIF, OBIS)
+- **European marine data infrastructure** (EMODnet Biology) 
+- **Digital Twin of the Ocean** ecosystem models
+- **Climate change research** and conservation planning
+- **International scientific collaboration**
+
+The ZooGoN package facilitates this transformation while maintaining data quality and scientific accuracy through automated taxonomic standardization and comprehensive quality control procedures.

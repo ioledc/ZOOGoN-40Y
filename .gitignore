@@ -46,3 +46,8 @@ docs
 *.tsv
 *.parquet
 /.quarto/
+
+
+## Other
+CLAUDE.md
+project_info
