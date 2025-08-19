@@ -1,0 +1,10 @@
+pandoc: 3.1.11
+pkgdown: 2.1.3
+pkgdown_sha: ~
+articles:
+  darwin-core: darwin-core.html
+  data-processing: data-processing.html
+last_built: 2025-08-19T15:38Z
+urls:
+  reference: https://ioledc.github.io/ZOOGoN-40Y/reference
+  article: https://ioledc.github.io/ZOOGoN-40Y/articles
