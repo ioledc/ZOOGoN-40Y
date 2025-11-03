@@ -36,8 +36,8 @@ extract_genus_species <- function(taxa_vector) {
           taxa_vector,
           "^[A-Z][a-z]+(?:\\s+\\([A-Z][a-z]+\\))?\\s+[a-z]+"
         ) %>%
-          str_remove("\\s+\\([A-Z][a-z]+\\)") %>% # Remove subgenus if present
-          str_trim(),
+        str_remove("\\s+\\([A-Z][a-z]+\\)") %>% # Remove subgenus if present
+        str_trim(),
 
       # For everything else, keep original
       TRUE ~ taxa_vector
@@ -98,8 +98,8 @@ worrms_matched <-
   ) |>
   dplyr::select(-"taxa_worrms")
 
-
-raw_taxa |>
+tidy_data <-
+  raw_taxa |>
   dplyr::select(-"taxa_worrms") |>
   dplyr::left_join(worrms_matched, by = "dat_id") |>
   dplyr::select("dat_id", "taxa", "worrms_match", "stage") |>
