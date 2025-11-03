@@ -14,6 +14,7 @@ Standardizes taxonomic names in zooplankton datasets from the LTER-MareChiara st
 Useful links:
 \itemize{
   \item \url{https://github.com/ioledc/ZOOGoN-40Y}
+  \item \url{https://ioledc.github.io/ZOOGoN-40Y/}
   \item Report bugs at \url{https://github.com/ioledc/ZOOGoN-40Y/issues}
 }
 

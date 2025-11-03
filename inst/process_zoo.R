@@ -36,8 +36,8 @@ extract_genus_species <- function(taxa_vector) {
           taxa_vector,
           "^[A-Z][a-z]+(?:\\s+\\([A-Z][a-z]+\\))?\\s+[a-z]+"
         ) %>%
-          str_remove("\\s+\\([A-Z][a-z]+\\)") %>% # Remove subgenus if present
-          str_trim(),
+        str_remove("\\s+\\([A-Z][a-z]+\\)") %>% # Remove subgenus if present
+        str_trim(),
 
       # For everything else, keep original
       TRUE ~ taxa_vector
@@ -164,6 +164,7 @@ occurrence_table <-
     occurrenceStatus
   )
 
+# Create Darwin Core Occurrence extension
 emof_table <-
   full_table |>
   dplyr::select(-c(scientificName, occurrenceStatus)) |>
