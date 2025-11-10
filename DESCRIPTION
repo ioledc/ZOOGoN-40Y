@@ -34,7 +34,8 @@ Imports:
     lubridate,
     tidyr,
     magrittr,
-    rlang
+    rlang,
+    dotenv
 Suggests: 
     testthat (>= 3.0.0),
     knitr,

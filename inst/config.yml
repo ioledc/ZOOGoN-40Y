@@ -1,0 +1,7 @@
+default:
+  ingestion:
+    kobo:
+      asset_id: !expr Sys.getenv('KOBO_ASSET_ID')
+      username: !expr Sys.getenv('KOBO_USERNAME')
+      password: !expr Sys.getenv('KOBO_PASSWORD')
+      token: !expr Sys.getenv('KOBO_TOKEN')

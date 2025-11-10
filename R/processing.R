@@ -98,7 +98,7 @@ process_lter_data <- function(
   ids_data_path = "data/ids.xlsx",
   worms_validation = TRUE,
   output_format = "list",
-  output_dir = "processed_data/darwin_core",
+  output_dir = "data/darwin_core",
   verbose = TRUE
 ) {
   if (verbose) {

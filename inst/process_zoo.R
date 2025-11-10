@@ -98,8 +98,8 @@ worrms_matched <-
   ) |>
   dplyr::select(-"taxa_worrms")
 
-
-raw_taxa |>
+tidy_data <-
+  raw_taxa |>
   dplyr::select(-"taxa_worrms") |>
   dplyr::left_join(worrms_matched, by = "dat_id") |>
   dplyr::select("dat_id", "taxa", "worrms_match", "stage") |>
@@ -175,3 +175,34 @@ emof_table <-
     names_to = "meameasurementType",
     values_to = "measurementValue"
   )
+
+#####
+
+dat <- readxl::read_xlsx(
+  "/Users/lore/Downloads/Species_ID_2019.xlsx",
+  .name_repair = "minimal"
+) |>
+  dplyr::mutate(dat_id = seq_len(dplyr::n())) |>
+  janitor::clean_names()
+
+ids <-
+  readxl::read_xlsx(
+    "/Users/lore/Downloads/ids_2019.xlsx",
+    .name_repair = "minimal"
+  ) |>
+  janitor::clean_names() |>
+  dplyr::mutate(
+    date = lubridate::as_date(date),
+    id = janitor::make_clean_names(id)
+  )
+
+dat |>
+  tidyr::pivot_longer(
+    cols = -c(dat_id, taxa, stage),
+    names_to = "id",
+    values_to = "ind_m3"
+  ) |>
+  dplyr::distinct() |>
+  dplyr::full_join(ids, by = "id") |>
+  dplyr::select(sample_id = "id", "date", "taxa", "stage", "ind_m3") |>
+  dplyr::arrange(date, taxa)
