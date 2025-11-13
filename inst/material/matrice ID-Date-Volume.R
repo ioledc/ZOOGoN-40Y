@@ -1,27 +1,19 @@
-getwd()
-setwd("C:/Users/andre/OneDrive/Desktop/Progetto GdN_40Y_DTO Bio-Flow/ZOOGoN-40Y/script andrea")
-getwd()
-# carico questo per caricare file .xlsx
+# MATRICI ID-DATE-VOLUME
+
+# carico i pacchetti che servono
 install.packages("xlsx")
 library(xlsx)
-
-# carico questo pacchetto per manipolare i dati 
 install.packages("dplyr")
 library(dplyr)
-
 
 # carico il db Matrice 2019
 matrix_2019 <- xlsx::read.xlsx("Matrice di base_2019.xlsx", 
                               sheetIndex = 1,
                               header = F)
-
-
 head(matrix_2019)
 View(matrix_2019)
 
-# estraggo soltanto la prima riga con ID del campionamento e data   
-class(matrix_2019)
-
+# estraggo soltanto la prima riga con ID del campionamento e data 
 row1_3_9 <- matrix_2019 %>% slice(c(1,3,9))
 row1_3_9
 View(row1_3_9)
@@ -30,7 +22,6 @@ View(row1_3_9)
 IDs_2019 <- row1_3_9 %>% select(X3:X42)
 IDs_2019
 View(IDs_2019)
-class(IDs_2019)
 
 # me lo imposto come dataframe a tre colonne 
 # trasformo le colonne in righe 
@@ -50,8 +41,7 @@ Filtered_Volume_m3 <- IDs_2019 %>% slice(3) %>% select(X3:X42) %>% unlist(use.na
 class(Filtered_Volume_m3)
 Filtered_Volume_m3
 
-
-# ottengo il dataframe come lo voglio 
+# creo il dataframe come lo voglio 
 
 ids_2019 <- tibble(
   ID = ID,
@@ -60,11 +50,12 @@ ids_2019 <- tibble(
 )
 
 View(ids_2019)
-# converto le date in fomrato normale 
+
+# converto le date in fomrato normale  
 library(lubridate)
 
 Date_2019 <- ifelse(
-  grepl("^[0-9]+$", Date_2019),                                   # se è solo numeri
+  grepl("^[0-9]+$", Date_2019),                                         # se è solo numeri
   as.character(as.Date(as.numeric(Date_2019), origin = "1899-12-30")),  # converto da seriale Excel
   Date_2019                                                        
 )
@@ -80,8 +71,9 @@ ids_2019 <- tibble(
 ids_2019
 
 # standardizzo 
-ids_2019 <- janitor::clean_names(ids_2019) |>
-  dplyr::mutate(id = gsub("_", "", janitor::make_clean_names(id)))
+library(janitor)
+ids_2019 <- janitor::clean_names(ids_2019) |>                          # standardizzo variabili df
+  dplyr::mutate(id = gsub("_", "", janitor::make_clean_names(id)))     # standardizzo nomi dei casi 
 
 ids_2019
 
@@ -89,18 +81,12 @@ ids_2019
 xlsx::write.xlsx(ids_2019, "ids_2019.xlsx", sheetName = "Sheet1", col.names = T)
 
 # 2016
-# carico il db Matrice 2016
 matrix_2016 <- xlsx::read.xlsx("Matrice di base_2016_dettagliata.xlsx", 
                               sheetIndex = 1,
                               header = F)
-
-
-head(matrix_2016)
 View(matrix_2016)
 
-# estraggo soltanto la prima riga con ID del campionamento e data   
-class(matrix_2019)
-
+# estraggo le righe che mi servono 
 row2_3 <- matrix_2016 %>% slice(c(2,3))
 row2_3
 View(row2_3)
@@ -143,15 +129,16 @@ ids_2016 <- tibble(
   Date = date,
 ) 
 
-
-class(ids_2016)
 View(ids_2016)
 
 # elimino una riga uguale
 ids_2016 <-ids_2016 %>% slice(-36)
 View(ids_2016)
 
-# standardizzazione nomi variabili e casi della variabili id
+# prova anche con dplyr
+dplyr::distinct(ids_2016) 
+
+# standardizzazione nomi variabili e i casi
 install.packages("janitor")
 library(janitor)
 
@@ -169,8 +156,6 @@ matrix_2017 <- xlsx::read.xlsx("Matrice di base_2017_dettagliata.xlsx",
                               sheetIndex = 1,
                               header = F)
 
-matrix_2017
-head(matrix_2017)
 View(matrix_2017)
 
 # estraggo soltanto la prima riga con ID del campionamento e data   
@@ -197,7 +182,7 @@ class(Date)
 date <- as.numeric(Date)
 class(date)
 
-# modifico le data in da julina day in fomato normale 
+# modifico le date in fomato normale 
 library(lubridate)
 
 date_num <- c(42745, 42752, 42759, 42766, 42774, 42783, 42787, 42794, 42803, 42808, 42815, 42822, 42830, 42836, 42843, 42851, 42860, 42864, 42873, 42878, 42885, 42892, 42899, 42906, 42913, 42920, 42927, 42934, 42943, 42948, 42954, 42978, 42983, 42991, 42999, 43004, 43011, 43018, 43025, 43031, 43060, 43068, 43073, 43088)
@@ -214,8 +199,6 @@ ids_2017 <- tibble(
   Date = date_real,
 ) 
 
-
-class(ids_2017)
 View(ids_2017)
 
 # standardizzo 
@@ -266,8 +249,6 @@ ids_2018 <- tibble(
   FilteredVolumeM3 = Filtered_volume_m3
 ) 
 
-
-class(IDs_2018)
 View(ids_2018)
 
 # standardizzo 
@@ -278,7 +259,6 @@ ids_2018 <- janitor::clean_names(ids_2018) |>
 xlsx::write.xlsx(ids_2018, "ids_2018.xlsx", sheetName = "Sheet1", col.names = T)
 
 # 2020
-
 matrix_2020 <- xlsx::read.xlsx("Matrice di base_2020.xlsx", 
                               sheetIndex = 1,
                               header = F)
@@ -306,7 +286,6 @@ Date <- IDs_2020 %>% slice(2) %>% select(X3:X25) %>% unlist(use.names = FALSE) %
 Date
 class(Date)
 
-
 Filtered_volume_m3 <- IDs_2020 %>% slice(3) %>% select(X3:X25) %>% unlist(use.names = F) %>% as.numeric()
 Filtered_volume_m3
 class(Filtered_volume_m3)
@@ -319,8 +298,6 @@ ids_2020 <- tibble(
   FilteredVolumeM3 = Filtered_volume_m3
 ) 
 
-
-class(IDs_2020)
 View(ids_2020)
 
 # standardizzo 
