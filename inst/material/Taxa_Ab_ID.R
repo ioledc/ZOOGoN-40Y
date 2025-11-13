@@ -1,9 +1,6 @@
 # MATRICI 
 
 # 2019
-getwd()
-setwd("C:/Users/andre/OneDrive/Desktop/Progetto GdN_40Y_DTO Bio-Flow/ZOOGoN-40Y/script andrea")
-
 library(xlsx)
 library(dplyr)
 
@@ -35,7 +32,7 @@ class(Taxa)
 View(Taxa)
 head(Taxa)
 
-# creo vettore gli ID di campionamento che diventeranno variabili insieme a taxa e stage 
+# creo vettore con gli ID di campionamento che diventeranno variabili insieme a taxa e stage 
 Sampling <- c("MC1314", "MC1315", "MC1316", "MC1317", "MC1318", "MC1319", "MC1320", "MC1321", "MC1322", "MC1323", "MC1324", "MC1325", "MC1326", "MC1327", "MC1328", "MC1329", "MC1330", "MC1331", "MC1332", "MC1333", "MC1334", "MC1335", "MC1336", "MC1337", "MC1338", "MC1339", "MC1340", "MC1341", "MC1342", "MC1343", "MC1344", "MC1345", "MC1346", "MC1347", "MC1348", "MC1349", "MC1350", "MC1351", "MC1352", "MC1353")
 Sampling
 class(Sampling)
@@ -59,7 +56,7 @@ View(Taxa)
 install.packages("tidyverse")
 library(tidyverse)
 
-# long format dei dati 
+# formato long
 TAXA <- Taxa|>
   tidyr::pivot_longer(             
     cols = starts_with("mc"),                     # cols = specifica quali colonne devono essere ruotate
@@ -75,7 +72,7 @@ View(TAXA)
 
 str(TAXA)
 
-# converto tutte le colonne in numeric tranne taxa e stage
+# converto tutte la colonna ind/m3 in numerica 
 TAXA <- TAXA %>%
   mutate(across(
     .cols = -c(taxa, stage, id),   # tutte le colonne tranne queste due
@@ -95,12 +92,6 @@ xlsx::write.xlsx(TAXA, "Species_ID_2019.xlsx", sheetName = "Sheet1", col.names =
 
 
 # 2016
-getwd()
-setwd("C:/Users/andre/OneDrive/Desktop/Progetto GdN_40Y_DTO Bio-Flow/ZOOGoN-40Y/script andrea")
-
-# richiamo i pacchetti che mi servono
-library(xlsx)
-library(dplyr)
 
 # carico la matrice
 matrix_2016 <- xlsx::read.xlsx("Matrice di base_2016_dettagliata.xlsx",
@@ -139,12 +130,11 @@ View(Species_ID_2016)
 install.packages("tidyverse")
 library(tidyverse)
 
-# long format dei dati 
 Species_ID_2016 <- Species_ID_2016 |>
   tidyr::pivot_longer(             
-    cols = starts_with("mc"),                     # cols = specifica quali colonne devono essere ruotate
-    names_to = "id",                              # names_to assegna un nome alla variabile memorizzata nella colonna names
-    values_to = "ind/m3"                          # values_to assegna un nome alla variabile memorizzata nei valori delle celle
+    cols = starts_with("mc"),                     
+    names_to = "id",                              
+    values_to = "ind/m3"                          
   )
 
 View(Species_ID_2016)
@@ -155,7 +145,8 @@ View(Species_ID_2016)
 
 str(Species_ID_2016)
 
-# converto tutte le colonne in numeric tranne taxa e stage
+# converto in numerica la variabile ind/m3 
+# usando uno di questi due approcci 
 # 1
 Species_ID_2016[ , !(names(Species_ID_2016) %in% c("taxa", "stage")) ] <-
   lapply(Species_ID_2016[ , !(names(Species_ID_2016) %in% c("taxa", "stage")) ], as.numeric)
@@ -169,8 +160,8 @@ Species_ID_2016[ , !(names(Species_ID_2016) %in% c("taxa", "stage")) ] <-
 # 2
 Species_ID_2016 <- Species_ID_2016 %>%
   mutate(across(
-    .cols = -c(taxa, stage, id),   # tutte le colonne tranne queste due
-    .fns = as.numeric          # applica la conversione
+    .cols = -c(taxa, stage, id),   # tutte le colonne tranne queste 3
+    .fns = as.numeric              # applica la conversione
   ))
 
 # mutate() → modifica o aggiunge colonne nel data frame
@@ -180,7 +171,7 @@ Species_ID_2016 <- Species_ID_2016 %>%
 
 str(Species_ID_2016)
 View(Species_ID_2016)
-glimpse(Species_ID_2016)
+glimpse(Species_ID_2016)  # stessa funzionalità di str()
 
 View(Species_ID_2016)
 
@@ -189,7 +180,6 @@ View(Species_ID_2016)
 xlsx::write.xlsx(Species_ID_2016, "Species_ID_2016.xlsx", sheetName = "Sheet1", col.names = T)
 
 # 2017
-
 # carico la matrice
 matrix_2017 <- xlsx::read.xlsx("Matrice di base_2017_dettagliata.xlsx",
                               sheetIndex = 1,
@@ -245,7 +235,6 @@ str(Species_ID_2017)
 xlsx::write.xlsx(Species_ID_2017, "Species_ID_2017.xlsx", sheetName = "Sheet1", col.names = T)
 
 # 2018
-
 # carico la matrice 
 matrix_2018 <- xlsx::read.xlsx("Matrice di base_2018.xlsx", 
                               sheetIndex = 2, 
@@ -297,7 +286,6 @@ xlsx::write.xlsx(Species_ID_2018, "Species_ID_2018.xlsx", sheetName = "2018")
 
 
 # 2020
-
 # carico la matrice 
 matrix_2020 <- xlsx::read.xlsx("Matrice di base_2020.xlsx", 
                               sheetIndex = 1, 
@@ -323,7 +311,6 @@ colnames(ID_Ab) <- c("TAXA", "STAGE", samp)
 ID_Ab <- janitor::clean_names(ID_Ab)
 
 # data tidyng
-
 Species_ID_2020 <- ID_Ab |>
   pivot_longer(cols = starts_with("mc"), 
   names_to = "id",                              
