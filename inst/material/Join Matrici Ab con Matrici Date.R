@@ -45,7 +45,7 @@ merged <- dat |>                        # trasforma il ds da wide a long
 
 View(merged)
 
-
+install.packages("worrms")
 taxaa <- worrms::wm_records_taxamatch(unique(merged$taxa)[20:60])
 
 
