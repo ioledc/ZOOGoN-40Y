@@ -2,6 +2,7 @@
 ^\.Rproj\.user$
 ^LICENSE\.md$
 ^README\.Rmd$
+^README\.html$
 ^cran-comments\.md$
 ^data-raw$
 ^data$
@@ -9,3 +10,8 @@
 ^docs$
 ^pkgdown$
 ^\.github$
+^project_info$
+^CLAUDE\.md$
+^\.env$
+^\.DS_Store$
+^LICENSE$

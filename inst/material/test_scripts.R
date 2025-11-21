@@ -29,12 +29,24 @@ merged <- dat |>
   dplyr::arrange(date, taxa)
 
 
-taxaa <- worrms::wm_records_taxamatch(unique(merged$taxa)[20:60])
+taxaa <- worrms::wm_records_taxamatch(
+  "Acartia (Acartia) danae Giesbrecht, 1889"
+)
+
+taxaa <- worrms::wm_records_taxamatch(unique(merged$taxa))
 
 
-unique(merged$taxa)[1:5] |>
+taxaa |>
+  dplyr::bind_rows() |>
+  dplyr::group_by(valid_name) |>
+  dplyr::count() |>
+  dplyr::arrange()
+
+taxas <-
+  unique(merged$taxa) |>
   purrr::map(worrms::wm_records_taxamatch)
 
+taxas
 
 test <-
   merged |>

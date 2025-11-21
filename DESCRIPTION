@@ -35,7 +35,13 @@ Imports:
     tidyr,
     magrittr,
     rlang,
-    dotenv
+    dotenv,
+    httr2,
+    arrow,
+    git2r,
+    config,
+    logger,
+    purrr
 Suggests: 
     testthat (>= 3.0.0),
     knitr,

@@ -134,8 +134,8 @@ process_lter_data <- function(
     .name_repair = "minimal"
   ) |>
     dplyr::mutate(
-      date = lubridate::as_date(as.numeric(date), origin = "1899-12-30"),
-      sample_id = janitor::make_clean_names(sample_id)
+      date = lubridate::as_date(as.numeric(.data$date), origin = "1899-12-30"),
+      sample_id = janitor::make_clean_names(.data$sample_id)
     )
 
   # Extract date columns and taxonomic data
@@ -153,7 +153,7 @@ process_lter_data <- function(
       genus_species = extract_genus_species(.data$taxa)$genus_species,
     ) |>
     tidyr::separate(
-      genus_species,
+      "genus_species",
       into = c("genus", "species"),
       sep = " ",
       remove = FALSE,
@@ -187,11 +187,14 @@ process_lter_data <- function(
       dplyr::mutate(
         worrms_match = tryCatch(
           {
-            worrms::wm_records_taxamatch(name = taxa_worms, verbose = FALSE)
+            worrms::wm_records_taxamatch(
+              name = .data$taxa_worms,
+              verbose = FALSE
+            )
           },
           error = function(e) {
             if (verbose) {
-              message("WoRMS match failed for: ", taxa_worms)
+              message("WoRMS match failed for: ", .data$taxa_worms)
             }
             NA
           }
@@ -222,20 +225,20 @@ process_lter_data <- function(
     ) |>
     janitor::clean_names() |>
     dplyr::mutate(
-      date = lubridate::as_date(as.numeric(date), origin = "1899-12-30")
+      date = lubridate::as_date(as.numeric(.data$date), origin = "1899-12-30")
     ) |>
     dplyr::select(-"dat_id") |>
     dplyr::left_join(ids, by = "date") |>
-    dplyr::relocate(sample_id, .before = "taxa") |>
-    dplyr::relocate(stage, .after = "ind_m3") |>
-    dplyr::relocate(date, .after = "sample_id") |>
-    dplyr::arrange(sample_id) |>
+    dplyr::relocate("sample_id", .before = "taxa") |>
+    dplyr::relocate("stage", .after = "ind_m3") |>
+    dplyr::relocate("date", .after = "sample_id") |>
+    dplyr::arrange(.data$sample_id) |>
     dplyr::rename(
-      eventID = sample_id,
-      eventDate = date,
-      scientificName = taxa,
-      individualCount = ind_m3,
-      lifeStage = stage
+      eventID = "sample_id",
+      eventDate = "date",
+      scientificName = "taxa",
+      individualCount = "ind_m3",
+      lifeStage = "stage"
     ) |>
     dplyr::distinct()
 
@@ -245,7 +248,7 @@ process_lter_data <- function(
   }
 
   event_ext <- tidy_data |>
-    dplyr::select(eventID, eventDate) |>
+    dplyr::select(dplyr::all_of(c("eventID", "eventDate"))) |>
     dplyr::distinct() |>
     dplyr::mutate(
       decimalLatitude = 40.81,
@@ -269,24 +272,24 @@ process_lter_data <- function(
   full_table <- tidy_data |>
     dplyr::mutate(
       occurrenceStatus = dplyr::if_else(
-        individualCount > 0,
+        .data$individualCount > 0,
         "present",
         "absent"
       ),
-      occurrenceID = paste0(eventID, "-occ", dplyr::row_number())
+      occurrenceID = paste0(.data$eventID, "-occ", dplyr::row_number())
     ) |>
-    dplyr::relocate(occurrenceID, .after = "eventDate") |>
+    dplyr::relocate("occurrenceID", .after = "eventDate") |>
     dplyr::distinct()
 
   occurrence_table <- full_table |>
-    dplyr::select(
-      eventID,
-      occurrenceID,
-      scientificName,
-      worrms_match,
-      lifeStage,
-      occurrenceStatus
-    )
+    dplyr::select(dplyr::all_of(c(
+      "eventID",
+      "occurrenceID",
+      "scientificName",
+      "worrms_match",
+      "lifeStage",
+      "occurrenceStatus"
+    )))
 
   # Create Darwin Core eMoF extension
   if (verbose) {
@@ -294,25 +297,33 @@ process_lter_data <- function(
   }
 
   emof_table <- full_table |>
-    dplyr::select(-c(scientificName, occurrenceStatus, worrms_match)) |>
+    dplyr::select(-dplyr::all_of(c(
+      "scientificName",
+      "occurrenceStatus",
+      "worrms_match"
+    ))) |>
     dplyr::distinct() |>
     dplyr::mutate(dplyr::across(dplyr::everything(), as.character)) |>
     tidyr::pivot_longer(
-      cols = -c(eventID, eventDate, occurrenceID),
+      cols = -dplyr::all_of(c("eventID", "eventDate", "occurrenceID")),
       names_to = "measurementType",
       values_to = "measurementValue"
     ) |>
-    dplyr::filter(!is.na(measurementValue), measurementValue != "") |>
+    dplyr::filter(
+      !is.na(.data$measurementValue),
+      .data$measurementValue != ""
+    ) |>
     dplyr::mutate(
       measurementUnit = dplyr::case_when(
-        measurementType == "individualCount" ~ "individuals per cubic meter",
-        measurementType == "lifeStage" ~ "categorical",
+        .data$measurementType == "individualCount" ~
+          "individuals per cubic meter",
+        .data$measurementType == "lifeStage" ~ "categorical",
         TRUE ~ "text"
       ),
       measurementRemarks = dplyr::case_when(
-        measurementType == "individualCount" ~
+        .data$measurementType == "individualCount" ~
           "Abundance count from microscopic analysis",
-        measurementType == "lifeStage" ~ "Development stage classification",
+        .data$measurementType == "lifeStage" ~ "Development stage classification",
         TRUE ~ NA_character_
       )
     )
