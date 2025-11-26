@@ -54,9 +54,15 @@ ingest_surveys <- function() {
   raw_survey <-
     purrr::map(data_raw, flatten_row) %>%
     dplyr::bind_rows() %>%
-    dplyr::rename("submission_id" = .data$`_id`)
+    dplyr::rename(submission_id = "_id")
 
-  raw_survey
+  upload_sharepoint_df(
+    data = raw_survey,
+    prefix = conf$ingestion$surveys$raw$file_prefix,
+    options = conf$storage$sharepoint,
+    bucket = conf$storage$sharepoint$aut_bucket,
+    format = "csv"
+  )
 }
 
 #' Retrieve Data from Kobotoolbox API
