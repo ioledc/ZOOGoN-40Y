@@ -21,17 +21,21 @@
 #' Upload a data frame to SharePoint
 #'
 #' @param data A data frame to upload
-#' @param prefix File prefix path (e.g., "raw", "preprocessed")
+#' @param prefix File prefix path (e.g., "raw", "preprocessed"), or exact filename if filename = TRUE
 #' @param options SharePoint configuration list from config$storage$sharepoint
+#' @param bucket Bucket name (optional)
 #' @param format File format: "csv", "tsv", or "parquet". Default is "csv"
+#' @param filename Logical. If TRUE, treat prefix as exact filename and skip versioning. Default is FALSE
 #'
 #' @return Invisible NULL
 #'
 #' @examples
 #' \dontrun{
 #' conf <- read_config()
+#' # Upload with automatic versioning
 #' upload_sharepoint_df(my_data, "raw", conf$storage$sharepoint)
-#' upload_sharepoint_df(my_data, "preprocessed", conf$storage$sharepoint, format = "parquet")
+#' # Upload to specific filename (no versioning)
+#' upload_sharepoint_df(my_data, "reference_data.csv", conf$storage$sharepoint, filename = TRUE)
 #' }
 #'
 #' @keywords storage
@@ -40,16 +44,36 @@ upload_sharepoint_df <- function(
   data,
   prefix,
   options,
-  format = c("csv", "tsv", "parquet")
+  bucket = NULL,
+  format = c("csv", "tsv", "parquet"),
+  filename = FALSE
 ) {
-  # Validate format parameter
-  format <- match.arg(format)
+  # Set bucket if provided
+  if (!is.null(bucket)) {
+    options$bucket <- bucket
+  }
 
-  # Add version to prefix (includes extension)
-  versioned_filename <- add_version(prefix, format)
+  if (filename) {
+    # Use exact filename without versioning
+    remote_filename <- prefix
+    format <- tools::file_ext(prefix)
+    if (!format %in% c("csv", "tsv", "parquet")) {
+      stop(
+        sprintf(
+          "Unsupported file format: %s. Must be csv, tsv, or parquet",
+          format
+        ),
+        call. = FALSE
+      )
+    }
+  } else {
+    # Validate format parameter and add versioning
+    format <- match.arg(format)
+    remote_filename <- add_version(prefix, format)
+  }
 
-  # Build full remote path: bucket/versioned_filename
-  remote_path <- file.path(options$bucket, versioned_filename)
+  # Build full remote path: bucket/filename
+  remote_path <- file.path(options$bucket, remote_filename)
 
   # Write data frame to temporary file
   temp_file <- write_df_to_temp(data, format)
@@ -73,17 +97,21 @@ upload_sharepoint_df <- function(
 
 #' Download a file from SharePoint
 #'
-#' @param prefix File prefix path (e.g., "raw", "preprocessed")
+#' @param prefix File prefix path (e.g., "raw", "preprocessed"), or exact filename if filename = TRUE
 #' @param options SharePoint configuration list from config$storage$sharepoint
+#' @param bucket Bucket name (optional)
 #' @param format File format: "csv", "tsv", or "parquet". Default is "csv"
+#' @param filename Logical. If TRUE, treat prefix as exact filename. Default is FALSE
 #'
 #' @return Data frame with downloaded data
 #'
 #' @examples
 #' \dontrun{
 #' conf <- read_config()
+#' # Download latest version by prefix
 #' data <- download_sharepoint_file("raw", conf$storage$sharepoint)
-#' data <- download_sharepoint_file("preprocessed", conf$storage$sharepoint, format = "parquet")
+#' # Download specific file by name
+#' data <- download_sharepoint_file("raw__2024-01-15.csv", conf$storage$sharepoint, filename = TRUE)
 #' }
 #'
 #' @keywords storage
@@ -91,14 +119,35 @@ upload_sharepoint_df <- function(
 download_sharepoint_file <- function(
   prefix,
   options,
-  format = c("csv", "tsv", "parquet")
+  bucket = NULL,
+  format = c("csv", "tsv", "parquet"),
+  filename = FALSE
 ) {
-  # Validate format parameter
-  format <- match.arg(format)
+  # Set bucket if provided
+  if (!is.null(bucket)) {
+    options$bucket <- bucket
+  }
 
-  # Find the latest versioned file with this prefix
-  remote_path <- find_latest_version(prefix, options$bucket, format, options)
-  message(sprintf("Found file: %s", basename(remote_path)))
+  if (filename) {
+    # Treat prefix as exact filename
+    remote_path <- file.path(options$bucket, prefix)
+    format <- tools::file_ext(prefix)
+    if (!format %in% c("csv", "tsv", "parquet")) {
+      stop(
+        sprintf(
+          "Unsupported file format: %s. Must be csv, tsv, or parquet",
+          format
+        ),
+        call. = FALSE
+      )
+    }
+    message(sprintf("Downloading file: %s", prefix))
+  } else {
+    # Find the latest versioned file with this prefix
+    format <- match.arg(format)
+    remote_path <- find_latest_version(prefix, options$bucket, format, options)
+    message(sprintf("Found file: %s", basename(remote_path)))
+  }
 
   # Get SharePoint connection details
   sharepoint_conn <- connect_to_sharepoint(options)
@@ -348,7 +397,9 @@ find_latest_version <- function(prefix, bucket, format, options) {
 
   # List files in the folder
   list_resp <- httr2::request(list_endpoint) |>
-    httr2::req_headers(Authorization = paste("Bearer", sharepoint_conn$token)) |>
+    httr2::req_headers(
+      Authorization = paste("Bearer", sharepoint_conn$token)
+    ) |>
     httr2::req_perform() |>
     httr2::resp_check_status()
 

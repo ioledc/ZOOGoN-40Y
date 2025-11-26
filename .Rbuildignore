@@ -15,3 +15,5 @@
 ^\.env$
 ^\.DS_Store$
 ^LICENSE$
+^doc$
+^Meta$

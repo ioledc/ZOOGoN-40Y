@@ -60,6 +60,7 @@ ingest_surveys <- function() {
     data = raw_survey,
     prefix = conf$ingestion$surveys$raw$file_prefix,
     options = conf$storage$sharepoint,
+    bucket = conf$storage$sharepoint$aut_bucket,
     format = "csv"
   )
 }

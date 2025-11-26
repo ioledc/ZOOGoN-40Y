@@ -35,16 +35,34 @@ navbar:
       href: https://dto-bioflow.eu
 
 reference:
-  - title: "Core Functions"
-    desc: "Main taxonomic standardization functions"
+  - title: "Darwin Core Conversion"
+    desc: "Convert legacy data to Darwin Core format"
     contents:
-      - extract_genus_species
-      
-  - title: "Data Processing"  
-    desc: "Functions for dataset processing and transformation"
+      - raw_to_dc
+
+  - title: "Cloud Storage"
+    desc: "SharePoint integration for data storage and retrieval"
     contents:
-      - starts_with("process_")
-      - starts_with("convert_")
+      - upload_sharepoint_df
+      - download_sharepoint_file
+
+  - title: "Survey Data Ingestion"
+    desc: "KoboToolbox integration for field survey data collection"
+    contents:
+      - ingest_surveys
+      - get_kobo_data
+      - preprocess_surveys
+
+  - title: "Utility Functions"
+    desc: "Helper functions for data processing"
+    contents:
+      - flatten_row
+      - flatten_field
+      - rename_child
+      - reshape_kobo_repeat
+      - add_version
+      - read_config
+      - load_dotenv
 
 articles:
   - title: "Getting Started"

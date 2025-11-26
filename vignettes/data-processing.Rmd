@@ -18,15 +18,11 @@ knitr::opts_chunk$set(
 ```{r setup}
 library(ZooGoN)
 library(dplyr)
-library(readxl)
-library(janitor)
-library(lubridate)
-library(tidyr)
 ```
 
 # Overview
 
-This vignette demonstrates the complete data processing workflow for the LTER-MareChiara zooplankton dataset, covering 40 years of monitoring (1984-2024) in the Gulf of Naples. The workflow transforms raw abundance data into Darwin Core-compliant format for integration with EMODnet Biology and the European Digital Twin of the Ocean.
+This vignette demonstrates the data processing workflow for converting legacy LTER-MareChiara zooplankton datasets into Darwin Core-compliant format for integration with EMODnet Biology and the European Digital Twin of the Ocean. The workflow uses the `raw_to_dc()` function to transform preprocessed legacy data (with WoRMS taxonomic validation) into standardized Darwin Core extensions.
 
 ## Dataset Background
 
@@ -40,256 +36,355 @@ The LTER-MareChiara station (40°81'N, 14°25'E) has been monitoring zooplankton
 - **Mesh Size**: 200 μm
 - **Location**: Gulf of Naples, Tyrrhenian Sea, Western Mediterranean
 
-# Data Processing Steps
+# Data Processing Workflow
 
-## Comprehensive Workflow with `process_lter_data()`
+## Converting Legacy Data to Darwin Core with `raw_to_dc()`
 
-The ZooGoN package provides a complete, integrated function that handles the entire processing pipeline from raw Excel files to Darwin Core format:
+The ZooGoN package provides the `raw_to_dc()` function to convert preprocessed legacy zooplankton datasets into Darwin Core-compliant format. This function expects **preprocessed** legacy data stored as parquet files with WoRMS taxonomic validation already applied.
 
-```{r main-function}
-# Process LTER-MareChiara dataset with full workflow
-processed_data <- process_lter_data(
-  zoo_data_path = "data/lter_zoo_84_13.xlsx",
-  ids_data_path = "data/ids.xlsx",
-  worms_validation = TRUE,
-  output_format = "list",
-  verbose = TRUE
-)
+### Expected Input Data Format
+
+The function processes legacy data files (e.g., `McZoo_84-13.parquet`) with the following structure:
+
+```{r input-format}
+# Example of expected input data structure:
+#
+# # A tibble: 350,112 × 6
+#    eventID eventDate  scientificname                 lsid                                      individualCount lifeStage
+#    <chr>   <date>     <chr>                          <chr>                                               <dbl> <chr>
+#  1 mc_1    1984-01-26 Acartia (Acartia) danae        urn:lsid:marinespecies.org:taxname:346026             0   f
+#  2 mc_1    1984-01-26 Acartia (Acartia) danae        urn:lsid:marinespecies.org:taxname:346026             0   m
+#  3 mc_1    1984-01-26 Acartia (Acartia) danae        urn:lsid:marinespecies.org:taxname:346026             0   j
+#  4 mc_1    1984-01-26 Acartia negligens              urn:lsid:marinespecies.org:taxname:104259             0   f
+#  5 mc_1    1984-01-26 Acartia clausi                 urn:lsid:marinespecies.org:taxname:104251             3.9 f
+#
+# Required columns:
+# - eventID: Unique sampling event identifier (e.g., "mc_1", "mc_2")
+# - eventDate: Sampling date (Date format)
+# - scientificname: Full scientific name with WoRMS validation
+# - lsid: WoRMS Life Science Identifier URN
+# - individualCount: Abundance measurement (ind/m³)
+# - lifeStage: Life stage code ("f"=female, "m"=male, "j"=juvenile, "fm"=both sexes, "fmj"=all stages)
+```
+
+### Basic Usage
+
+```{r basic-usage}
+# Convert legacy data to Darwin Core format
+dc_data <- raw_to_dc()
 
 # Access the Darwin Core formatted results
-event_table <- processed_data$event
-occurrence_table <- processed_data$occurrence  
-emof_table <- processed_data$emof
-processing_info <- processed_data$processing_info
+event_table <- dc_data$event
+occurrence_table <- dc_data$occurrence
+emof_table <- dc_data$emof
+processing_info <- dc_data$processing_info
+metadata <- dc_data$metadata
 ```
 
-This single function performs all the following steps automatically:
+### What the Function Does
 
-### 1. Data Loading and Validation
-- Reads Excel files with proper encoding and name repair
-- Validates file paths and parameters
-- Handles Excel date format conversion
+The `raw_to_dc()` function performs the following transformations:
 
-### 2. Taxonomic Standardization  
-- Applies `extract_genus_species()` for name standardization
-- Splits genus-species names into separate columns
-- Creates taxa suitable for WoRMS validation
+#### 1. Downloads Legacy Data
+- Retrieves preprocessed parquet files from SharePoint storage
+- Currently processes: `McZoo_84-13.parquet` (1984-2013 data)
+- Future support for: `McZoo_16.parquet`, `McZoo_17.parquet`, etc.
 
-### 3. WoRMS Taxonomic Validation (Optional)
-```{r worms-validation}
-# Enable WoRMS validation for taxonomic accuracy
-processed_with_worms <- process_lter_data(
-  worms_validation = TRUE,
-  verbose = TRUE
-)
+#### 2. Creates Darwin Core Event Extension
+- Extracts unique sampling events with temporal information
+- Assigns LTER-MareChiara station coordinates automatically:
+  - Latitude: 40.81°N
+  - Longitude: 14.25°E
+  - Location: Gulf of Naples, Tyrrhenian Sea
+  - Sampling protocol: Vertical tow 0-50m depth
 
-# WoRMS validation provides:
-# - Taxonomic authorities and publication dates  
-# - LSIDs (Life Sciences Identifiers)
-# - Accepted names and synonymy information
-# - Classification hierarchy verification
+```{r event-structure}
+# Event extension structure:
+# - eventID: Unique event identifier
+# - eventDate: Sampling date
+# - decimalLatitude: 40.81
+# - decimalLongitude: 14.25
+# - locality: "LTER-MareChiara station"
+# - country: "Italy"
+# - stateProvince: "Campania"
+# - waterBody: "Mediterranean Sea"
+# - maximumDepthInMeters: 50
+# - minimumDepthInMeters: 0
+# - samplingProtocol: "Vertical tow 0-50m depth"
 ```
 
-### 4. Darwin Core Formatting
-The function automatically creates three core Darwin Core extensions:
+#### 3. Creates Darwin Core Occurrence Extension
+- Links species occurrences to sampling events via `eventID`
+- Determines occurrence status (present/absent) based on abundance
+- Includes WoRMS LSIDs for taxonomic validation
 
-- **Event Extension**: Sampling events with temporal and spatial metadata
-- **Occurrence Extension**: Species occurrence records with life stage information  
-- **eMoF Extension**: Quantitative measurements (abundance as ind/m³)
-
-### 5. Geographic Metadata Integration
-```{r geographic-data}
-# LTER-MareChiara coordinates are automatically assigned:
-# - Latitude: 40.81°N
-# - Longitude: 14.25°E  
-# - Location: Gulf of Naples, Tyrrhenian Sea
-# - Sampling protocol: Vertical tow 0-50m depth
+```{r occurrence-structure}
+# Occurrence extension structure:
+# - eventID: Links to Event table
+# - occurrenceID: Unique occurrence identifier
+# - scientificName: Full scientific name
+# - scientificNameID: WoRMS LSID
+# - occurrenceStatus: "present" or "absent" (based on individualCount > 0)
 ```
 
-## Alternative Processing Options
+#### 4. Creates Darwin Core eMoF (Extended Measurement or Fact) Extension
+- Transforms measurements into standardized format
+- Uses BODC NERC Vocabulary Server controlled vocabulary
+- Includes measurement types, values, units, and their URIs
 
-### Fast Processing (Skip WoRMS)
-```{r fast-processing}
-# Skip WoRMS validation for faster execution
-quick_data <- process_lter_data(
-  worms_validation = FALSE,
-  verbose = TRUE
-)
+```{r emof-structure}
+# eMoF extension structure:
+# - eventID: Links to Event table
+# - occurrenceID: Links to Occurrence table
+# - measurementType: Type of measurement (e.g., "individualCount", "sex", "lifeStage")
+# - measurementTypeID: NERC vocabulary URI for measurement type
+# - measurementValue: Measured value
+# - measurementValueID: NERC vocabulary URI for value (e.g., sex codes, life stages)
+# - measurementUnitID: NERC vocabulary URI for units (e.g., ind/m³)
 ```
 
-### Direct CSV Export
-```{r csv-export}
-# Export directly to CSV files
-process_lter_data(
-  output_format = "csv",
-  output_dir = "processed_data/darwin_core",
-  verbose = TRUE
-)
+### Silent Processing
 
-# This creates:
-# - event.csv (sampling events)
-# - occurrence.csv (species occurrences)  
-# - emof.csv (measurements)
-# - raw_processed.csv (intermediate data)
-# - processing_metadata.csv (workflow metadata)
+```{r silent-processing}
+# Run without console messages
+dc_data <- raw_to_dc(verbose = FALSE)
 ```
 
-## Manual Step-by-Step Processing
+### Accessing Processing Information
 
-For users who prefer granular control, the individual processing steps can be performed manually:
+```{r processing-info}
+# View summary statistics
+dc_data$processing_info
+# Returns:
+# - processing_date: Timestamp of processing
+# - total_events: Number of sampling events
+# - total_occurrences: Number of occurrence records
+# - total_measurements: Number of measurements in eMoF table
+# - date_range: Start and end dates of sampling
+# - unique_taxa: Number of unique taxa
 
-### 1. Basic Data Loading
-```{r manual-loading}
-# Load zooplankton abundance data
-zooplankton_data <- readxl::read_xlsx(
-  "data/lter_zoo_84_13.xlsx",
-  .name_repair = "minimal"
-) %>%
-  dplyr::mutate(dat_id = seq_len(dplyr::n()))
-
-# Load sample identification data  
-sample_ids <- readxl::read_xlsx(
-  "data/ids.xlsx",
-  .name_repair = "minimal"  
-) %>%
-  dplyr::mutate(
-    date = lubridate::as_date(as.numeric(date), origin = "1899-12-30"),
-    sample_id = janitor::make_clean_names(sample_id)
-  )
-```
-
-### 2. Taxonomic Processing
-```{r manual-taxonomy}
-# Extract and standardize taxonomic information
-raw_taxa <- zooplankton_data %>%
-  janitor::clean_names() %>%
-  dplyr::select(phylum_o_subphylum:stage, dat_id) %>%
-  dplyr::mutate(
-    genus_species = extract_genus_species(taxa)$genus_species
-  ) %>%
-  tidyr::separate(
-    genus_species, 
-    into = c("genus", "species"), 
-    sep = " ", 
-    remove = FALSE, 
-    fill = "right"
-  )
-```
-
-### 3. Data Restructuring
-```{r manual-restructuring}
-# Convert from wide to long format
-dates <- zooplankton_data %>%
-  dplyr::select(-c(1:10), dat_id)
-
-tidy_data <- raw_taxa %>%
-  dplyr::left_join(dates, by = "dat_id") %>%
-  tidyr::pivot_longer(
-    -c(dat_id, taxa, genus_species, stage),
-    names_to = "date",
-    values_to = "ind_m3"
-  ) %>%
-  dplyr::mutate(
-    date = lubridate::as_date(as.numeric(date), origin = "1899-12-30")
-  ) %>%
-  dplyr::left_join(sample_ids, by = "date")
+# View dataset metadata
+dc_data$metadata
+# Returns tibble with:
+# - dataset_title: Full dataset title
+# - contact: Principal investigator contact
+# - institution: Stazione Zoologica Anton Dohrn
+# - license: CC-BY-NC
+# - project: DTO-BioFlow FSTP Grant
+# - processing_date, total_events, date_range_start, date_range_end
 ```
 
 # Quality Control and Validation
 
-## Sample Size Verification
+## Verifying Output Data Quality
+
+After processing, you can verify the quality and completeness of the Darwin Core data:
 
 ```{r quality-control}
-# Verify sample counts
-cat("Total samples processed:", n_distinct(darwin_core_data$eventID), "\n")
-cat("Date range:", min(darwin_core_data$eventDate), "to", max(darwin_core_data$eventDate), "\n")
-cat("Unique taxa:", n_distinct(darwin_core_data$scientificName), "\n")
-cat("Total occurrences:", nrow(occurrence_extension), "\n")
+# Process the data
+dc_data <- raw_to_dc()
+
+# Verify sample counts using processing_info
+print(dc_data$processing_info)
 
 # Check for data completeness
-missing_coords <- event_extension %>% 
+missing_coords <- dc_data$event %>%
   filter(is.na(decimalLatitude) | is.na(decimalLongitude))
 cat("Events missing coordinates:", nrow(missing_coords), "\n")
 
-# Verify taxonomic standardization success
-standardization_summary <- occurrence_extension %>%
-  summarise(
-    original_taxa = n_distinct(scientificName),
-    standardized_taxa = n_distinct(genus_species),
-    .groups = "drop"
-  )
-print(standardization_summary)
+# Verify occurrence status assignment
+occurrence_summary <- dc_data$occurrence %>%
+  count(occurrenceStatus)
+print(occurrence_summary)
+
+# Check taxonomic coverage
+unique_taxa <- dc_data$occurrence %>%
+  distinct(scientificName, scientificNameID) %>%
+  arrange(scientificName)
+cat("Total unique taxa:", nrow(unique_taxa), "\n")
+
+# Verify measurement types in eMoF
+measurement_types <- dc_data$emof %>%
+  count(measurementType, measurementTypeID) %>%
+  arrange(measurementType)
+print(measurement_types)
 ```
 
 ## Data Export
 
-Export the processed data in Darwin Core Archive format:
+Export the processed Darwin Core data for EMODnet Biology submission:
 
 ```{r export}
-# Create output directory
+# Export Darwin Core tables to CSV
 output_dir <- "processed_data/darwin_core"
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 
-# Export Darwin Core tables
-readr::write_csv(event_extension, 
-                 file.path(output_dir, "event.csv"))
-readr::write_csv(occurrence_extension, 
-                 file.path(output_dir, "occurrence.csv"))  
-readr::write_csv(emof_extension, 
-                 file.path(output_dir, "emof.csv"))
+# Export Event extension
+readr::write_csv(
+  dc_data$event,
+  file.path(output_dir, "event.csv")
+)
+
+# Export Occurrence extension
+readr::write_csv(
+  dc_data$occurrence,
+  file.path(output_dir, "occurrence.csv")
+)
+
+# Export eMoF extension
+readr::write_csv(
+  dc_data$emof,
+  file.path(output_dir, "emof.csv")
+)
 
 # Export metadata
 readr::write_csv(
-  tibble::tibble(
-    dataset_title = "40 years of Zooplankton data at LTER MareChiara site (Gulf of Naples, Mediterranean Sea) 1984-2024",
-    contact = "Dr. Iole Di Capua (iole.dicapua@szn.it)",
-    institution = "Stazione Zoologica Anton Dohrn",
-    license = "CC-BY-NC",
-    project = "DTO-BioFlow FSTP Grant",
-    processing_date = Sys.Date()
-  ),
+  dc_data$metadata,
   file.path(output_dir, "metadata.csv")
 )
+
+# Export raw preprocessed data (for reference)
+readr::write_csv(
+  dc_data$raw_data,
+  file.path(output_dir, "raw_legacy_data.csv")
+)
+
+cat("Darwin Core data exported to:", output_dir, "\n")
 ```
 
 # Integration with EMODnet Biology
 
-The processed Darwin Core data is ready for integration with EMODnet Biology following these standards:
+The processed Darwin Core data is ready for integration with EMODnet Biology. The `raw_to_dc()` function ensures compliance with international biodiversity data standards.
 
-## Taxonomic Validation
+## Data Standards Applied
 
-```{r worms-integration, eval=FALSE}
-# The data will be validated against WoRMS (World Register of Marine Species)
-# to obtain Life Sciences Identifiers (LSIDs) using the Taxon Match tool
-# This ensures taxonomic consistency with international databases
+### Taxonomic Validation
 
-# Example WoRMS integration workflow:
-# 1. Submit genus_species names to WoRMS Taxon Match
-# 2. Retrieve LSIDs and taxonomic hierarchy
-# 3. Add scientificNameID column with WoRMS LSIDs
-# 4. Validate against accepted names and synonyms
+The legacy input data already includes WoRMS validation:
+
+```{r worms-standards, eval=FALSE}
+# WoRMS LSIDs are already present in the input data:
+# - scientificNameID contains WoRMS LSID URNs
+# - Format: "urn:lsid:marinespecies.org:taxname:XXXXXX"
+# - Ensures taxonomic consistency with international databases
+# - Links to accepted names and taxonomic hierarchy
+
+# Example from the data:
+# scientificName: "Acartia clausi"
+# scientificNameID: "urn:lsid:marinespecies.org:taxname:104251"
 ```
 
-## Measurement Standardization  
+### Measurement Standardization
+
+The `raw_to_dc()` function applies BODC NERC Vocabulary Server standards:
 
 ```{r bodc-vocab, eval=FALSE}
-# Measurements will be standardized using BODC NERC Vocabulary Server
-# to ensure consistent terminology for:
-# - Life stages (adult, juvenile, copepodite, etc.)
-# - Measurement units (individuals per cubic meter)
-# - Sampling instruments (WP2 net, Indian Ocean net)
-# - Sample preservation methods (ethanol, formaldehyde)
+# eMoF table uses standardized NERC vocabulary terms:
+
+# 1. Individual counts:
+#    measurementType: "individualCount"
+#    measurementTypeID: "https://vocab.nerc.ac.uk/collection/S06/current/S0600002/"
+#    measurementUnitID: "http://vocab.nerc.ac.uk/collection/P06/current/UPMM/"
+#    (units: individuals per cubic meter)
+
+# 2. Sex information:
+#    measurementType: "sex"
+#    measurementTypeID: "http://vocab.nerc.ac.uk/collection/P01/current/ENTSEX01/"
+#    measurementValueID: S10 collection codes (e.g., S102=female, S103=male)
+
+# 3. Life stage information:
+#    measurementType: "lifeStage"
+#    measurementTypeID: "http://vocab.nerc.ac.uk/collection/P01/current/LSTAGE01/"
+#    measurementValueID: S11 collection codes (e.g., S1127=juvenile)
 
 # This enables interoperability with other marine biodiversity datasets
 ```
 
+## OBIS Compliance
+
+The Darwin Core structure follows OBIS (Ocean Biodiversity Information System) standards:
+
+```{r obis-structure, eval=FALSE}
+# The three-table structure is OBIS-compliant:
+# 1. Event table (core): Sampling event metadata
+# 2. Occurrence table (extension): Links to events via eventID
+# 3. eMoF table (extension): Links to occurrences via occurrenceID
+
+# Geographic coordinates use decimal degrees (WGS84)
+# Dates follow ISO 8601 format (YYYY-MM-DD)
+# All tables include proper foreign key relationships
+
+# For OBIS publication guidance, see:
+# https://manual.obis.org/darwin_core.html
+```
+
+## Data Submission Checklist
+
+Before submitting to EMODnet Biology:
+
+```{r submission-checklist, eval=FALSE}
+# 1. Verify all required Darwin Core terms are present
+dc_data <- raw_to_dc()
+required_event_terms <- c("eventID", "eventDate", "decimalLatitude", "decimalLongitude")
+required_occurrence_terms <- c("eventID", "occurrenceID", "scientificName", "occurrenceStatus")
+
+# 2. Check for missing values in critical fields
+summary(dc_data$event)
+summary(dc_data$occurrence)
+
+# 3. Validate taxonomic identifiers (WoRMS LSIDs)
+all(grepl("^urn:lsid:marinespecies.org:taxname:", dc_data$occurrence$scientificNameID))
+
+# 4. Verify geographic coordinates are within valid ranges
+all(dc_data$event$decimalLatitude >= -90 & dc_data$event$decimalLatitude <= 90)
+all(dc_data$event$decimalLongitude >= -180 & dc_data$event$decimalLongitude <= 180)
+
+# 5. Export data as CSV files
+# (See Data Export section above)
+
+# 6. Prepare metadata document (EML or ISO19115)
+# 7. Contact EMODnet Biology data manager for submission
+```
+
+# Future Development
+
+## Support for Additional Legacy Files
+
+The current implementation processes `McZoo_84-13.parquet`. Future versions will support:
+
+```{r future-files, eval=FALSE}
+# Planned support for additional legacy files:
+# - McZoo_16.parquet (2016 data)
+# - McZoo_17.parquet (2017 data)
+# - McZoo_18.parquet (2018 data)
+# - ... continuing through 2024
+
+# All files will follow the same standardized format:
+# - eventID, eventDate, scientificname, lsid, individualCount, lifeStage
+
+# The raw_to_dc() function will be extended to:
+# 1. Accept file path as parameter
+# 2. Process multiple files in batch
+# 3. Combine datasets with proper eventID management
+```
+
 # Conclusion
 
-This workflow transforms 40 years of LTER-MareChiara zooplankton data into a FAIR-compliant, Darwin Core-formatted dataset suitable for:
+This workflow converts preprocessed legacy LTER-MareChiara zooplankton data into FAIR-compliant, Darwin Core-formatted datasets suitable for:
 
 - **EMODnet Biology** publication and quality control
 - **European Digital Twin of the Ocean** integration
-- **International biodiversity databases** compatibility
+- **OBIS** (Ocean Biodiversity Information System) compatibility
+- **International biodiversity databases** interoperability
 - **Long-term ecological research** and climate change studies
 
-The standardized dataset contributes to the EU Mission "Restore our Ocean & Waters by 2030" by providing essential biodiversity monitoring data for the Mediterranean Sea ecosystem.
+The standardized dataset contributes to the EU Horizon Mission "Restore our Ocean & Waters by 2030" by providing 40 years of essential biodiversity monitoring data from the LTER-MareChiara station in the Gulf of Naples, Mediterranean Sea.
+
+## Key Features
+
+- **Standardized taxonomic names** with WoRMS LSIDs
+- **OBIS-compliant Darwin Core structure** (Event, Occurrence, eMoF)
+- **BODC NERC vocabulary** for measurement standardization
+- **Geographic metadata** with proper coordinates and locality information
+- **Quality control** with comprehensive validation checks
+- **Ready for EMODnet Biology** submission and publication

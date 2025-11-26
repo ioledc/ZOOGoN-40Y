@@ -4,14 +4,24 @@
 \alias{download_sharepoint_file}
 \title{Download a file from SharePoint}
 \usage{
-download_sharepoint_file(prefix, options, format = c("csv", "tsv", "parquet"))
+download_sharepoint_file(
+  prefix,
+  options,
+  bucket = NULL,
+  format = c("csv", "tsv", "parquet"),
+  filename = FALSE
+)
 }
 \arguments{
-\item{prefix}{File prefix path (e.g., "raw", "preprocessed")}
+\item{prefix}{File prefix path (e.g., "raw", "preprocessed"), or exact filename if filename = TRUE}
 
 \item{options}{SharePoint configuration list from config$storage$sharepoint}
 
+\item{bucket}{Bucket name (optional)}
+
 \item{format}{File format: "csv", "tsv", or "parquet". Default is "csv"}
+
+\item{filename}{Logical. If TRUE, treat prefix as exact filename. Default is FALSE}
 }
 \value{
 Data frame with downloaded data
@@ -22,8 +32,10 @@ Download a file from SharePoint
 \examples{
 \dontrun{
 conf <- read_config()
+# Download latest version by prefix
 data <- download_sharepoint_file("raw", conf$storage$sharepoint)
-data <- download_sharepoint_file("preprocessed", conf$storage$sharepoint, format = "parquet")
+# Download specific file by name
+data <- download_sharepoint_file("raw__2024-01-15.csv", conf$storage$sharepoint, filename = TRUE)
 }
 
 }

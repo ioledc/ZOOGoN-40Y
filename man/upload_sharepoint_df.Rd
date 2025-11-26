@@ -8,17 +8,23 @@ upload_sharepoint_df(
   data,
   prefix,
   options,
-  format = c("csv", "tsv", "parquet")
+  bucket = NULL,
+  format = c("csv", "tsv", "parquet"),
+  filename = FALSE
 )
 }
 \arguments{
 \item{data}{A data frame to upload}
 
-\item{prefix}{File prefix path (e.g., "raw", "preprocessed")}
+\item{prefix}{File prefix path (e.g., "raw", "preprocessed"), or exact filename if filename = TRUE}
 
 \item{options}{SharePoint configuration list from config$storage$sharepoint}
 
+\item{bucket}{Bucket name (optional)}
+
 \item{format}{File format: "csv", "tsv", or "parquet". Default is "csv"}
+
+\item{filename}{Logical. If TRUE, treat prefix as exact filename and skip versioning. Default is FALSE}
 }
 \value{
 Invisible NULL
@@ -29,8 +35,10 @@ Upload a data frame to SharePoint
 \examples{
 \dontrun{
 conf <- read_config()
+# Upload with automatic versioning
 upload_sharepoint_df(my_data, "raw", conf$storage$sharepoint)
-upload_sharepoint_df(my_data, "preprocessed", conf$storage$sharepoint, format = "parquet")
+# Upload to specific filename (no versioning)
+upload_sharepoint_df(my_data, "reference_data.csv", conf$storage$sharepoint, filename = TRUE)
 }
 
 }
