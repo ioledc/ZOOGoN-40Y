@@ -5,3 +5,22 @@ default:
       username: !expr Sys.getenv('KOBO_USERNAME')
       password: !expr Sys.getenv('KOBO_PASSWORD')
       token: !expr Sys.getenv('KOBO_TOKEN')
+    surveys:
+      raw:
+        file_prefix: "raw-surveys"
+      preprocessed:
+        file_prefix: "preprocessed-surveys"
+  storage:
+    sharepoint:
+      aut_bucket: zoogon_mc-dev
+      legacy_bucket: legacy_data
+      hot_bucket: hot_storage
+      site_url: "https://sznit.sharepoint.com/sites/BioFlow-ZOOGoN-40Y"
+      client_id: !expr Sys.getenv('SHAREPOINT_CLIENT_ID')
+      tenant_id: !expr Sys.getenv('SHAREPOINT_TENANT_ID')
+      client_secret: !expr Sys.getenv('SHAREPOINT_CLIENT_SECRET')
+
+production:
+  storage:
+    sharepoint:
+      aut_bucket: zoogon_mc-prod

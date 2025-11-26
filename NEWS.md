@@ -1,3 +1,77 @@
+# ZooGoN 2.0.0
+
+## Automation & Cloud Integration
+
+This release introduces cloud storage connectivity and survey data ingestion capabilities for the ZooGoN package. The focus is on building infrastructure for automated workflows, with new functions for SharePoint integration, KoboToolbox data retrieval, and streamlined Darwin Core conversion.
+
+### New Functions
+
+#### Cloud Storage Functions
+* **`upload_sharepoint_df()`**: Upload data frames to Microsoft SharePoint document libraries
+  - Automatic file versioning with timestamps
+  - Support for CSV, TSV, and Parquet formats
+  - Authentication via Microsoft Graph API
+
+* **`download_sharepoint_file()`**: Download files from SharePoint
+  - Retrieve latest versioned files by prefix
+  - Support for multiple file formats
+
+#### Survey Data Ingestion
+* **`ingest_surveys()`**: Retrieve survey data from KoboToolbox and upload to SharePoint
+  - Connects to KoboToolbox API to download survey submissions
+  - Flattens nested JSON survey data into tabular format
+  - Validates data integrity and checks for duplicates
+  - Uploads processed data to cloud storage
+
+* **`get_kobo_data()`**: Low-level function to retrieve data from KoboToolbox API
+  - Handles pagination for large datasets
+  - Supports JSON and XML formats
+
+#### Darwin Core Conversion
+* **`raw_to_dc()`**: Convert preprocessed legacy data to Darwin Core format
+  - Processes parquet files with WoRMS-validated taxonomic data
+  - Creates Event, Occurrence, and eMoF (Extended Measurement or Fact) tables
+  - Applies BODC NERC Vocabulary standards
+  - Currently processes `McZoo_84-13.parquet` (1984-2013 data)
+
+### Infrastructure Changes
+
+#### Configuration System
+* New YAML-based configuration (`inst/config.yml`) for managing:
+  - SharePoint connection details and credentials
+  - KoboToolbox API settings
+  - Data bucket organization (`aut_bucket`, `hot_bucket`)
+  - File naming conventions
+
+#### Code Organization
+* Modular file structure:
+  - `R/storage.R`: SharePoint upload/download operations
+  - `R/ingestion-surveys.R`: KoboToolbox data retrieval
+  - `R/preprocessing-surveys.R`: Survey data transformation
+  - `R/processing.R`: Darwin Core conversion
+
+### New Dependencies
+* `httr2`: HTTP API interactions
+* `arrow`: Parquet file handling
+* `config`: Configuration management
+* `logger`: Logging functionality
+* `purrr`: Functional programming utilities
+
+### Documentation
+* Updated function documentation with roxygen2
+* Revised `data-processing.Rmd` vignette to document `raw_to_dc()` workflow
+* Updated `raw_to_dc.Rd` manual page
+
+### Breaking Changes
+* Removed `process_lter_data()` function (replaced by `raw_to_dc()`)
+* Requires `inst/config.yml` configuration file with credentials
+* `raw_to_dc()` expects preprocessed parquet files instead of raw Excel files
+
+### Notes
+* This release establishes the foundation for automated data workflows
+* Survey data ingestion is functional but preprocessing steps are still in development
+* Darwin Core conversion currently handles legacy data (1984-2013); additional time periods will be added in future releases
+
 # ZooGoN 1.0.0
 
 ## Major Release - Comprehensive Data Processing Pipeline
