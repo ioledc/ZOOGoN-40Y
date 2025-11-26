@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">ZooGoN</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,6 +37,112 @@
     </div>
 
     <div class="section level2">
+<h2 class="pkg-version" data-toc-text="2.0.0" id="zoogon-200">ZooGoN 2.0.0<a class="anchor" aria-label="anchor" href="#zoogon-200"></a></h2>
+<div class="section level3">
+<h3 id="automation--cloud-integration-2-0-0">Automation &amp; Cloud Integration<a class="anchor" aria-label="anchor" href="#automation--cloud-integration-2-0-0"></a></h3>
+<p>This release introduces cloud storage connectivity and survey data ingestion capabilities for the ZooGoN package. The focus is on building infrastructure for automated workflows, with new functions for SharePoint integration, KoboToolbox data retrieval, and streamlined Darwin Core conversion.</p>
+<div class="section level4">
+<h4 id="new-functions-2-0-0">New Functions<a class="anchor" aria-label="anchor" href="#new-functions-2-0-0"></a></h4>
+<div class="section level5">
+<h5 id="cloud-storage-functions-2-0-0">Cloud Storage Functions<a class="anchor" aria-label="anchor" href="#cloud-storage-functions-2-0-0"></a></h5>
+<ul><li>
+<strong><code><a href="../reference/upload_sharepoint_df.html">upload_sharepoint_df()</a></code></strong>: Upload data frames to Microsoft SharePoint document libraries
+<ul><li>Automatic file versioning with timestamps</li>
+<li>Support for CSV, TSV, and Parquet formats</li>
+<li>Authentication via Microsoft Graph API</li>
+</ul></li>
+<li>
+<strong><code><a href="../reference/download_sharepoint_file.html">download_sharepoint_file()</a></code></strong>: Download files from SharePoint
+<ul><li>Retrieve latest versioned files by prefix</li>
+<li>Support for multiple file formats</li>
+</ul></li>
+</ul></div>
+<div class="section level5">
+<h5 id="survey-data-ingestion-2-0-0">Survey Data Ingestion<a class="anchor" aria-label="anchor" href="#survey-data-ingestion-2-0-0"></a></h5>
+<ul><li>
+<strong><code><a href="../reference/ingest_surveys.html">ingest_surveys()</a></code></strong>: Retrieve survey data from KoboToolbox and upload to SharePoint
+<ul><li>Connects to KoboToolbox API to download survey submissions</li>
+<li>Flattens nested JSON survey data into tabular format</li>
+<li>Validates data integrity and checks for duplicates</li>
+<li>Uploads processed data to cloud storage</li>
+</ul></li>
+<li>
+<strong><code><a href="../reference/get_kobo_data.html">get_kobo_data()</a></code></strong>: Low-level function to retrieve data from KoboToolbox API
+<ul><li>Handles pagination for large datasets</li>
+<li>Supports JSON and XML formats</li>
+</ul></li>
+</ul></div>
+<div class="section level5">
+<h5 id="darwin-core-conversion-2-0-0">Darwin Core Conversion<a class="anchor" aria-label="anchor" href="#darwin-core-conversion-2-0-0"></a></h5>
+<ul><li>
+<strong><code><a href="../reference/raw_to_dc.html">raw_to_dc()</a></code></strong>: Convert preprocessed legacy data to Darwin Core format
+<ul><li>Processes parquet files with WoRMS-validated taxonomic data</li>
+<li>Creates Event, Occurrence, and eMoF (Extended Measurement or Fact) tables</li>
+<li>Applies BODC NERC Vocabulary standards</li>
+<li>Currently processes <code>McZoo_84-13.parquet</code> (1984-2013 data)</li>
+</ul></li>
+</ul></div>
+</div>
+<div class="section level4">
+<h4 id="infrastructure-changes-2-0-0">Infrastructure Changes<a class="anchor" aria-label="anchor" href="#infrastructure-changes-2-0-0"></a></h4>
+<div class="section level5">
+<h5 id="configuration-system-2-0-0">Configuration System<a class="anchor" aria-label="anchor" href="#configuration-system-2-0-0"></a></h5>
+<ul><li>New YAML-based configuration (<code>inst/config.yml</code>) for managing:
+<ul><li>SharePoint connection details and credentials</li>
+<li>KoboToolbox API settings</li>
+<li>Data bucket organization (<code>aut_bucket</code>, <code>hot_bucket</code>)</li>
+<li>File naming conventions</li>
+</ul></li>
+</ul></div>
+<div class="section level5">
+<h5 id="code-organization-2-0-0">Code Organization<a class="anchor" aria-label="anchor" href="#code-organization-2-0-0"></a></h5>
+<ul><li>Modular file structure:
+<ul><li>
+<code>R/storage.R</code>: SharePoint upload/download operations</li>
+<li>
+<code>R/ingestion-surveys.R</code>: KoboToolbox data retrieval</li>
+<li>
+<code>R/preprocessing-surveys.R</code>: Survey data transformation</li>
+<li>
+<code>R/processing.R</code>: Darwin Core conversion</li>
+</ul></li>
+</ul></div>
+</div>
+<div class="section level4">
+<h4 id="new-dependencies-2-0-0">New Dependencies<a class="anchor" aria-label="anchor" href="#new-dependencies-2-0-0"></a></h4>
+<ul><li>
+<code>httr2</code>: HTTP API interactions</li>
+<li>
+<code>arrow</code>: Parquet file handling</li>
+<li>
+<code>config</code>: Configuration management</li>
+<li>
+<code>logger</code>: Logging functionality</li>
+<li>
+<code>purrr</code>: Functional programming utilities</li>
+</ul></div>
+<div class="section level4">
+<h4 id="documentation-2-0-0">Documentation<a class="anchor" aria-label="anchor" href="#documentation-2-0-0"></a></h4>
+<ul><li>Updated function documentation with roxygen2</li>
+<li>Revised <code>data-processing.Rmd</code> vignette to document <code><a href="../reference/raw_to_dc.html">raw_to_dc()</a></code> workflow</li>
+<li>Updated <code>raw_to_dc.Rd</code> manual page</li>
+</ul></div>
+<div class="section level4">
+<h4 id="breaking-changes-2-0-0">Breaking Changes<a class="anchor" aria-label="anchor" href="#breaking-changes-2-0-0"></a></h4>
+<ul><li>Removed <code>process_lter_data()</code> function (replaced by <code><a href="../reference/raw_to_dc.html">raw_to_dc()</a></code>)</li>
+<li>Requires <code>inst/config.yml</code> configuration file with credentials</li>
+<li>
+<code><a href="../reference/raw_to_dc.html">raw_to_dc()</a></code> expects preprocessed parquet files instead of raw Excel files</li>
+</ul></div>
+<div class="section level4">
+<h4 id="notes-2-0-0">Notes<a class="anchor" aria-label="anchor" href="#notes-2-0-0"></a></h4>
+<ul><li>This release establishes the foundation for automated data workflows</li>
+<li>Survey data ingestion is functional but preprocessing steps are still in development</li>
+<li>Darwin Core conversion currently handles legacy data (1984-2013); additional time periods will be added in future releases</li>
+</ul></div>
+</div>
+</div>
+    <div class="section level2">
 <h2 class="pkg-version" data-toc-text="1.0.0" id="zoogon-100">ZooGoN 1.0.0<a class="anchor" aria-label="anchor" href="#zoogon-100"></a></h2>
 <div class="section level3">
 <h3 id="major-release---comprehensive-data-processing-pipeline-1-0-0">Major Release - Comprehensive Data Processing Pipeline<a class="anchor" aria-label="anchor" href="#major-release---comprehensive-data-processing-pipeline-1-0-0"></a></h3>
@@ -44,7 +150,7 @@
 <div class="section level4">
 <h4 id="new-features-1-0-0">New Features<a class="anchor" aria-label="anchor" href="#new-features-1-0-0"></a></h4>
 <ul><li>
-<strong><code><a href="../reference/process_lter_data.html">process_lter_data()</a></code> Function</strong>: Complete integrated workflow from raw Excel files to Darwin Core format</li>
+<strong><code>process_lter_data()</code> Function</strong>: Complete integrated workflow from raw Excel files to Darwin Core format</li>
 <li>
 <strong>WoRMS Taxonomic Validation</strong>: Optional integration with World Register of Marine Species for taxonomic accuracy</li>
 <li>
@@ -72,7 +178,7 @@
 <ul><li>
 <strong>Complete Workflow</strong>: Single function handles entire Excel → Darwin Core pipeline</li>
 <li>
-<strong>Taxonomic Standardization</strong>: Enhanced <code><a href="../reference/extract_genus_species.html">extract_genus_species()</a></code> integration with WoRMS validation</li>
+<strong>Taxonomic Standardization</strong>: Enhanced <code>extract_genus_species()</code> integration with WoRMS validation</li>
 <li>
 <strong>Darwin Core Extensions</strong>: Automatic generation of Event, Occurrence, and eMoF tables</li>
 <li>
@@ -83,7 +189,7 @@
 <div class="section level4">
 <h4 id="documentation-updates-1-0-0">Documentation Updates<a class="anchor" aria-label="anchor" href="#documentation-updates-1-0-0"></a></h4>
 <ul><li>
-<strong>Enhanced Vignettes</strong>: Updated data processing workflow to demonstrate <code><a href="../reference/process_lter_data.html">process_lter_data()</a></code>
+<strong>Enhanced Vignettes</strong>: Updated data processing workflow to demonstrate <code>process_lter_data()</code>
 </li>
 <li>
 <strong>README Improvements</strong>: Showcases new comprehensive processing capabilities</li>
@@ -118,7 +224,7 @@
 <div class="section level4">
 <h4 id="features-0-1-0">Features<a class="anchor" aria-label="anchor" href="#features-0-1-0"></a></h4>
 <ul><li>
-<strong>Taxonomic Standardization</strong>: Core <code><a href="../reference/extract_genus_species.html">extract_genus_species()</a></code> function for standardizing Mediterranean zooplankton taxonomic names</li>
+<strong>Taxonomic Standardization</strong>: Core <code>extract_genus_species()</code> function for standardizing Mediterranean zooplankton taxonomic names</li>
 <li>
 <strong>Darwin Core Compliance</strong>: Full support for converting LTER-MareChiara data to Darwin Core Archive format</li>
 <li>
@@ -176,7 +282,7 @@
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by Lorenzo Longobardi, Iole Di Capua. Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.
+  <p>Developed by Lorenzo Longobardi, Iole Di Capua. Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.
 </p>
 <p>
 © 2025 Stazione Zoologica Anton Dohrn. Licensed under <a href="https://www.gnu.org/licenses/gpl-3.0.html" class="external-link">GPL-3</a>.

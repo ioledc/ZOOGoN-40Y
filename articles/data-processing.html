@@ -25,7 +25,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">ZooGoN</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -71,19 +71,17 @@
     
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/ioledc/ZOOGoN-40Y" class="external-link">ZooGoN</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://readxl.tidyverse.org" class="external-link">readxl</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/sfirke/janitor" class="external-link">janitor</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://lubridate.tidyverse.org" class="external-link">lubridate</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tidyr.tidyverse.org" class="external-link">tidyr</a></span><span class="op">)</span></span></code></pre></div>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span></code></pre></div>
 <div class="section level2">
 <h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
 </h2>
-<p>This vignette demonstrates the complete data processing workflow for
-the LTER-MareChiara zooplankton dataset, covering 40 years of monitoring
-(1984-2024) in the Gulf of Naples. The workflow transforms raw abundance
-data into Darwin Core-compliant format for integration with EMODnet
-Biology and the European Digital Twin of the Ocean.</p>
+<p>This vignette demonstrates the data processing workflow for
+converting legacy LTER-MareChiara zooplankton datasets into Darwin
+Core-compliant format for integration with EMODnet Biology and the
+European Digital Twin of the Ocean. The workflow uses the
+<code><a href="../reference/raw_to_dc.html">raw_to_dc()</a></code> function to transform preprocessed legacy data
+(with WoRMS taxonomic validation) into standardized Darwin Core
+extensions.</p>
 <div class="section level3">
 <h3 id="dataset-background">Dataset Background<a class="anchor" aria-label="anchor" href="#dataset-background"></a>
 </h3>
@@ -101,191 +99,169 @@ Mediterranean</p>
 </div>
 </div>
 <div class="section level2">
-<h2 id="data-processing-steps">Data Processing Steps<a class="anchor" aria-label="anchor" href="#data-processing-steps"></a>
+<h2 id="data-processing-workflow">Data Processing Workflow<a class="anchor" aria-label="anchor" href="#data-processing-workflow"></a>
 </h2>
 <div class="section level3">
-<h3 id="comprehensive-workflow-with-process_lter_data">Comprehensive Workflow with <code>process_lter_data()</code><a class="anchor" aria-label="anchor" href="#comprehensive-workflow-with-process_lter_data"></a>
+<h3 id="converting-legacy-data-to-darwin-core-with-raw_to_dc">Converting Legacy Data to Darwin Core with
+<code>raw_to_dc()</code><a class="anchor" aria-label="anchor" href="#converting-legacy-data-to-darwin-core-with-raw_to_dc"></a>
 </h3>
-<p>The ZooGoN package provides a complete, integrated function that
-handles the entire processing pipeline from raw Excel files to Darwin
-Core format:</p>
+<p>The ZooGoN package provides the <code><a href="../reference/raw_to_dc.html">raw_to_dc()</a></code> function to
+convert preprocessed legacy zooplankton datasets into Darwin
+Core-compliant format. This function expects
+<strong>preprocessed</strong> legacy data stored as parquet files with
+WoRMS taxonomic validation already applied.</p>
+<div class="section level4">
+<h4 id="expected-input-data-format">Expected Input Data Format<a class="anchor" aria-label="anchor" href="#expected-input-data-format"></a>
+</h4>
+<p>The function processes legacy data files (e.g.,
+<code>McZoo_84-13.parquet</code>) with the following structure:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Process LTER-MareChiara dataset with full workflow</span></span>
-<span><span class="va">processed_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/process_lter_data.html">process_lter_data</a></span><span class="op">(</span></span>
-<span>  zoo_data_path <span class="op">=</span> <span class="st">"data/lter_zoo_84_13.xlsx"</span>,</span>
-<span>  ids_data_path <span class="op">=</span> <span class="st">"data/ids.xlsx"</span>,</span>
-<span>  worms_validation <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  output_format <span class="op">=</span> <span class="st">"list"</span>,</span>
-<span>  verbose <span class="op">=</span> <span class="cn">TRUE</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Access the Darwin Core formatted results</span></span>
-<span><span class="va">event_table</span> <span class="op">&lt;-</span> <span class="va">processed_data</span><span class="op">$</span><span class="va">event</span></span>
-<span><span class="va">occurrence_table</span> <span class="op">&lt;-</span> <span class="va">processed_data</span><span class="op">$</span><span class="va">occurrence</span>  </span>
-<span><span class="va">emof_table</span> <span class="op">&lt;-</span> <span class="va">processed_data</span><span class="op">$</span><span class="va">emof</span></span>
-<span><span class="va">processing_info</span> <span class="op">&lt;-</span> <span class="va">processed_data</span><span class="op">$</span><span class="va">processing_info</span></span></code></pre></div>
-<p>This single function performs all the following steps
-automatically:</p>
-<div class="section level4">
-<h4 id="data-loading-and-validation">1. Data Loading and Validation<a class="anchor" aria-label="anchor" href="#data-loading-and-validation"></a>
-</h4>
-<ul>
-<li>Reads Excel files with proper encoding and name repair</li>
-<li>Validates file paths and parameters</li>
-<li>Handles Excel date format conversion</li>
-</ul>
+<code class="sourceCode R"><span><span class="co"># Example of expected input data structure:</span></span>
+<span><span class="co">#</span></span>
+<span><span class="co"># # A tibble: 350,112 × 6</span></span>
+<span><span class="co">#    eventID eventDate  scientificname                 lsid                                      individualCount lifeStage</span></span>
+<span><span class="co">#    &lt;chr&gt;   &lt;date&gt;     &lt;chr&gt;                          &lt;chr&gt;                                               &lt;dbl&gt; &lt;chr&gt;</span></span>
+<span><span class="co">#  1 mc_1    1984-01-26 Acartia (Acartia) danae        urn:lsid:marinespecies.org:taxname:346026             0   f</span></span>
+<span><span class="co">#  2 mc_1    1984-01-26 Acartia (Acartia) danae        urn:lsid:marinespecies.org:taxname:346026             0   m</span></span>
+<span><span class="co">#  3 mc_1    1984-01-26 Acartia (Acartia) danae        urn:lsid:marinespecies.org:taxname:346026             0   j</span></span>
+<span><span class="co">#  4 mc_1    1984-01-26 Acartia negligens              urn:lsid:marinespecies.org:taxname:104259             0   f</span></span>
+<span><span class="co">#  5 mc_1    1984-01-26 Acartia clausi                 urn:lsid:marinespecies.org:taxname:104251             3.9 f</span></span>
+<span><span class="co">#</span></span>
+<span><span class="co"># Required columns:</span></span>
+<span><span class="co"># - eventID: Unique sampling event identifier (e.g., "mc_1", "mc_2")</span></span>
+<span><span class="co"># - eventDate: Sampling date (Date format)</span></span>
+<span><span class="co"># - scientificname: Full scientific name with WoRMS validation</span></span>
+<span><span class="co"># - lsid: WoRMS Life Science Identifier URN</span></span>
+<span><span class="co"># - individualCount: Abundance measurement (ind/m³)</span></span>
+<span><span class="co"># - lifeStage: Life stage code ("f"=female, "m"=male, "j"=juvenile, "fm"=both sexes, "fmj"=all stages)</span></span></code></pre></div>
 </div>
 <div class="section level4">
-<h4 id="taxonomic-standardization">2. Taxonomic Standardization<a class="anchor" aria-label="anchor" href="#taxonomic-standardization"></a>
-</h4>
-<ul>
-<li>Applies <code><a href="../reference/extract_genus_species.html">extract_genus_species()</a></code> for name
-standardization</li>
-<li>Splits genus-species names into separate columns</li>
-<li>Creates taxa suitable for WoRMS validation</li>
-</ul>
-</div>
-<div class="section level4">
-<h4 id="worms-taxonomic-validation-optional">3. WoRMS Taxonomic Validation (Optional)<a class="anchor" aria-label="anchor" href="#worms-taxonomic-validation-optional"></a>
+<h4 id="basic-usage">Basic Usage<a class="anchor" aria-label="anchor" href="#basic-usage"></a>
 </h4>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Enable WoRMS validation for taxonomic accuracy</span></span>
-<span><span class="va">processed_with_worms</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/process_lter_data.html">process_lter_data</a></span><span class="op">(</span></span>
-<span>  worms_validation <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  verbose <span class="op">=</span> <span class="cn">TRUE</span></span>
-<span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="co"># Convert legacy data to Darwin Core format</span></span>
+<span><span class="va">dc_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/raw_to_dc.html">raw_to_dc</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># WoRMS validation provides:</span></span>
-<span><span class="co"># - Taxonomic authorities and publication dates  </span></span>
-<span><span class="co"># - LSIDs (Life Sciences Identifiers)</span></span>
-<span><span class="co"># - Accepted names and synonymy information</span></span>
-<span><span class="co"># - Classification hierarchy verification</span></span></code></pre></div>
+<span><span class="co"># Access the Darwin Core formatted results</span></span>
+<span><span class="va">event_table</span> <span class="op">&lt;-</span> <span class="va">dc_data</span><span class="op">$</span><span class="va">event</span></span>
+<span><span class="va">occurrence_table</span> <span class="op">&lt;-</span> <span class="va">dc_data</span><span class="op">$</span><span class="va">occurrence</span></span>
+<span><span class="va">emof_table</span> <span class="op">&lt;-</span> <span class="va">dc_data</span><span class="op">$</span><span class="va">emof</span></span>
+<span><span class="va">processing_info</span> <span class="op">&lt;-</span> <span class="va">dc_data</span><span class="op">$</span><span class="va">processing_info</span></span>
+<span><span class="va">metadata</span> <span class="op">&lt;-</span> <span class="va">dc_data</span><span class="op">$</span><span class="va">metadata</span></span></code></pre></div>
 </div>
 <div class="section level4">
-<h4 id="darwin-core-formatting">4. Darwin Core Formatting<a class="anchor" aria-label="anchor" href="#darwin-core-formatting"></a>
+<h4 id="what-the-function-does">What the Function Does<a class="anchor" aria-label="anchor" href="#what-the-function-does"></a>
 </h4>
-<p>The function automatically creates three core Darwin Core
-extensions:</p>
+<p>The <code><a href="../reference/raw_to_dc.html">raw_to_dc()</a></code> function performs the following
+transformations:</p>
+<div class="section level5">
+<h5 id="downloads-legacy-data">1. Downloads Legacy Data<a class="anchor" aria-label="anchor" href="#downloads-legacy-data"></a>
+</h5>
 <ul>
-<li>
-<strong>Event Extension</strong>: Sampling events with temporal and
-spatial metadata</li>
-<li>
-<strong>Occurrence Extension</strong>: Species occurrence records
-with life stage information<br>
-</li>
-<li>
-<strong>eMoF Extension</strong>: Quantitative measurements
-(abundance as ind/m³)</li>
+<li>Retrieves preprocessed parquet files from SharePoint storage</li>
+<li>Currently processes: <code>McZoo_84-13.parquet</code> (1984-2013
+data)</li>
+<li>Future support for: <code>McZoo_16.parquet</code>,
+<code>McZoo_17.parquet</code>, etc.</li>
 </ul>
 </div>
-<div class="section level4">
-<h4 id="geographic-metadata-integration">5. Geographic Metadata Integration<a class="anchor" aria-label="anchor" href="#geographic-metadata-integration"></a>
-</h4>
+<div class="section level5">
+<h5 id="creates-darwin-core-event-extension">2. Creates Darwin Core Event Extension<a class="anchor" aria-label="anchor" href="#creates-darwin-core-event-extension"></a>
+</h5>
+<ul>
+<li>Extracts unique sampling events with temporal information</li>
+<li>Assigns LTER-MareChiara station coordinates automatically:
+<ul>
+<li>Latitude: 40.81°N</li>
+<li>Longitude: 14.25°E</li>
+<li>Location: Gulf of Naples, Tyrrhenian Sea</li>
+<li>Sampling protocol: Vertical tow 0-50m depth</li>
+</ul>
+</li>
+</ul>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># LTER-MareChiara coordinates are automatically assigned:</span></span>
-<span><span class="co"># - Latitude: 40.81°N</span></span>
-<span><span class="co"># - Longitude: 14.25°E  </span></span>
-<span><span class="co"># - Location: Gulf of Naples, Tyrrhenian Sea</span></span>
-<span><span class="co"># - Sampling protocol: Vertical tow 0-50m depth</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="co"># Event extension structure:</span></span>
+<span><span class="co"># - eventID: Unique event identifier</span></span>
+<span><span class="co"># - eventDate: Sampling date</span></span>
+<span><span class="co"># - decimalLatitude: 40.81</span></span>
+<span><span class="co"># - decimalLongitude: 14.25</span></span>
+<span><span class="co"># - locality: "LTER-MareChiara station"</span></span>
+<span><span class="co"># - country: "Italy"</span></span>
+<span><span class="co"># - stateProvince: "Campania"</span></span>
+<span><span class="co"># - waterBody: "Mediterranean Sea"</span></span>
+<span><span class="co"># - maximumDepthInMeters: 50</span></span>
+<span><span class="co"># - minimumDepthInMeters: 0</span></span>
+<span><span class="co"># - samplingProtocol: "Vertical tow 0-50m depth"</span></span></code></pre></div>
 </div>
-</div>
-<div class="section level3">
-<h3 id="alternative-processing-options">Alternative Processing Options<a class="anchor" aria-label="anchor" href="#alternative-processing-options"></a>
-</h3>
-<div class="section level4">
-<h4 id="fast-processing-skip-worms">Fast Processing (Skip WoRMS)<a class="anchor" aria-label="anchor" href="#fast-processing-skip-worms"></a>
-</h4>
+<div class="section level5">
+<h5 id="creates-darwin-core-occurrence-extension">3. Creates Darwin Core Occurrence Extension<a class="anchor" aria-label="anchor" href="#creates-darwin-core-occurrence-extension"></a>
+</h5>
+<ul>
+<li>Links species occurrences to sampling events via
+<code>eventID</code>
+</li>
+<li>Determines occurrence status (present/absent) based on
+abundance</li>
+<li>Includes WoRMS LSIDs for taxonomic validation</li>
+</ul>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Skip WoRMS validation for faster execution</span></span>
-<span><span class="va">quick_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/process_lter_data.html">process_lter_data</a></span><span class="op">(</span></span>
-<span>  worms_validation <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  verbose <span class="op">=</span> <span class="cn">TRUE</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="co"># Occurrence extension structure:</span></span>
+<span><span class="co"># - eventID: Links to Event table</span></span>
+<span><span class="co"># - occurrenceID: Unique occurrence identifier</span></span>
+<span><span class="co"># - scientificName: Full scientific name</span></span>
+<span><span class="co"># - scientificNameID: WoRMS LSID</span></span>
+<span><span class="co"># - occurrenceStatus: "present" or "absent" (based on individualCount &gt; 0)</span></span></code></pre></div>
 </div>
-<div class="section level4">
-<h4 id="direct-csv-export">Direct CSV Export<a class="anchor" aria-label="anchor" href="#direct-csv-export"></a>
-</h4>
+<div class="section level5">
+<h5 id="creates-darwin-core-emof-extended-measurement-or-fact-extension">4. Creates Darwin Core eMoF (Extended Measurement or Fact)
+Extension<a class="anchor" aria-label="anchor" href="#creates-darwin-core-emof-extended-measurement-or-fact-extension"></a>
+</h5>
+<ul>
+<li>Transforms measurements into standardized format</li>
+<li>Uses BODC NERC Vocabulary Server controlled vocabulary</li>
+<li>Includes measurement types, values, units, and their URIs</li>
+</ul>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Export directly to CSV files</span></span>
-<span><span class="fu"><a href="../reference/process_lter_data.html">process_lter_data</a></span><span class="op">(</span></span>
-<span>  output_format <span class="op">=</span> <span class="st">"csv"</span>,</span>
-<span>  output_dir <span class="op">=</span> <span class="st">"processed_data/darwin_core"</span>,</span>
-<span>  verbose <span class="op">=</span> <span class="cn">TRUE</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># This creates:</span></span>
-<span><span class="co"># - event.csv (sampling events)</span></span>
-<span><span class="co"># - occurrence.csv (species occurrences)  </span></span>
-<span><span class="co"># - emof.csv (measurements)</span></span>
-<span><span class="co"># - raw_processed.csv (intermediate data)</span></span>
-<span><span class="co"># - processing_metadata.csv (workflow metadata)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="co"># eMoF extension structure:</span></span>
+<span><span class="co"># - eventID: Links to Event table</span></span>
+<span><span class="co"># - occurrenceID: Links to Occurrence table</span></span>
+<span><span class="co"># - measurementType: Type of measurement (e.g., "individualCount", "sex", "lifeStage")</span></span>
+<span><span class="co"># - measurementTypeID: NERC vocabulary URI for measurement type</span></span>
+<span><span class="co"># - measurementValue: Measured value</span></span>
+<span><span class="co"># - measurementValueID: NERC vocabulary URI for value (e.g., sex codes, life stages)</span></span>
+<span><span class="co"># - measurementUnitID: NERC vocabulary URI for units (e.g., ind/m³)</span></span></code></pre></div>
 </div>
 </div>
-<div class="section level3">
-<h3 id="manual-step-by-step-processing">Manual Step-by-Step Processing<a class="anchor" aria-label="anchor" href="#manual-step-by-step-processing"></a>
-</h3>
-<p>For users who prefer granular control, the individual processing
-steps can be performed manually:</p>
 <div class="section level4">
-<h4 id="basic-data-loading">1. Basic Data Loading<a class="anchor" aria-label="anchor" href="#basic-data-loading"></a>
+<h4 id="silent-processing">Silent Processing<a class="anchor" aria-label="anchor" href="#silent-processing"></a>
 </h4>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Load zooplankton abundance data</span></span>
-<span><span class="va">zooplankton_data</span> <span class="op">&lt;-</span> <span class="fu">readxl</span><span class="fu">::</span><span class="fu"><a href="https://readxl.tidyverse.org/reference/read_excel.html" class="external-link">read_xlsx</a></span><span class="op">(</span></span>
-<span>  <span class="st">"data/lter_zoo_84_13.xlsx"</span>,</span>
-<span>  .name_repair <span class="op">=</span> <span class="st">"minimal"</span></span>
-<span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>dat_id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/context.html" class="external-link">n</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Load sample identification data  </span></span>
-<span><span class="va">sample_ids</span> <span class="op">&lt;-</span> <span class="fu">readxl</span><span class="fu">::</span><span class="fu"><a href="https://readxl.tidyverse.org/reference/read_excel.html" class="external-link">read_xlsx</a></span><span class="op">(</span></span>
-<span>  <span class="st">"data/ids.xlsx"</span>,</span>
-<span>  .name_repair <span class="op">=</span> <span class="st">"minimal"</span>  </span>
-<span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span></span>
-<span>    date <span class="op">=</span> <span class="fu">lubridate</span><span class="fu">::</span><span class="fu"><a href="https://lubridate.tidyverse.org/reference/as_date.html" class="external-link">as_date</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">date</span><span class="op">)</span>, origin <span class="op">=</span> <span class="st">"1899-12-30"</span><span class="op">)</span>,</span>
-<span>    sample_id <span class="op">=</span> <span class="fu">janitor</span><span class="fu">::</span><span class="fu"><a href="https://sfirke.github.io/janitor/reference/make_clean_names.html" class="external-link">make_clean_names</a></span><span class="op">(</span><span class="va">sample_id</span><span class="op">)</span></span>
-<span>  <span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="co"># Run without console messages</span></span>
+<span><span class="va">dc_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/raw_to_dc.html">raw_to_dc</a></span><span class="op">(</span>verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level4">
-<h4 id="taxonomic-processing">2. Taxonomic Processing<a class="anchor" aria-label="anchor" href="#taxonomic-processing"></a>
+<h4 id="accessing-processing-information">Accessing Processing Information<a class="anchor" aria-label="anchor" href="#accessing-processing-information"></a>
 </h4>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Extract and standardize taxonomic information</span></span>
-<span><span class="va">raw_taxa</span> <span class="op">&lt;-</span> <span class="va">zooplankton_data</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">janitor</span><span class="fu">::</span><span class="fu"><a href="https://sfirke.github.io/janitor/reference/clean_names.html" class="external-link">clean_names</a></span><span class="op">(</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">phylum_o_subphylum</span><span class="op">:</span><span class="va">stage</span>, <span class="va">dat_id</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span></span>
-<span>    genus_species <span class="op">=</span> <span class="fu"><a href="../reference/extract_genus_species.html">extract_genus_species</a></span><span class="op">(</span><span class="va">taxa</span><span class="op">)</span><span class="op">$</span><span class="va">genus_species</span></span>
-<span>  <span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">tidyr</span><span class="fu">::</span><span class="fu"><a href="https://tidyr.tidyverse.org/reference/separate.html" class="external-link">separate</a></span><span class="op">(</span></span>
-<span>    <span class="va">genus_species</span>, </span>
-<span>    into <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"genus"</span>, <span class="st">"species"</span><span class="op">)</span>, </span>
-<span>    sep <span class="op">=</span> <span class="st">" "</span>, </span>
-<span>    remove <span class="op">=</span> <span class="cn">FALSE</span>, </span>
-<span>    fill <span class="op">=</span> <span class="st">"right"</span></span>
-<span>  <span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level4">
-<h4 id="data-restructuring">3. Data Restructuring<a class="anchor" aria-label="anchor" href="#data-restructuring"></a>
-</h4>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Convert from wide to long format</span></span>
-<span><span class="va">dates</span> <span class="op">&lt;-</span> <span class="va">zooplankton_data</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="op">-</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">10</span><span class="op">)</span>, <span class="va">dat_id</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="co"># View summary statistics</span></span>
+<span><span class="va">dc_data</span><span class="op">$</span><span class="va">processing_info</span></span>
+<span><span class="co"># Returns:</span></span>
+<span><span class="co"># - processing_date: Timestamp of processing</span></span>
+<span><span class="co"># - total_events: Number of sampling events</span></span>
+<span><span class="co"># - total_occurrences: Number of occurrence records</span></span>
+<span><span class="co"># - total_measurements: Number of measurements in eMoF table</span></span>
+<span><span class="co"># - date_range: Start and end dates of sampling</span></span>
+<span><span class="co"># - unique_taxa: Number of unique taxa</span></span>
 <span></span>
-<span><span class="va">tidy_data</span> <span class="op">&lt;-</span> <span class="va">raw_taxa</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate-joins.html" class="external-link">left_join</a></span><span class="op">(</span><span class="va">dates</span>, by <span class="op">=</span> <span class="st">"dat_id"</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">tidyr</span><span class="fu">::</span><span class="fu"><a href="https://tidyr.tidyverse.org/reference/pivot_longer.html" class="external-link">pivot_longer</a></span><span class="op">(</span></span>
-<span>    <span class="op">-</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">dat_id</span>, <span class="va">taxa</span>, <span class="va">genus_species</span>, <span class="va">stage</span><span class="op">)</span>,</span>
-<span>    names_to <span class="op">=</span> <span class="st">"date"</span>,</span>
-<span>    values_to <span class="op">=</span> <span class="st">"ind_m3"</span></span>
-<span>  <span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span></span>
-<span>    date <span class="op">=</span> <span class="fu">lubridate</span><span class="fu">::</span><span class="fu"><a href="https://lubridate.tidyverse.org/reference/as_date.html" class="external-link">as_date</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="va">date</span><span class="op">)</span>, origin <span class="op">=</span> <span class="st">"1899-12-30"</span><span class="op">)</span></span>
-<span>  <span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate-joins.html" class="external-link">left_join</a></span><span class="op">(</span><span class="va">sample_ids</span>, by <span class="op">=</span> <span class="st">"date"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="co"># View dataset metadata</span></span>
+<span><span class="va">dc_data</span><span class="op">$</span><span class="va">metadata</span></span>
+<span><span class="co"># Returns tibble with:</span></span>
+<span><span class="co"># - dataset_title: Full dataset title</span></span>
+<span><span class="co"># - contact: Principal investigator contact</span></span>
+<span><span class="co"># - institution: Stazione Zoologica Anton Dohrn</span></span>
+<span><span class="co"># - license: CC-BY-NC</span></span>
+<span><span class="co"># - project: DTO-BioFlow FSTP Grant</span></span>
+<span><span class="co"># - processing_date, total_events, date_range_start, date_range_end</span></span></code></pre></div>
 </div>
 </div>
 </div>
@@ -293,98 +269,209 @@ steps can be performed manually:</p>
 <h2 id="quality-control-and-validation">Quality Control and Validation<a class="anchor" aria-label="anchor" href="#quality-control-and-validation"></a>
 </h2>
 <div class="section level3">
-<h3 id="sample-size-verification">Sample Size Verification<a class="anchor" aria-label="anchor" href="#sample-size-verification"></a>
+<h3 id="verifying-output-data-quality">Verifying Output Data Quality<a class="anchor" aria-label="anchor" href="#verifying-output-data-quality"></a>
 </h3>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Verify sample counts</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Total samples processed:"</span>, <span class="fu"><a href="https://dplyr.tidyverse.org/reference/n_distinct.html" class="external-link">n_distinct</a></span><span class="op">(</span><span class="va">darwin_core_data</span><span class="op">$</span><span class="va">eventID</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Date range:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">min</a></span><span class="op">(</span><span class="va">darwin_core_data</span><span class="op">$</span><span class="va">eventDate</span><span class="op">)</span>, <span class="st">"to"</span>, <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">darwin_core_data</span><span class="op">$</span><span class="va">eventDate</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Unique taxa:"</span>, <span class="fu"><a href="https://dplyr.tidyverse.org/reference/n_distinct.html" class="external-link">n_distinct</a></span><span class="op">(</span><span class="va">darwin_core_data</span><span class="op">$</span><span class="va">scientificName</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Total occurrences:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">occurrence_extension</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<p>After processing, you can verify the quality and completeness of the
+Darwin Core data:</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Process the data</span></span>
+<span><span class="va">dc_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/raw_to_dc.html">raw_to_dc</a></span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Verify sample counts using processing_info</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">dc_data</span><span class="op">$</span><span class="va">processing_info</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Check for data completeness</span></span>
-<span><span class="va">missing_coords</span> <span class="op">&lt;-</span> <span class="va">event_extension</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span> </span>
+<span><span class="va">missing_coords</span> <span class="op">&lt;-</span> <span class="va">dc_data</span><span class="op">$</span><span class="va">event</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
 <span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/filter.html" class="external-link">filter</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/NA.html" class="external-link">is.na</a></span><span class="op">(</span><span class="va">decimalLatitude</span><span class="op">)</span> <span class="op">|</span> <span class="fu"><a href="https://rdrr.io/r/base/NA.html" class="external-link">is.na</a></span><span class="op">(</span><span class="va">decimalLongitude</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Events missing coordinates:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">missing_coords</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Verify taxonomic standardization success</span></span>
-<span><span class="va">standardization_summary</span> <span class="op">&lt;-</span> <span class="va">occurrence_extension</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/summarise.html" class="external-link">summarise</a></span><span class="op">(</span></span>
-<span>    original_taxa <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/n_distinct.html" class="external-link">n_distinct</a></span><span class="op">(</span><span class="va">scientificName</span><span class="op">)</span>,</span>
-<span>    standardized_taxa <span class="op">=</span> <span class="fu"><a href="https://dplyr.tidyverse.org/reference/n_distinct.html" class="external-link">n_distinct</a></span><span class="op">(</span><span class="va">genus_species</span><span class="op">)</span>,</span>
-<span>    .groups <span class="op">=</span> <span class="st">"drop"</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">standardization_summary</span><span class="op">)</span></span></code></pre></div>
+<span><span class="co"># Verify occurrence status assignment</span></span>
+<span><span class="va">occurrence_summary</span> <span class="op">&lt;-</span> <span class="va">dc_data</span><span class="op">$</span><span class="va">occurrence</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/count.html" class="external-link">count</a></span><span class="op">(</span><span class="va">occurrenceStatus</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">occurrence_summary</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Check taxonomic coverage</span></span>
+<span><span class="va">unique_taxa</span> <span class="op">&lt;-</span> <span class="va">dc_data</span><span class="op">$</span><span class="va">occurrence</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/distinct.html" class="external-link">distinct</a></span><span class="op">(</span><span class="va">scientificName</span>, <span class="va">scientificNameID</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/arrange.html" class="external-link">arrange</a></span><span class="op">(</span><span class="va">scientificName</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Total unique taxa:"</span>, <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">unique_taxa</span><span class="op">)</span>, <span class="st">"\n"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Verify measurement types in eMoF</span></span>
+<span><span class="va">measurement_types</span> <span class="op">&lt;-</span> <span class="va">dc_data</span><span class="op">$</span><span class="va">emof</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/count.html" class="external-link">count</a></span><span class="op">(</span><span class="va">measurementType</span>, <span class="va">measurementTypeID</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
+<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/arrange.html" class="external-link">arrange</a></span><span class="op">(</span><span class="va">measurementType</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">measurement_types</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="data-export">Data Export<a class="anchor" aria-label="anchor" href="#data-export"></a>
 </h3>
-<p>Export the processed data in Darwin Core Archive format:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Create output directory</span></span>
+<p>Export the processed Darwin Core data for EMODnet Biology
+submission:</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Export Darwin Core tables to CSV</span></span>
 <span><span class="va">output_dir</span> <span class="op">&lt;-</span> <span class="st">"processed_data/darwin_core"</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/files2.html" class="external-link">dir.create</a></span><span class="op">(</span><span class="va">output_dir</span>, recursive <span class="op">=</span> <span class="cn">TRUE</span>, showWarnings <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Export Darwin Core tables</span></span>
-<span><span class="fu">readr</span><span class="fu">::</span><span class="fu"><a href="https://readr.tidyverse.org/reference/write_delim.html" class="external-link">write_csv</a></span><span class="op">(</span><span class="va">event_extension</span>, </span>
-<span>                 <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">output_dir</span>, <span class="st">"event.csv"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu">readr</span><span class="fu">::</span><span class="fu"><a href="https://readr.tidyverse.org/reference/write_delim.html" class="external-link">write_csv</a></span><span class="op">(</span><span class="va">occurrence_extension</span>, </span>
-<span>                 <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">output_dir</span>, <span class="st">"occurrence.csv"</span><span class="op">)</span><span class="op">)</span>  </span>
-<span><span class="fu">readr</span><span class="fu">::</span><span class="fu"><a href="https://readr.tidyverse.org/reference/write_delim.html" class="external-link">write_csv</a></span><span class="op">(</span><span class="va">emof_extension</span>, </span>
-<span>                 <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">output_dir</span>, <span class="st">"emof.csv"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co"># Export Event extension</span></span>
+<span><span class="fu">readr</span><span class="fu">::</span><span class="fu"><a href="https://readr.tidyverse.org/reference/write_delim.html" class="external-link">write_csv</a></span><span class="op">(</span></span>
+<span>  <span class="va">dc_data</span><span class="op">$</span><span class="va">event</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">output_dir</span>, <span class="st">"event.csv"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Export Occurrence extension</span></span>
+<span><span class="fu">readr</span><span class="fu">::</span><span class="fu"><a href="https://readr.tidyverse.org/reference/write_delim.html" class="external-link">write_csv</a></span><span class="op">(</span></span>
+<span>  <span class="va">dc_data</span><span class="op">$</span><span class="va">occurrence</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">output_dir</span>, <span class="st">"occurrence.csv"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Export eMoF extension</span></span>
+<span><span class="fu">readr</span><span class="fu">::</span><span class="fu"><a href="https://readr.tidyverse.org/reference/write_delim.html" class="external-link">write_csv</a></span><span class="op">(</span></span>
+<span>  <span class="va">dc_data</span><span class="op">$</span><span class="va">emof</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">output_dir</span>, <span class="st">"emof.csv"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Export metadata</span></span>
 <span><span class="fu">readr</span><span class="fu">::</span><span class="fu"><a href="https://readr.tidyverse.org/reference/write_delim.html" class="external-link">write_csv</a></span><span class="op">(</span></span>
-<span>  <span class="fu">tibble</span><span class="fu">::</span><span class="fu"><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble</a></span><span class="op">(</span></span>
-<span>    dataset_title <span class="op">=</span> <span class="st">"40 years of Zooplankton data at LTER MareChiara site (Gulf of Naples, Mediterranean Sea) 1984-2024"</span>,</span>
-<span>    contact <span class="op">=</span> <span class="st">"Dr. Iole Di Capua (iole.dicapua@szn.it)"</span>,</span>
-<span>    institution <span class="op">=</span> <span class="st">"Stazione Zoologica Anton Dohrn"</span>,</span>
-<span>    license <span class="op">=</span> <span class="st">"CC-BY-NC"</span>,</span>
-<span>    project <span class="op">=</span> <span class="st">"DTO-BioFlow FSTP Grant"</span>,</span>
-<span>    processing_date <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Sys.time.html" class="external-link">Sys.Date</a></span><span class="op">(</span><span class="op">)</span></span>
-<span>  <span class="op">)</span>,</span>
+<span>  <span class="va">dc_data</span><span class="op">$</span><span class="va">metadata</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">output_dir</span>, <span class="st">"metadata.csv"</span><span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Export raw preprocessed data (for reference)</span></span>
+<span><span class="fu">readr</span><span class="fu">::</span><span class="fu"><a href="https://readr.tidyverse.org/reference/write_delim.html" class="external-link">write_csv</a></span><span class="op">(</span></span>
+<span>  <span class="va">dc_data</span><span class="op">$</span><span class="va">raw_data</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">output_dir</span>, <span class="st">"raw_legacy_data.csv"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="st">"Darwin Core data exported to:"</span>, <span class="va">output_dir</span>, <span class="st">"\n"</span><span class="op">)</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
 <h2 id="integration-with-emodnet-biology">Integration with EMODnet Biology<a class="anchor" aria-label="anchor" href="#integration-with-emodnet-biology"></a>
 </h2>
 <p>The processed Darwin Core data is ready for integration with EMODnet
-Biology following these standards:</p>
+Biology. The <code><a href="../reference/raw_to_dc.html">raw_to_dc()</a></code> function ensures compliance with
+international biodiversity data standards.</p>
 <div class="section level3">
-<h3 id="taxonomic-validation">Taxonomic Validation<a class="anchor" aria-label="anchor" href="#taxonomic-validation"></a>
+<h3 id="data-standards-applied">Data Standards Applied<a class="anchor" aria-label="anchor" href="#data-standards-applied"></a>
 </h3>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># The data will be validated against WoRMS (World Register of Marine Species)</span></span>
-<span><span class="co"># to obtain Life Sciences Identifiers (LSIDs) using the Taxon Match tool</span></span>
-<span><span class="co"># This ensures taxonomic consistency with international databases</span></span>
+<div class="section level4">
+<h4 id="taxonomic-validation">Taxonomic Validation<a class="anchor" aria-label="anchor" href="#taxonomic-validation"></a>
+</h4>
+<p>The legacy input data already includes WoRMS validation:</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># WoRMS LSIDs are already present in the input data:</span></span>
+<span><span class="co"># - scientificNameID contains WoRMS LSID URNs</span></span>
+<span><span class="co"># - Format: "urn:lsid:marinespecies.org:taxname:XXXXXX"</span></span>
+<span><span class="co"># - Ensures taxonomic consistency with international databases</span></span>
+<span><span class="co"># - Links to accepted names and taxonomic hierarchy</span></span>
 <span></span>
-<span><span class="co"># Example WoRMS integration workflow:</span></span>
-<span><span class="co"># 1. Submit genus_species names to WoRMS Taxon Match</span></span>
-<span><span class="co"># 2. Retrieve LSIDs and taxonomic hierarchy</span></span>
-<span><span class="co"># 3. Add scientificNameID column with WoRMS LSIDs</span></span>
-<span><span class="co"># 4. Validate against accepted names and synonyms</span></span></code></pre></div>
+<span><span class="co"># Example from the data:</span></span>
+<span><span class="co"># scientificName: "Acartia clausi"</span></span>
+<span><span class="co"># scientificNameID: "urn:lsid:marinespecies.org:taxname:104251"</span></span></code></pre></div>
 </div>
-<div class="section level3">
-<h3 id="measurement-standardization">Measurement Standardization<a class="anchor" aria-label="anchor" href="#measurement-standardization"></a>
-</h3>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Measurements will be standardized using BODC NERC Vocabulary Server</span></span>
-<span><span class="co"># to ensure consistent terminology for:</span></span>
-<span><span class="co"># - Life stages (adult, juvenile, copepodite, etc.)</span></span>
-<span><span class="co"># - Measurement units (individuals per cubic meter)</span></span>
-<span><span class="co"># - Sampling instruments (WP2 net, Indian Ocean net)</span></span>
-<span><span class="co"># - Sample preservation methods (ethanol, formaldehyde)</span></span>
+<div class="section level4">
+<h4 id="measurement-standardization">Measurement Standardization<a class="anchor" aria-label="anchor" href="#measurement-standardization"></a>
+</h4>
+<p>The <code><a href="../reference/raw_to_dc.html">raw_to_dc()</a></code> function applies BODC NERC Vocabulary
+Server standards:</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># eMoF table uses standardized NERC vocabulary terms:</span></span>
+<span></span>
+<span><span class="co"># 1. Individual counts:</span></span>
+<span><span class="co">#    measurementType: "individualCount"</span></span>
+<span><span class="co">#    measurementTypeID: "https://vocab.nerc.ac.uk/collection/S06/current/S0600002/"</span></span>
+<span><span class="co">#    measurementUnitID: "http://vocab.nerc.ac.uk/collection/P06/current/UPMM/"</span></span>
+<span><span class="co">#    (units: individuals per cubic meter)</span></span>
+<span></span>
+<span><span class="co"># 2. Sex information:</span></span>
+<span><span class="co">#    measurementType: "sex"</span></span>
+<span><span class="co">#    measurementTypeID: "http://vocab.nerc.ac.uk/collection/P01/current/ENTSEX01/"</span></span>
+<span><span class="co">#    measurementValueID: S10 collection codes (e.g., S102=female, S103=male)</span></span>
+<span></span>
+<span><span class="co"># 3. Life stage information:</span></span>
+<span><span class="co">#    measurementType: "lifeStage"</span></span>
+<span><span class="co">#    measurementTypeID: "http://vocab.nerc.ac.uk/collection/P01/current/LSTAGE01/"</span></span>
+<span><span class="co">#    measurementValueID: S11 collection codes (e.g., S1127=juvenile)</span></span>
 <span></span>
 <span><span class="co"># This enables interoperability with other marine biodiversity datasets</span></span></code></pre></div>
+</div>
+</div>
+<div class="section level3">
+<h3 id="obis-compliance">OBIS Compliance<a class="anchor" aria-label="anchor" href="#obis-compliance"></a>
+</h3>
+<p>The Darwin Core structure follows OBIS (Ocean Biodiversity
+Information System) standards:</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># The three-table structure is OBIS-compliant:</span></span>
+<span><span class="co"># 1. Event table (core): Sampling event metadata</span></span>
+<span><span class="co"># 2. Occurrence table (extension): Links to events via eventID</span></span>
+<span><span class="co"># 3. eMoF table (extension): Links to occurrences via occurrenceID</span></span>
+<span></span>
+<span><span class="co"># Geographic coordinates use decimal degrees (WGS84)</span></span>
+<span><span class="co"># Dates follow ISO 8601 format (YYYY-MM-DD)</span></span>
+<span><span class="co"># All tables include proper foreign key relationships</span></span>
+<span></span>
+<span><span class="co"># For OBIS publication guidance, see:</span></span>
+<span><span class="co"># https://manual.obis.org/darwin_core.html</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="data-submission-checklist">Data Submission Checklist<a class="anchor" aria-label="anchor" href="#data-submission-checklist"></a>
+</h3>
+<p>Before submitting to EMODnet Biology:</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># 1. Verify all required Darwin Core terms are present</span></span>
+<span><span class="va">dc_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/raw_to_dc.html">raw_to_dc</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">required_event_terms</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"eventID"</span>, <span class="st">"eventDate"</span>, <span class="st">"decimalLatitude"</span>, <span class="st">"decimalLongitude"</span><span class="op">)</span></span>
+<span><span class="va">required_occurrence_terms</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"eventID"</span>, <span class="st">"occurrenceID"</span>, <span class="st">"scientificName"</span>, <span class="st">"occurrenceStatus"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># 2. Check for missing values in critical fields</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">dc_data</span><span class="op">$</span><span class="va">event</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">dc_data</span><span class="op">$</span><span class="va">occurrence</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># 3. Validate taxonomic identifiers (WoRMS LSIDs)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/all.html" class="external-link">all</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grepl</a></span><span class="op">(</span><span class="st">"^urn:lsid:marinespecies.org:taxname:"</span>, <span class="va">dc_data</span><span class="op">$</span><span class="va">occurrence</span><span class="op">$</span><span class="va">scientificNameID</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># 4. Verify geographic coordinates are within valid ranges</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/all.html" class="external-link">all</a></span><span class="op">(</span><span class="va">dc_data</span><span class="op">$</span><span class="va">event</span><span class="op">$</span><span class="va">decimalLatitude</span> <span class="op">&gt;=</span> <span class="op">-</span><span class="fl">90</span> <span class="op">&amp;</span> <span class="va">dc_data</span><span class="op">$</span><span class="va">event</span><span class="op">$</span><span class="va">decimalLatitude</span> <span class="op">&lt;=</span> <span class="fl">90</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/all.html" class="external-link">all</a></span><span class="op">(</span><span class="va">dc_data</span><span class="op">$</span><span class="va">event</span><span class="op">$</span><span class="va">decimalLongitude</span> <span class="op">&gt;=</span> <span class="op">-</span><span class="fl">180</span> <span class="op">&amp;</span> <span class="va">dc_data</span><span class="op">$</span><span class="va">event</span><span class="op">$</span><span class="va">decimalLongitude</span> <span class="op">&lt;=</span> <span class="fl">180</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># 5. Export data as CSV files</span></span>
+<span><span class="co"># (See Data Export section above)</span></span>
+<span></span>
+<span><span class="co"># 6. Prepare metadata document (EML or ISO19115)</span></span>
+<span><span class="co"># 7. Contact EMODnet Biology data manager for submission</span></span></code></pre></div>
+</div>
+</div>
+<div class="section level2">
+<h2 id="future-development">Future Development<a class="anchor" aria-label="anchor" href="#future-development"></a>
+</h2>
+<div class="section level3">
+<h3 id="support-for-additional-legacy-files">Support for Additional Legacy Files<a class="anchor" aria-label="anchor" href="#support-for-additional-legacy-files"></a>
+</h3>
+<p>The current implementation processes
+<code>McZoo_84-13.parquet</code>. Future versions will support:</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Planned support for additional legacy files:</span></span>
+<span><span class="co"># - McZoo_16.parquet (2016 data)</span></span>
+<span><span class="co"># - McZoo_17.parquet (2017 data)</span></span>
+<span><span class="co"># - McZoo_18.parquet (2018 data)</span></span>
+<span><span class="co"># - ... continuing through 2024</span></span>
+<span></span>
+<span><span class="co"># All files will follow the same standardized format:</span></span>
+<span><span class="co"># - eventID, eventDate, scientificname, lsid, individualCount, lifeStage</span></span>
+<span></span>
+<span><span class="co"># The raw_to_dc() function will be extended to:</span></span>
+<span><span class="co"># 1. Accept file path as parameter</span></span>
+<span><span class="co"># 2. Process multiple files in batch</span></span>
+<span><span class="co"># 3. Combine datasets with proper eventID management</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
 <h2 id="conclusion">Conclusion<a class="anchor" aria-label="anchor" href="#conclusion"></a>
 </h2>
-<p>This workflow transforms 40 years of LTER-MareChiara zooplankton data
-into a FAIR-compliant, Darwin Core-formatted dataset suitable for:</p>
+<p>This workflow converts preprocessed legacy LTER-MareChiara
+zooplankton data into FAIR-compliant, Darwin Core-formatted datasets
+suitable for:</p>
 <ul>
 <li>
 <strong>EMODnet Biology</strong> publication and quality
@@ -392,15 +479,42 @@ control</li>
 <li>
 <strong>European Digital Twin of the Ocean</strong> integration</li>
 <li>
-<strong>International biodiversity databases</strong>
+<strong>OBIS</strong> (Ocean Biodiversity Information System)
 compatibility</li>
+<li>
+<strong>International biodiversity databases</strong>
+interoperability</li>
 <li>
 <strong>Long-term ecological research</strong> and climate change
 studies</li>
 </ul>
-<p>The standardized dataset contributes to the EU Mission “Restore our
-Ocean &amp; Waters by 2030” by providing essential biodiversity
-monitoring data for the Mediterranean Sea ecosystem.</p>
+<p>The standardized dataset contributes to the EU Horizon Mission
+“Restore our Ocean &amp; Waters by 2030” by providing 40 years of
+essential biodiversity monitoring data from the LTER-MareChiara station
+in the Gulf of Naples, Mediterranean Sea.</p>
+<div class="section level3">
+<h3 id="key-features">Key Features<a class="anchor" aria-label="anchor" href="#key-features"></a>
+</h3>
+<ul>
+<li>
+<strong>Standardized taxonomic names</strong> with WoRMS LSIDs</li>
+<li>
+<strong>OBIS-compliant Darwin Core structure</strong> (Event,
+Occurrence, eMoF)</li>
+<li>
+<strong>BODC NERC vocabulary</strong> for measurement
+standardization</li>
+<li>
+<strong>Geographic metadata</strong> with proper coordinates and
+locality information</li>
+<li>
+<strong>Quality control</strong> with comprehensive validation
+checks</li>
+<li>
+<strong>Ready for EMODnet Biology</strong> submission and
+publication</li>
+</ul>
+</div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
@@ -409,7 +523,7 @@ monitoring data for the Mediterranean Sea ecosystem.</p>
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by Lorenzo Longobardi, Iole Di Capua. Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.
+  <p>Developed by Lorenzo Longobardi, Iole Di Capua. Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.
 </p>
 <p>
 © 2025 Stazione Zoologica Anton Dohrn. Licensed under <a href="https://www.gnu.org/licenses/gpl-3.0.html" class="external-link">GPL-3</a>.
