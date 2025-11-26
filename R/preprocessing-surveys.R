@@ -23,6 +23,12 @@ preprocess_surveys <- function(raw_data = NULL) {
       options = conf$storage$sharepoint,
       bucket = conf$storage$sharepoint$aut_bucket,
       format = "csv"
+    ) |>
+    # remove kobo metadata columns
+    dplyr::select(
+      -dplyr::starts_with("_"),
+      -dplyr::starts_with("meta/"),
+      -dplyr::all_of(c("formhub/uuid", "start", "end", "today"))
     )
 
   cruise_info <-
@@ -32,7 +38,9 @@ preprocess_surveys <- function(raw_data = NULL) {
     dplyr::rename_with(~ stringr::str_remove(., "group_environment/")) |>
     dplyr::rename_with(~ stringr::str_remove(., "group_cruise/")) |>
     dplyr::rename_with(~ stringr::str_remove(., "group_abundance/")) |>
-    dplyr::rename_with(~ stringr::str_remove(., "group_sample/"))
+    dplyr::rename_with(~ stringr::str_remove(., "group_sample/")) |>
+    # remove legacy columns
+    dplyr::select(-"sampling_name")
 
   taxa_info <-
     raw_surveys |>
@@ -58,6 +66,8 @@ preprocess_surveys <- function(raw_data = NULL) {
     dplyr::full_join(cruise_info, taxa_info, by = "submission_id") |>
     janitor::clean_names()
 
+  preprocessed_survey |>
+    dplyr::glimpse()
   # process abundances
 
   upload_sharepoint_df(
