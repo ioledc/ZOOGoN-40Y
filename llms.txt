@@ -20,17 +20,18 @@ dataset from the Western Mediterranean Sea, including:
 
 ## Key Features
 
-- **Taxonomic Standardization**: Robust genus-species extraction from
-  complex taxonomic strings
-- **Species Complex Handling**: Converts multi-species entries
-- **Family-level Processing**: Creates standardized names from family
-  entries
-- **Darwin Core Compliance**: Converts datasets to international
-  biodiversity standards
+- **Cloud Storage Integration**: Microsoft SharePoint connectivity for
+  collaborative data management
+- **Survey Data Ingestion**: KoboToolbox integration for automated field
+  survey collection
+- **Darwin Core Conversion**: Transform legacy zooplankton data to
+  OBIS-compliant format
+- **Automated Workflows**: Infrastructure for continuous biodiversity
+  monitoring
 - **FAIR Data Principles**: Ensures Findable, Accessible, Interoperable,
   Reusable data
-- **EMODnet Biology Integration**: Quality-controlled data publication
-  workflow
+- **EMODnet Biology Ready**: Standards-compliant data for European
+  marine biodiversity infrastructure
 
 ## Installation
 
@@ -44,68 +45,64 @@ pak::pak("ioledc/ZOOGoN-40Y")
 
 ## Usage
 
-### Basic Taxonomic Standardization
+### Darwin Core Conversion
+
+Convert preprocessed legacy zooplankton data to Darwin Core format:
 
 ``` r
 library(ZooGoN)
 
-# Example taxonomic names from Gulf of Naples zooplankton samples
-taxa_examples <- c(
-  "Sardinella+Sardinops",                    # Species complex
-  "Clupeidae n.i.",                          # Family level  
-  "Engraulis - group",                       # Higher group
-  "Lutjanus (Paradies) argentimaculatus (Forsskål, 1775)",  # Full binomial
-  "Chiridius poppei Giesbrecht, 1893"       # Standard binomial
-)
+# Convert legacy data to Darwin Core format
+dc_data <- raw_to_dc()
 
-# Standardize taxonomic names
-standardized <- extract_genus_species(taxa_examples)
-print(standardized)
+# Access Darwin Core extension tables
+event_table <- dc_data$event              # Sampling events
+occurrence_table <- dc_data$occurrence    # Species occurrences
+measurements <- dc_data$emof              # Extended measurements
 
-# Expected output:
-#   original_name                                          genus_species
-#   <chr>                                                  <chr>        
-# 1 Sardinella+Sardinops                                   Sardinella spp
-# 2 Clupeidae n.i.                                         Clupegenus sp
-# 3 Engraulis - group                                      Engraulis indet
-# 4 Lutjanus (Paradies) argentimaculatus (Forsskål, 1775) Lutjanus argentimaculatus
-# 5 Chiridius poppei Giesbrecht, 1893                     Chiridius poppei
+# View processing summary
+dc_data$processing_info
 ```
 
-### Complete Data Processing Workflow
+The function creates OBIS-compliant tables with: - **Event Extension**:
+Sampling event metadata with geographic coordinates - **Occurrence
+Extension**: Species occurrences with WoRMS LSIDs - **eMoF Extension**:
+Measurements with BODC NERC Vocabulary standards
 
-The package provides a comprehensive function that processes the entire
-LTER-MareChiara dataset from raw Excel files to Darwin Core format:
+### Cloud Storage Operations
+
+Upload and download data to/from Microsoft SharePoint:
 
 ``` r
-# Complete workflow in a single function call
-processed_data <- process_lter_data(
-  zoo_data_path = "data/lter_zoo_84_13.xlsx",
-  ids_data_path = "data/ids.xlsx", 
-  worms_validation = TRUE,
-  output_format = "list",
-  verbose = TRUE
+# Upload data with automatic versioning
+upload_sharepoint_df(
+  data = my_data,
+  prefix = "processed",
+  options = config$storage$sharepoint,
+  format = "parquet"
 )
 
-# Access Darwin Core formatted results
-event_table <- processed_data$event
-occurrence_table <- processed_data$occurrence
-measurements <- processed_data$emof
+# Download latest version
+data <- download_sharepoint_file(
+  prefix = "processed",
+  options = config$storage$sharepoint,
+  format = "parquet"
+)
 ```
 
-This integrated workflow includes: - **Taxonomic standardization** using
-`extract_genus_species()` - **WoRMS validation** for taxonomic accuracy
-(optional) - **Darwin Core formatting** with Event, Occurrence, and eMoF
-tables - **Geographic metadata** for LTER-MareChiara station - **Quality
-control** and data validation - **CSV export** capabilities
+### Survey Data Ingestion
 
-### Direct CSV Export
+Retrieve field survey data from KoboToolbox:
 
 ``` r
-# Export processed data directly to CSV files
-process_lter_data(
-  output_format = "csv",
-  output_dir = "processed_data/darwin_core"
+# Ingest surveys from KoboToolbox and upload to SharePoint
+ingest_surveys()
+
+# Or retrieve data directly
+survey_data <- get_kobo_data(
+  assetid = "your_asset_id",
+  uname = "username",
+  pwd = "password"
 )
 ```
 
@@ -158,8 +155,7 @@ citation("ZooGoN")
 
 This work is supported by the DTO-BioFlow project
 (HORIZON-MISS-2022-OCEAN-01-07) under the EU Mission “Restore our Ocean
-& Waters by 2030” through a Financial Support to Third Parties (FSTP)
-grant of €60,000.
+& Waters by 2030”.
 
 ## Contact
 

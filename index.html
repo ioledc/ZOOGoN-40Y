@@ -87,17 +87,17 @@
 </h2>
 <ul>
 <li>
-<strong>Taxonomic Standardization</strong>: Robust genus-species extraction from complex taxonomic strings</li>
+<strong>Cloud Storage Integration</strong>: Microsoft SharePoint connectivity for collaborative data management</li>
 <li>
-<strong>Species Complex Handling</strong>: Converts multi-species entries</li>
+<strong>Survey Data Ingestion</strong>: KoboToolbox integration for automated field survey collection</li>
 <li>
-<strong>Family-level Processing</strong>: Creates standardized names from family entries</li>
+<strong>Darwin Core Conversion</strong>: Transform legacy zooplankton data to OBIS-compliant format</li>
 <li>
-<strong>Darwin Core Compliance</strong>: Converts datasets to international biodiversity standards</li>
+<strong>Automated Workflows</strong>: Infrastructure for continuous biodiversity monitoring</li>
 <li>
 <strong>FAIR Data Principles</strong>: Ensures Findable, Accessible, Interoperable, Reusable data</li>
 <li>
-<strong>EMODnet Biology Integration</strong>: Quality-controlled data publication workflow</li>
+<strong>EMODnet Biology Ready</strong>: Standards-compliant data for European marine biodiversity infrastructure</li>
 </ul>
 </div>
 <div class="section level2">
@@ -112,61 +112,57 @@
 <h2 id="usage">Usage<a class="anchor" aria-label="anchor" href="#usage"></a>
 </h2>
 <div class="section level3">
-<h3 id="basic-taxonomic-standardization">Basic Taxonomic Standardization<a class="anchor" aria-label="anchor" href="#basic-taxonomic-standardization"></a>
+<h3 id="darwin-core-conversion">Darwin Core Conversion<a class="anchor" aria-label="anchor" href="#darwin-core-conversion"></a>
 </h3>
+<p>Convert preprocessed legacy zooplankton data to Darwin Core format:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/ioledc/ZOOGoN-40Y" class="external-link">ZooGoN</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Example taxonomic names from Gulf of Naples zooplankton samples</span></span>
-<span><span class="va">taxa_examples</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>  <span class="st">"Sardinella+Sardinops"</span>,                    <span class="co"># Species complex</span></span>
-<span>  <span class="st">"Clupeidae n.i."</span>,                          <span class="co"># Family level  </span></span>
-<span>  <span class="st">"Engraulis - group"</span>,                       <span class="co"># Higher group</span></span>
-<span>  <span class="st">"Lutjanus (Paradies) argentimaculatus (Forsskål, 1775)"</span>,  <span class="co"># Full binomial</span></span>
-<span>  <span class="st">"Chiridius poppei Giesbrecht, 1893"</span>       <span class="co"># Standard binomial</span></span>
-<span><span class="op">)</span></span>
+<span><span class="co"># Convert legacy data to Darwin Core format</span></span>
+<span><span class="va">dc_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/raw_to_dc.html">raw_to_dc</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Standardize taxonomic names</span></span>
-<span><span class="va">standardized</span> <span class="op">&lt;-</span> <span class="fu">extract_genus_species</span><span class="op">(</span><span class="va">taxa_examples</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">standardized</span><span class="op">)</span></span>
+<span><span class="co"># Access Darwin Core extension tables</span></span>
+<span><span class="va">event_table</span> <span class="op">&lt;-</span> <span class="va">dc_data</span><span class="op">$</span><span class="va">event</span>              <span class="co"># Sampling events</span></span>
+<span><span class="va">occurrence_table</span> <span class="op">&lt;-</span> <span class="va">dc_data</span><span class="op">$</span><span class="va">occurrence</span>    <span class="co"># Species occurrences</span></span>
+<span><span class="va">measurements</span> <span class="op">&lt;-</span> <span class="va">dc_data</span><span class="op">$</span><span class="va">emof</span>              <span class="co"># Extended measurements</span></span>
 <span></span>
-<span><span class="co"># Expected output:</span></span>
-<span><span class="co">#   original_name                                          genus_species</span></span>
-<span><span class="co">#   &lt;chr&gt;                                                  &lt;chr&gt;        </span></span>
-<span><span class="co"># 1 Sardinella+Sardinops                                   Sardinella spp</span></span>
-<span><span class="co"># 2 Clupeidae n.i.                                         Clupegenus sp</span></span>
-<span><span class="co"># 3 Engraulis - group                                      Engraulis indet</span></span>
-<span><span class="co"># 4 Lutjanus (Paradies) argentimaculatus (Forsskål, 1775) Lutjanus argentimaculatus</span></span>
-<span><span class="co"># 5 Chiridius poppei Giesbrecht, 1893                     Chiridius poppei</span></span></code></pre></div>
+<span><span class="co"># View processing summary</span></span>
+<span><span class="va">dc_data</span><span class="op">$</span><span class="va">processing_info</span></span></code></pre></div>
+<p>The function creates OBIS-compliant tables with: - <strong>Event Extension</strong>: Sampling event metadata with geographic coordinates - <strong>Occurrence Extension</strong>: Species occurrences with WoRMS LSIDs - <strong>eMoF Extension</strong>: Measurements with BODC NERC Vocabulary standards</p>
 </div>
 <div class="section level3">
-<h3 id="complete-data-processing-workflow">Complete Data Processing Workflow<a class="anchor" aria-label="anchor" href="#complete-data-processing-workflow"></a>
+<h3 id="cloud-storage-operations">Cloud Storage Operations<a class="anchor" aria-label="anchor" href="#cloud-storage-operations"></a>
 </h3>
-<p>The package provides a comprehensive function that processes the entire LTER-MareChiara dataset from raw Excel files to Darwin Core format:</p>
+<p>Upload and download data to/from Microsoft SharePoint:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Complete workflow in a single function call</span></span>
-<span><span class="va">processed_data</span> <span class="op">&lt;-</span> <span class="fu">process_lter_data</span><span class="op">(</span></span>
-<span>  zoo_data_path <span class="op">=</span> <span class="st">"data/lter_zoo_84_13.xlsx"</span>,</span>
-<span>  ids_data_path <span class="op">=</span> <span class="st">"data/ids.xlsx"</span>, </span>
-<span>  worms_validation <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  output_format <span class="op">=</span> <span class="st">"list"</span>,</span>
-<span>  verbose <span class="op">=</span> <span class="cn">TRUE</span></span>
+<code class="sourceCode R"><span><span class="co"># Upload data with automatic versioning</span></span>
+<span><span class="fu"><a href="reference/upload_sharepoint_df.html">upload_sharepoint_df</a></span><span class="op">(</span></span>
+<span>  data <span class="op">=</span> <span class="va">my_data</span>,</span>
+<span>  prefix <span class="op">=</span> <span class="st">"processed"</span>,</span>
+<span>  options <span class="op">=</span> <span class="va">config</span><span class="op">$</span><span class="va">storage</span><span class="op">$</span><span class="va">sharepoint</span>,</span>
+<span>  format <span class="op">=</span> <span class="st">"parquet"</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Access Darwin Core formatted results</span></span>
-<span><span class="va">event_table</span> <span class="op">&lt;-</span> <span class="va">processed_data</span><span class="op">$</span><span class="va">event</span></span>
-<span><span class="va">occurrence_table</span> <span class="op">&lt;-</span> <span class="va">processed_data</span><span class="op">$</span><span class="va">occurrence</span></span>
-<span><span class="va">measurements</span> <span class="op">&lt;-</span> <span class="va">processed_data</span><span class="op">$</span><span class="va">emof</span></span></code></pre></div>
-<p>This integrated workflow includes: - <strong>Taxonomic standardization</strong> using <code>extract_genus_species()</code> - <strong>WoRMS validation</strong> for taxonomic accuracy (optional) - <strong>Darwin Core formatting</strong> with Event, Occurrence, and eMoF tables - <strong>Geographic metadata</strong> for LTER-MareChiara station - <strong>Quality control</strong> and data validation - <strong>CSV export</strong> capabilities</p>
+<span><span class="co"># Download latest version</span></span>
+<span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/download_sharepoint_file.html">download_sharepoint_file</a></span><span class="op">(</span></span>
+<span>  prefix <span class="op">=</span> <span class="st">"processed"</span>,</span>
+<span>  options <span class="op">=</span> <span class="va">config</span><span class="op">$</span><span class="va">storage</span><span class="op">$</span><span class="va">sharepoint</span>,</span>
+<span>  format <span class="op">=</span> <span class="st">"parquet"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
-<h3 id="direct-csv-export">Direct CSV Export<a class="anchor" aria-label="anchor" href="#direct-csv-export"></a>
+<h3 id="survey-data-ingestion">Survey Data Ingestion<a class="anchor" aria-label="anchor" href="#survey-data-ingestion"></a>
 </h3>
+<p>Retrieve field survey data from KoboToolbox:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Export processed data directly to CSV files</span></span>
-<span><span class="fu">process_lter_data</span><span class="op">(</span></span>
-<span>  output_format <span class="op">=</span> <span class="st">"csv"</span>,</span>
-<span>  output_dir <span class="op">=</span> <span class="st">"processed_data/darwin_core"</span></span>
+<code class="sourceCode R"><span><span class="co"># Ingest surveys from KoboToolbox and upload to SharePoint</span></span>
+<span><span class="fu"><a href="reference/ingest_surveys.html">ingest_surveys</a></span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Or retrieve data directly</span></span>
+<span><span class="va">survey_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/get_kobo_data.html">get_kobo_data</a></span><span class="op">(</span></span>
+<span>  assetid <span class="op">=</span> <span class="st">"your_asset_id"</span>,</span>
+<span>  uname <span class="op">=</span> <span class="st">"username"</span>,</span>
+<span>  pwd <span class="op">=</span> <span class="st">"password"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
 </div>
@@ -266,7 +262,7 @@
 <div class="section level2">
 <h2 id="funding">Funding<a class="anchor" aria-label="anchor" href="#funding"></a>
 </h2>
-<p>This work is supported by the DTO-BioFlow project (HORIZON-MISS-2022-OCEAN-01-07) under the EU Mission “Restore our Ocean &amp; Waters by 2030” through a Financial Support to Third Parties (FSTP) grant of €60,000.</p>
+<p>This work is supported by the DTO-BioFlow project (HORIZON-MISS-2022-OCEAN-01-07) under the EU Mission “Restore our Ocean &amp; Waters by 2030”.</p>
 </div>
 <div class="section level2">
 <h2 id="contact">Contact<a class="anchor" aria-label="anchor" href="#contact"></a>
