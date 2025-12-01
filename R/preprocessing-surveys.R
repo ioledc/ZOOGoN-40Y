@@ -66,8 +66,6 @@ preprocess_surveys <- function(raw_data = NULL) {
     dplyr::full_join(cruise_info, taxa_info, by = "submission_id") |>
     janitor::clean_names()
 
-  preprocessed_survey |>
-    dplyr::glimpse()
   # process abundances
 
   upload_sharepoint_df(
