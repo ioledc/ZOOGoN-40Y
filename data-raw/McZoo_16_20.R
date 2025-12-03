@@ -1,32 +1,65 @@
-## code to prepare zoo data (1984-2013)
-
-# load configuration parameters
+## code to prepare zoo data (2016-2020)
+# Load packages and configurations (including credentials from .env)
+devtools::load_all()
 conf <- read_config()
 
-# get legacy data from legacy_data bucket
+# get legacy data from legacy_data bucket from sharepoint, formatting data and name 
 ids <-
   download_sharepoint_file(
-    prefix = "ids_16_20.xlsx",
-    options = conf$storage$sharepoint,
+    prefix = "ids_16_20.csv",
+   options = conf$storage$sharepoint,
     bucket = "legacy_data",
     filename = TRUE
-  ) |>
+  ) |> 
+  dplyr::rename(sample_id = id) |>
   dplyr::mutate(
-    date = lubridate::as_date(as.numeric(.data$date), origin = "1899-12-30"),
-    sample_id = janitor::make_clean_names(.data$sample_id)
+    date = lubridate::mdy(.data$date)
   )
 
-bio <-
-  download_sharepoint_file(
-    prefix = "zoo_84_13.csv",
-    options = conf$storage$sharepoint,
-    bucket = "legacy_data",
-    filename = TRUE
-  ) |>
+# Understanding the nature of the variable helped me get the code to work because the dates were of a “character” nature.
+# date is "character" class, I must convert it directly from string to date
+class(ids$date)
+View(ids)
+
+# get legacy data from legacy_data bucket from sharepoint, formatting data
+zoo <- download_sharepoint_file(
+  prefix = "merge_taxa_16_20.csv",
+  options = conf$storage$sharepoint,
+  bucket = "legacy_data",
+  filename = TRUE
+)
+
+# I apply transformations because the “dowload_sharepoint_file” function confuses the “,” separator in the CSV file with data such as scientific names
+# convert everything to characters
+zoo <- zoo |>
   dplyr::mutate(
-    dat_id = seq_len(dplyr::n()),
-    TAXA = stringr::str_trim(.data$TAXA)
-  )
+    stage = as.character(stage),
+    ind_m3 = as.character(ind_m3),
+    has_comma = grepl(",", ind_m3, fixed = TRUE),              # Check if ind_m3 contains a comma
+    taxa = dplyr::case_when(
+      grepl("[0-9]{4}", stage) ~ paste0(taxa, ", ", stage),
+      TRUE ~ taxa
+    ),                                                         # I reconstruct taxa
+    stage = dplyr::case_when(
+      has_comma ~ sub(",.*", "", ind_m3),
+      TRUE ~ stage
+    ),                                                         # I correct stage
+    ind_m3 = dplyr::case_when(
+      has_comma ~ sub(".*,", "", ind_m3),
+      TRUE ~ ind_m3
+    ),                                                         # I correct Ind_m3
+    stage = dplyr::na_if(stage, "#N/D"),
+    ind_m3 = dplyr::na_if(ind_m3, "#N/D"),
+    ind_m3 = as.numeric(ind_m3),                               # I manage #N/A
+    date = lubridate::mdy(date)                                # Convert dates
+  ) |>
+  dplyr::select(-has_comma)                                    
+
+class(zoo)
+head(zoo)
+View(zoo)
+zoo[7494:7504,]
+###########################################################################################
 
 dates <-
   bio |>
