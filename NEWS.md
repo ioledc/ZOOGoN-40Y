@@ -1,3 +1,9 @@
+# ZooGoN 3.0.0
+
+- Added automated GBIF publishing helpers: `register_gbif_dataset()` for production use and `register_gbif_dataset_test()` for the GBIF-Test demo flow; both take a public DwC-A URL and handle dataset registration.
+- Simplified Darwin Core export: `dc_to_archive()` now builds the DwC-A + EML from `raw_to_dc()` output and uploads the archive to SharePoint.
+- Clarified EML generation (`get_metadata()`) and cleaned up pkgdown reference sections.
+
 # ZooGoN 2.0.0
 
 ## Automation & Cloud Integration

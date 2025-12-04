@@ -46,6 +46,7 @@ docs
 *.tsv
 *.parquet
 /.quarto/
+*xml
 
 
 ## Other
