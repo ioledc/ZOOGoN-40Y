@@ -13,6 +13,7 @@
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/add_version_to_path.html</loc></url>
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/clean_path.html</loc></url>
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/connect_to_sharepoint.html</loc></url>
+<url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/dc_to_archive.html</loc></url>
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/download_file_from_sharepoint.html</loc></url>
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/download_sharepoint_file.html</loc></url>
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/find_latest_version.html</loc></url>
@@ -20,6 +21,7 @@
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/flatten_row.html</loc></url>
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/get_content_type.html</loc></url>
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/get_kobo_data.html</loc></url>
+<url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/get_metadata.html</loc></url>
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/get_ms_graph_token.html</loc></url>
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/get_sharepoint_site.html</loc></url>
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/get_site_drive_id.html</loc></url>
@@ -30,6 +32,8 @@
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/preprocess_surveys.html</loc></url>
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/raw_to_dc.html</loc></url>
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/read_config.html</loc></url>
+<url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/register_gbif_dataset.html</loc></url>
+<url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/register_gbif_dataset_test.html</loc></url>
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/rename_child.html</loc></url>
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/reshape_kobo_repeat.html</loc></url>
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/upload_file_to_sharepoint.html</loc></url>

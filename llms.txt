@@ -136,6 +136,19 @@ standards:
 - **📄 FAIR Principles**: Findable, Accessible, Interoperable, Reusable
   data
 
+## Publishing to GBIF (optional)
+
+- Build a Darwin Core Archive and EML with `dc_to_archive(raw_to_dc())`
+  (writes the zip and uploads it to SharePoint).
+- Production registration: use
+  [`register_gbif_dataset()`](https://ioledc.github.io/ZOOGoN-40Y/reference/register_gbif_dataset.md)
+  with your real GBIF organization key, installation key, credentials,
+  and a public DwC-A URL.
+- Test registration: use
+  [`register_gbif_dataset_test()`](https://ioledc.github.io/ZOOGoN-40Y/reference/register_gbif_dataset_test.md)
+  with the GBIF-Test demo credentials (ws_client_demo/Demo123) and your
+  public DwC-A URL to exercise the flow safely.
+
 ## Contributing
 
 This package is part of the DTO-BioFlow project timeline (2025-2026):
@@ -224,6 +237,17 @@ Helper functions for data processing
   : Read configuration file
 - [`load_dotenv()`](https://ioledc.github.io/ZOOGoN-40Y/reference/load_dotenv.md)
   : Load environment variables from .env file
+
+## Publishing
+
+Build and register Darwin Core Archives
+
+- [`dc_to_archive()`](https://ioledc.github.io/ZOOGoN-40Y/reference/dc_to_archive.md)
+  : Build a Darwin Core Archive and upload to SharePoint
+- [`register_gbif_dataset()`](https://ioledc.github.io/ZOOGoN-40Y/reference/register_gbif_dataset.md)
+  : Register a hosted archive on GBIF
+- [`register_gbif_dataset_test()`](https://ioledc.github.io/ZOOGoN-40Y/reference/register_gbif_dataset_test.md)
+  : GBIF-Test demo flow (fixed keys and credentials)
 
 # Articles
 

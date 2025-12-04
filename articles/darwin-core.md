@@ -158,6 +158,18 @@ upload_sharepoint_df(
 )
 ```
 
+## Publishing (optional)
+
+If you need to publish the archive to GBIF:
+
+- Production: supply your real organization/installation keys and a
+  public DwC-A URL to
+  [`register_gbif_dataset()`](https://ioledc.github.io/ZOOGoN-40Y/reference/register_gbif_dataset.md).
+- Test: use the GBIF-Test demo helper
+  [`register_gbif_dataset_test()`](https://ioledc.github.io/ZOOGoN-40Y/reference/register_gbif_dataset_test.md)
+  with the demo credentials and a public DwC-A URL to check the flow
+  safely.
+
 ## Limitations and next steps
 
 - The current implementation processes a single legacy file

@@ -30,7 +30,7 @@
 
     <a class="navbar-brand me-2" href="index.html">ZooGoN</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">3.0.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -236,6 +236,15 @@
 <strong>🏷️ ISO19115 Metadata</strong>: International metadata standards</li>
 <li>
 <strong>📄 FAIR Principles</strong>: Findable, Accessible, Interoperable, Reusable data</li>
+</ul>
+</div>
+<div class="section level2">
+<h2 id="publishing-to-gbif-optional">Publishing to GBIF (optional)<a class="anchor" aria-label="anchor" href="#publishing-to-gbif-optional"></a>
+</h2>
+<ul>
+<li>Build a Darwin Core Archive and EML with <code>dc_to_archive(raw_to_dc())</code> (writes the zip and uploads it to SharePoint).</li>
+<li>Production registration: use <code><a href="reference/register_gbif_dataset.html">register_gbif_dataset()</a></code> with your real GBIF organization key, installation key, credentials, and a public DwC-A URL.</li>
+<li>Test registration: use <code><a href="reference/register_gbif_dataset_test.html">register_gbif_dataset_test()</a></code> with the GBIF-Test demo credentials (ws_client_demo/Demo123) and your public DwC-A URL to exercise the flow safely.</li>
 </ul>
 </div>
 <div class="section level2">

@@ -40,3 +40,14 @@ Helper functions for data processing
   : Read configuration file
 - [`load_dotenv()`](https://ioledc.github.io/ZOOGoN-40Y/reference/load_dotenv.md)
   : Load environment variables from .env file
+
+## Publishing
+
+Build and register Darwin Core Archives
+
+- [`dc_to_archive()`](https://ioledc.github.io/ZOOGoN-40Y/reference/dc_to_archive.md)
+  : Build a Darwin Core Archive and upload to SharePoint
+- [`register_gbif_dataset()`](https://ioledc.github.io/ZOOGoN-40Y/reference/register_gbif_dataset.md)
+  : Register a hosted archive on GBIF
+- [`register_gbif_dataset_test()`](https://ioledc.github.io/ZOOGoN-40Y/reference/register_gbif_dataset_test.md)
+  : GBIF-Test demo flow (fixed keys and credentials)

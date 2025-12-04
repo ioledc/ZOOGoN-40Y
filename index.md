@@ -136,6 +136,19 @@ standards:
 - **📄 FAIR Principles**: Findable, Accessible, Interoperable, Reusable
   data
 
+## Publishing to GBIF (optional)
+
+- Build a Darwin Core Archive and EML with `dc_to_archive(raw_to_dc())`
+  (writes the zip and uploads it to SharePoint).
+- Production registration: use
+  [`register_gbif_dataset()`](https://ioledc.github.io/ZOOGoN-40Y/reference/register_gbif_dataset.md)
+  with your real GBIF organization key, installation key, credentials,
+  and a public DwC-A URL.
+- Test registration: use
+  [`register_gbif_dataset_test()`](https://ioledc.github.io/ZOOGoN-40Y/reference/register_gbif_dataset_test.md)
+  with the GBIF-Test demo credentials (ws_client_demo/Demo123) and your
+  public DwC-A URL to exercise the flow safely.
+
 ## Contributing
 
 This package is part of the DTO-BioFlow project timeline (2025-2026):

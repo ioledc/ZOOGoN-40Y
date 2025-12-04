@@ -1,5 +1,22 @@
 # Changelog
 
+## ZooGoN 3.0.0
+
+- Added automated GBIF publishing helpers:
+  [`register_gbif_dataset()`](https://ioledc.github.io/ZOOGoN-40Y/reference/register_gbif_dataset.md)
+  for production use and
+  [`register_gbif_dataset_test()`](https://ioledc.github.io/ZOOGoN-40Y/reference/register_gbif_dataset_test.md)
+  for the GBIF-Test demo flow; both take a public DwC-A URL and handle
+  dataset registration.
+- Simplified Darwin Core export:
+  [`dc_to_archive()`](https://ioledc.github.io/ZOOGoN-40Y/reference/dc_to_archive.md)
+  now builds the DwC-A + EML from
+  [`raw_to_dc()`](https://ioledc.github.io/ZOOGoN-40Y/reference/raw_to_dc.md)
+  output and uploads the archive to SharePoint.
+- Clarified EML generation
+  ([`get_metadata()`](https://ioledc.github.io/ZOOGoN-40Y/reference/get_metadata.md))
+  and cleaned up pkgdown reference sections.
+
 ## ZooGoN 2.0.0
 
 ### Automation & Cloud Integration
