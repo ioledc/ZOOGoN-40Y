@@ -43,6 +43,8 @@ Imports:
     EML,
     LivingNorwayR,
     lubridate
+Remotes:
+    LivingNorway/LivingNorwayR
 Suggests: 
     testthat (>= 3.0.0),
     knitr,
