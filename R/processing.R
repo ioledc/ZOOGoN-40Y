@@ -146,17 +146,16 @@ raw_to_dc <- function(
     dplyr::arrange(.data$eventDate) |>
     dplyr::distinct() |>
     dplyr::mutate(
+      eventDate = as.character(.data$eventDate),
       decimalLatitude = 40.81,
       decimalLongitude = 14.25,
+      countryCode = "IT",
       locality = "LTER-MareChiara station",
-      country = "Italy",
       stateProvince = "Campania",
       waterBody = "Mediterranean Sea",
       maximumDepthInMeters = 50,
       minimumDepthInMeters = 0,
-      samplingProtocol = "Vertical tow 0-50m depth",
-      sampleSizeValue = 1,
-      sampleSizeUnit = "sample"
+      samplingProtocol = "Vertical tow 0-50m depth"
     )
 
   # Create Darwin Core Occurrence extension
@@ -177,9 +176,11 @@ raw_to_dc <- function(
     dplyr::distinct()
 
   occurrence_table <- full_table |>
+    dplyr::mutate(basisOfRecord = "MachineObservation") |>
     dplyr::select(
       "eventID",
       "occurrenceID",
+      "basisOfRecord",
       scientificName = "scientificname",
       scientificNameID = "lsid",
       "occurrenceStatus"
@@ -222,7 +223,7 @@ raw_to_dc <- function(
         .data$measurementType ==
           "lifeStage" ~ "http://vocab.nerc.ac.uk/collection/P01/current/LSTAGE01/",
         .data$measurementType ==
-          "individualCount" ~ "https://vocab.nerc.ac.uk/collection/S06/current/S0600002/",
+          "individualCount" ~ "http://vocab.nerc.ac.uk/collection/P01/current/MZBNMITX/",
         TRUE ~ .data$measurementType
       ),
       measurementValueID = dplyr::case_when(
@@ -233,7 +234,7 @@ raw_to_dc <- function(
         .data$measurementValue == "fm" ~
           "http://vocab.nerc.ac.uk/collection/S10/current/S108/",
         .data$measurementValue == "j" ~
-          "https://vocab.nerc.ac.uk/collection/S11/current/S1127/",
+          "http://vocab.nerc.ac.uk/collection/S11/current/S1127/",
         .data$measurementValue == "fmj" ~
           "http://vocab.nerc.ac.uk/collection/S11/current/S1145/",
         TRUE ~
