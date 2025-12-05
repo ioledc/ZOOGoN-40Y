@@ -8,7 +8,7 @@
 #'
 #' @return Invisible list with paths to the archive and EML.
 #' @export
-dc_to_archive <- function(dc_list) {
+dc_to_archive <- function(dc_list = NULL) {
   conf <- read_config()
 
   event_df <- dc_list$event

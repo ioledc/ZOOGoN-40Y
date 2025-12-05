@@ -4,7 +4,7 @@
 \alias{dc_to_archive}
 \title{Build a Darwin Core Archive and upload to SharePoint}
 \usage{
-dc_to_archive(dc_list)
+dc_to_archive(dc_list = NULL)
 }
 \arguments{
 \item{dc_list}{List from \code{raw_to_dc()} containing \code{event}, \code{occurrence}, and \code{emof}.}
