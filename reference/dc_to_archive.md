@@ -8,7 +8,7 @@ archive to SharePoint using the configured credentials.
 ## Usage
 
 ``` r
-dc_to_archive(dc_list)
+dc_to_archive(dc_list = NULL)
 ```
 
 ## Arguments
