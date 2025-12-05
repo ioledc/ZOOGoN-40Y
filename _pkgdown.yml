@@ -67,6 +67,7 @@ reference:
       - dc_to_archive
       - register_gbif_dataset
       - register_gbif_dataset_test
+      - add_gbif_license_block
 
 articles:
   - title: "Getting Started"

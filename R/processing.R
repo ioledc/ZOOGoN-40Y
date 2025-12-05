@@ -149,6 +149,8 @@ raw_to_dc <- function(
       eventDate = as.character(.data$eventDate),
       decimalLatitude = 40.81,
       decimalLongitude = 14.25,
+      geodeticDatum = "WGS84",
+      continent = "Europe",
       countryCode = "IT",
       institutionCode = "SZN",
       datasetName = "ZooGoN", # to do: verify dataset name

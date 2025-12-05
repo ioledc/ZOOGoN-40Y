@@ -33,7 +33,11 @@ dc_to_archive <- function(dc_list = NULL) {
 
   eml_obj <- get_metadata(event_df)
   eml_path <- file.path(tempdir(), "mc_eml.xml")
+
   EML::write_eml(eml_obj, eml_path)
+  # Fix license block *and* its position
+  add_gbif_license_block(eml_path)
+  # Optional: vanilla EML validation (against eml.xsd)
   EML::eml_validate(eml_path)
 
   metadata <- LivingNorwayR::initializeDwCMetadata(
@@ -131,6 +135,82 @@ get_metadata <- function(event_df = NULL) {
     )
   )
   eml_obj
+}
+
+#' Add GBIF-style license block to an EML file
+#'
+#' This helper modifies an existing EML file by inserting a
+#' GBIF/IPT-compatible \code{<intellectualRights>} element.
+#' Any existing \code{<intellectualRights>} node is removed and
+#' replaced with a paragraph containing a \code{<ulink>} pointing
+#' to the chosen license URL. The new block is inserted before
+#' \code{<coverage>} (or \code{<contact>} if \code{<coverage>} is
+#' missing) to satisfy the GBIF EML profile element order.
+#'
+#' @param eml_path Character string giving the path to an EML file
+#'   on disk. The file is modified in place.
+#' @param url Character string with the license URL. Defaults to
+#'   the Creative Commons Attribution Non Commercial 4.0
+#'   International licence URL.
+#' @param title Character string with the human-readable licence
+#'   title used inside \code{<citetitle>}.
+#'
+#' @return Invisibly returns \code{eml_path}.
+#'
+#' @examples
+#' \dontrun{
+#' eml_path <- "mc_eml.xml"
+#' add_gbif_license_block(eml_path)
+#' }
+#'
+#' @export
+add_gbif_license_block <- function(
+  eml_path,
+  url = "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
+  title = "Creative Commons Attribution Non Commercial (CC-BY-NC) 4.0 License"
+) {
+  doc <- xml2::read_xml(eml_path)
+  dataset <- xml2::xml_find_first(doc, ".//dataset")
+
+  # 1. Remove any existing <intellectualRights>
+  xml2::xml_remove(xml2::xml_find_all(dataset, "intellectualRights"))
+
+  # 2. New GBIF-style block
+  ir_xml <- sprintf(
+    '
+    <intellectualRights>
+      <para>This work is licensed under a
+        <ulink url="%s">
+          <citetitle>%s</citetitle>
+        </ulink>.
+      </para>
+    </intellectualRights>
+  ',
+    url,
+    title
+  )
+
+  ir_node <- xml2::read_xml(ir_xml)
+
+  # 3. Insert in correct position in the GBIF dataset sequence:
+  #    ideally after abstract and BEFORE coverage/contact.
+  cov_node <- xml2::xml_find_first(dataset, "coverage")
+  if (!inherits(cov_node, "xml_missing")) {
+    # insert before <coverage>
+    xml2::xml_add_sibling(cov_node, ir_node, .where = "before")
+  } else {
+    contact_node <- xml2::xml_find_first(dataset, "contact")
+    if (!inherits(contact_node, "xml_missing")) {
+      # fallback: before <contact>
+      xml2::xml_add_sibling(contact_node, ir_node, .where = "before")
+    } else {
+      # last resort: append at end (shouldn’t happen in your case)
+      xml2::xml_add_child(dataset, ir_node)
+    }
+  }
+
+  xml2::write_xml(doc, eml_path)
+  invisible(eml_path)
 }
 
 #' Register a hosted archive on GBIF
@@ -265,4 +345,5 @@ register_gbif_dataset_test <- function(
     registration = reg_body,
     endpoint = httr2::resp_body_json(endpoint_resp)
   )
+  # https://registry.gbif-test.org/dataset/{dataset_key}
 }

@@ -42,7 +42,8 @@ Imports:
     purrr,
     EML,
     LivingNorwayR,
-    lubridate
+    lubridate,
+    xml2
 Remotes:
     LivingNorway/LivingNorwayR
 Suggests: 
