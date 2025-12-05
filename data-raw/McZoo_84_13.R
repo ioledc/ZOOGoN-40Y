@@ -141,7 +141,7 @@ unmatched <-
   dplyr::pull()
 
 
-# prepare ready for export
+# prepare long format ready for export
 
 tidy_data <-
   taxa_df |>
@@ -162,7 +162,9 @@ tidy_data <-
       .data$lifeStage == "f+m+j" ~ "fmj",
       TRUE ~ .data$lifeStage
     )
-  )
+  ) |>
+  # remove NA counts
+  dplyr::filter(!is.na(.data$individualCount))
 
 
 # export csv and parquet tidy files to hot storage bucket
