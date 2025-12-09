@@ -1,4 +1,4 @@
-## code to prepare zoo data (1984-2013)
+## code to prepare zoo data (1984-2015)
 
 # load configuration parameters
 conf <- read_config()
@@ -6,19 +6,21 @@ conf <- read_config()
 # get legacy data from legacy_data bucket
 ids <-
   download_sharepoint_file(
-    prefix = "ids_84_13.csv",
+    prefix = "ids_84_15.csv",
     options = conf$storage$sharepoint,
     bucket = "legacy_data",
     filename = TRUE
   ) |>
   dplyr::mutate(
     date = lubridate::as_date(as.numeric(.data$date), origin = "1899-12-30"),
-    sample_id = janitor::make_clean_names(.data$sample_id)
+    sample_id = janitor::make_clean_names(.data$sample_id),
+    sample_id = stringr::str_replace_all(.data$sample_id, "_", "")
   )
+
 
 bio <-
   download_sharepoint_file(
-    prefix = "zoo_84_13.csv",
+    prefix = "zoo_84_15.csv",
     options = conf$storage$sharepoint,
     bucket = "legacy_data",
     filename = TRUE
@@ -169,7 +171,7 @@ tidy_data <-
 formats <- c("parquet", "csv")
 
 purrr::walk(formats, function(fmt) {
-  filename <- paste0("McZoo_84-13.", fmt)
+  filename <- paste0("McZoo_84-15.", fmt)
 
   # Write locally
   if (fmt == "parquet") {
