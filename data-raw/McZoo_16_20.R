@@ -21,7 +21,6 @@ ids <-
     date = lubridate::mdy(.data$date)
   )
 
-
 # Inside a pipe: use .data$column or simply column.
 # Outside the pipe: you can use dataframe$column.
 # # The pipe creates a “data flow” where the dataframe is transformed step by step, and .data always refers to the current state of that flow
@@ -44,39 +43,7 @@ bio <- download_sharepoint_file(
     ind_m3 = stringr::str_replace_all(ind_m3, ",", ".")
   )
 
-
-## Data Cleaning: this code downloads historical zooplankton data from SharePoint and fixes a CSV parsing issue where commas in scientific names caused data to shift between columns
-# I apply transformations because the “dowload_sharepoint_file” function confuses the “,” separator in the CSV file with data such as scientific names
-# convert everything to characters
-# zoo <- zoo |>
-#   dplyr::mutate(
-#     dat_id = seq_len(dplyr::n()),
-#     stage = as.character(stage),
-#     ind_m3 = as.character(ind_m3), # Convert stage and ind_m3 into characters for manipulation
-#     has_comma = grepl(",", ind_m3, fixed = TRUE), # Create a temporary column has_comma that is TRUE if ind_m3 contains a comma
-#     taxa = dplyr::case_when(
-#       grepl("[0-9]{4}", stage) ~ paste0(taxa, ", ", stage),
-#       TRUE ~ taxa
-#     ), # Reconstructs the name of the taxa: if stage contains 4 consecutive digits (probably data that ended up there by mistake), it adds it to taxa, otherwise it leaves taxa as it is
-#     stage = dplyr::case_when(
-#       has_comma ~ sub(",.*", "", ind_m3),
-#       TRUE ~ stage
-#     ), # Corrects stage: if there is a comma in ind_m3, it takes everything before the comma and puts it in stage, otherwise it leaves stage as it is
-#     ind_m3 = dplyr::case_when(
-#       has_comma ~ sub(".*,", "", ind_m3),
-#       TRUE ~ ind_m3
-#     ), # Correct ind_m3: if there is a comma, take everything after the comma otherwise, leave ind_m3 as it is
-#     stage = dplyr::na_if(stage, "#N/D"),
-#     ind_m3 = dplyr::na_if(ind_m3, "#N/D"), # Converts the text #N/D (Not Available, equivalent to #N/A in Excel) to NA (missing value in R)
-#     ind_m3 = as.numeric(ind_m3),
-#     date = lubridate::mdy(date) # Convert dates
-#   ) |>
-#   dplyr::select(-has_comma) # Removes the temporary column: has_comma
-
-# class(zoo)
-# head(zoo)
-# View(zoo)
-
+## Data Cleaning
 # This code performs taxonomic validation:
 # It takes the names of taxa from your data (which may contain errors, synonyms, old names)
 # searches for them in the international WoRMS database
@@ -86,6 +53,7 @@ bio <- download_sharepoint_file(
 # match taxa down to worms
 reported_taxa <-
   as.character(unique(bio$taxa)) # extracts all unique values from the taxa column (removes duplicates) and converts them to characters (text strings).
+reported_taxa
 
 # purrr::map2_dfr:
 # Iterates over two vectors simultaneously,
@@ -140,7 +108,6 @@ worms_matched_clean <-
   dplyr::select(-"AphiaID") |> # removes the AphiaID column after making the selection, because it is no longer needed
   dplyr::ungroup() # removes the group structure, returning a normal dataframe
 
-
 # Merge the zooplankton dataframe with validated WoRMS taxonomy,
 # merge with ids data frame and sample metadata from worms, reorder and rename columns,
 # and remove duplicates to produce a clean, analysis-ready taxa dataframe.
@@ -172,7 +139,6 @@ taxa_df <-
   ) |>
   dplyr::distinct()
 
-
 # Check for unmatched taxa (to be checked by curators)
 # Identify taxa that did not match any entries in the WoRMS database
 # to allow manual review by editors
@@ -195,16 +161,8 @@ unmatched <-
     "lifestage" = NA_character_
   )
 
-filename <- "taxa_unmatched_16_20.csv"
-# Upload to SharePoint
-upload_sharepoint_df(
-  data = unmatched,
-  prefix = filename,
-  bucket = "worms_unmatched",
-  options = conf$storage$sharepoint,
-  format = "csv",
-  filename = TRUE
-)
+# to upload to sharepoint
+xlsx::write.xlsx(unmatched, "unmatched_worms.xlsx", sheetName = "unmatch")
 
 # prepare ready for export
 tidy_data <-
@@ -241,7 +199,6 @@ tidy_data <-
     ),
     IndividualCount = as.numeric(IndividualCount),
   )
-
 
 # export csv and parquet tidy files to hot storage bucket
 # vreate a vector with the two formats to be generated
