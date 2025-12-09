@@ -1,6 +1,7 @@
 ## code to prepare zoo data (1984-2015)
 
 # load configuration parameters
+devtools::load_all()
 conf <- read_config()
 
 # get legacy data from legacy_data bucket
