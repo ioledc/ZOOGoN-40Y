@@ -120,7 +120,7 @@ download_sharepoint_file <- function(
   prefix,
   options,
   bucket = NULL,
-  format = c("csv", "tsv", "parquet"),
+  format = c("csv", "tsv", "parquet", "xlsx"),
   filename = FALSE
 ) {
   # Set bucket if provided
@@ -132,10 +132,10 @@ download_sharepoint_file <- function(
     # Treat prefix as exact filename
     remote_path <- file.path(options$bucket, prefix)
     format <- tools::file_ext(prefix)
-    if (!format %in% c("csv", "tsv", "parquet")) {
+    if (!format %in% c("csv", "tsv", "parquet", "xlsx")) {
       stop(
         sprintf(
-          "Unsupported file format: %s. Must be csv, tsv, or parquet",
+          "Unsupported file format: %s. Must be csv, tsv, xlsx, or parquet",
           format
         ),
         call. = FALSE
@@ -171,7 +171,8 @@ download_sharepoint_file <- function(
     format,
     csv = readr::read_csv(temp_file, show_col_types = FALSE),
     tsv = readr::read_tsv(temp_file, show_col_types = FALSE),
-    parquet = arrow::read_parquet(temp_file)
+    parquet = arrow::read_parquet(temp_file),
+    xlsx = readxl::read_excel(temp_file)
   )
 }
 

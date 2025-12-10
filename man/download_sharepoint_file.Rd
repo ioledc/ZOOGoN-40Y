@@ -8,7 +8,7 @@ download_sharepoint_file(
   prefix,
   options,
   bucket = NULL,
-  format = c("csv", "tsv", "parquet"),
+  format = c("csv", "tsv", "parquet", "xlsx"),
   filename = FALSE
 )
 }
