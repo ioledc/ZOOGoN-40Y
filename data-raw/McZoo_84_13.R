@@ -31,6 +31,7 @@ bio <-
     TAXA = stringr::str_trim(.data$TAXA)
   )
 
+
 dates <-
   bio |>
   dplyr::select(-c(1:10), "dat_id")
@@ -67,6 +68,7 @@ worms_matched <- purrr::map2_dfr(
   }
 )
 
+
 # Ensure we get one AphiaID per taxon
 worms_matched_clean <-
   worms_matched |>
@@ -86,13 +88,15 @@ worms_matched_clean <-
   dplyr::select(-"AphiaID") |>
   dplyr::ungroup()
 
+
+
 # Merge taxa datafrmae with worms and add dates and ids
 taxa_df <-
   bio |>
   dplyr::select(
     "dat_id",
     reported_taxa = "TAXA",
-    "stage"
+    "stage",
   ) |>
   dplyr::full_join(worms_matched_clean, by = c("reported_taxa" = "original")) |>
   dplyr::full_join(dates, by = "dat_id") |>
@@ -119,6 +123,7 @@ taxa_df <-
   dplyr::relocate("stage", .after = "ind_m3") |>
   dplyr::relocate("date", .after = "sample_id") |>
   dplyr::arrange(.data$sample_id) |>
+  dplyr::arrange(.data$date, .data$sample_id)|>
   dplyr::rename(
     eventID = "sample_id",
     eventDate = "date",
@@ -127,8 +132,25 @@ taxa_df <-
   ) |>
   dplyr::distinct()
 
-# Check for unmatched taxa (to be checked by curators)
 
+# after executing the taxa_id code, the data is not sorted chronologically
+# check the eventID order vs chronological order
+# probably because it's sorted by eventID (alphanumeric) instead of eventDate
+View(taxa_df)
+taxa_df[1194:1204,]
+summary(taxa_df$eventDate)
+
+taxa_df |>
+  dplyr::distinct(eventID, eventDate) |>
+  dplyr::arrange(eventID) |>
+  print(n = 30)
+
+taxa_df |>
+  dplyr::distinct(eventID, eventDate) |>
+  dplyr::arrange(eventDate) |>
+  print(n = 30)
+
+# Check for unmatched taxa (to be checked by curators)
 unmatched <-
   taxa_df |>
   dplyr::select(
@@ -141,11 +163,19 @@ unmatched <-
   dplyr::distinct() |>
   dplyr::filter(is.na(.data$lsid)) |>
   dplyr::select("reported_taxa") |>
-  dplyr::pull()
+  dplyr::distinct() |>
+  dplyr::mutate(
+    "accepted scientific name" = NA_character_,
+    "lifestage" = NA_character_
+  )
+
+unmatched |> View()
+
+# to upload to sharepoint
+xlsx::write.xlsx(unmatched, "unmatched_worms_84_15.xlsx", sheetName = "unmatch")
 
 
 # prepare ready for export
-
 tidy_data <-
   taxa_df |>
   dplyr::select(
