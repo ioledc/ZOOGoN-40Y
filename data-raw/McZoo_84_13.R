@@ -17,7 +17,7 @@ ids <-
     sample_id = janitor::make_clean_names(.data$sample_id),
     sample_id = stringr::str_replace_all(.data$sample_id, "_", "")
   )
-ids |> View()
+
 
 bio <-
   download_sharepoint_file(
@@ -89,7 +89,6 @@ worms_matched <- purrr::map2_dfr(
   }
 )
 
-
 # Ensure we get one AphiaID per taxon
 worms_matched_clean <-
   worms_matched |>
@@ -108,7 +107,6 @@ worms_matched_clean <-
   dplyr::slice_head(n = 1) |>
   dplyr::select(-"AphiaID") |>
   dplyr::ungroup()
-
 
 # Merge taxa datafrmae with worms and add dates and ids
 taxa_df <-
@@ -152,7 +150,6 @@ taxa_df <-
   ) |>
   dplyr::distinct()
 
-
 # Check for unmatched taxa (to be checked by curators)
 unmatched <-
   taxa_df |>
@@ -171,10 +168,6 @@ unmatched <-
     "accepted scientific name" = NA_character_,
     "lifestage" = NA_character_
   )
-
-
-# to upload to sharepoint
-#xlsx::write.xlsx(unmatched, "unmatched_worms_84_15.xlsx", sheetName = "unmatch")
 
 # prepare ready for export
 tidy_data <-
@@ -218,7 +211,7 @@ purrr::walk(formats, function(fmt) {
 
   # Upload to SharePoint
   upload_sharepoint_df(
-    data = tidy_data_complete,
+    data = tidy_data,
     prefix = filename,
     bucket = "hot_storage",
     options = conf$storage$sharepoint,
