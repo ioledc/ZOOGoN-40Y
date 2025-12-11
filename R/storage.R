@@ -60,7 +60,7 @@ upload_sharepoint_df <- function(
     if (!format %in% c("csv", "tsv", "parquet")) {
       stop(
         sprintf(
-          "Unsupported file format: %s. Must be csv, tsv, or parquet",
+          "Unsupported file format: %s. Must be csv, tsv or parquet",
           format
         ),
         call. = FALSE

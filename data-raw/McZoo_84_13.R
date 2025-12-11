@@ -17,7 +17,7 @@ ids <-
     sample_id = janitor::make_clean_names(.data$sample_id),
     sample_id = stringr::str_replace_all(.data$sample_id, "_", "")
   )
-
+ids |> View()
 
 bio <-
   download_sharepoint_file(
