@@ -1,4 +1,5 @@
 ## code to prepare zoo data (2016-2020)
+
 # Load packages and configurations (including credentials from .env)
 devtools::load_all()
 conf <- read_config()
@@ -12,22 +13,16 @@ ids <-
     filename = TRUE
   ) |>
   dplyr::rename(sample_id = id) |>
+  dplyr::select(-"filtered_volume_m3")|>
   dplyr::mutate(
-    filtered_volume_m3 = dplyr::if_else(
-      filtered_volume_m3 == "#N/D",
-      NA_character_,
-      filtered_volume_m3
-    ),
-    date = lubridate::mdy(.data$date)
+    date = lubridate::mdy(.data$date),
+    sample_id = janitor::make_clean_names(.data$sample_id),
+    sample_id = stringr::str_replace_all(.data$sample_id, "_", "")
   )
 
 # Inside a pipe: use .data$column or simply column.
 # Outside the pipe: you can use dataframe$column.
-# # The pipe creates a “data flow” where the dataframe is transformed step by step, and .data always refers to the current state of that flow
-
-# verifying variables to understand the nature of the variable helped me get the code to work because the dates were of a “character” nature.
-# date is "character" class, I must convert it directly from string to date
-# class(ids$date)
+# The pipe creates a “data flow” where the dataframe is transformed step by step, and .data always refers to the current state of that flow
 
 # get legacy data from legacy_data bucket from sharepoint, formatting data
 bio <- download_sharepoint_file(
@@ -43,17 +38,44 @@ bio <- download_sharepoint_file(
     ind_m3 = stringr::str_replace_all(ind_m3, ",", ".")
   )
 
-## Data Cleaning
+## Data Integration
+# previous run of the code highlighted some taxa that did not match on worms
+# downloading this data into a dataframe called “unmatched” 
+# where the accepted scientific name and the respective AphiaID were added. 
+
+# integrate unmatched taxa 
+unmatched_fixed <-
+  download_sharepoint_file(
+    prefix = "unmatched_worms_16_20.xlsx",
+    options = conf$storage$sharepoint,
+    bucket = "worms_unmatched",
+    filename = TRUE
+  ) |>
+  janitor::clean_names()
+
+# Add worms unmatched to our dataset 
+update_bio <-
+  bio |>
+  dplyr::left_join(unmatched_fixed, by = c("taxa" = "reported_taxa")) |>
+  dplyr::mutate(
+    taxa = dplyr::case_when(
+      taxa = !is.na(accepted_scientific_name) ~ accepted_scientific_name,
+      TRUE ~ taxa
+    ),
+    stage = dplyr::case_when(!is.na(lifestage) ~ lifestage, TRUE ~ stage)
+  ) |>
+  dplyr::select(-c(accepted_scientific_name, aphia_id, lifestage))
+
+## Data Validation
 # This code performs taxonomic validation:
 # It takes the names of taxa from your data (which may contain errors, synonyms, old names)
 # searches for them in the international WoRMS database
 # obtains standardized and verified names
 # keeps track of which taxa were not found.
 
-# match taxa down to worms
+# extracts all unique values from the taxa column (removes duplicates) and converts them to characters
 reported_taxa <-
-  as.character(unique(bio$taxa)) # extracts all unique values from the taxa column (removes duplicates) and converts them to characters (text strings).
-reported_taxa
+  as.character(unique(update_bio$taxa))
 
 # purrr::map2_dfr:
 # Iterates over two vectors simultaneously,
@@ -108,12 +130,32 @@ worms_matched_clean <-
   dplyr::select(-"AphiaID") |> # removes the AphiaID column after making the selection, because it is no longer needed
   dplyr::ungroup() # removes the group structure, returning a normal dataframe
 
+## Data WoRMS TEST
+# Check for any unmatched taxa
+# Filter taxa that did not find a valid match on WoRMS under two conditions: AphiaID is NA (no ID found); match_type = “no_match” (explicitly marked as not matched)
+verification_unmatched <-
+  worms_matched |>
+  dplyr::filter(is.na(valid_AphiaID) | match_type == "no_match") |>
+  dplyr::distinct(original)
+
+verification_unmatched |> View()
+
+cat("Unmatched taxa found:", nrow(verification_unmatched), "\n")
+
+# if there are unmatched taxa, display a warning and print them
+# otherwise, confirm that everything is OK!
+if (nrow(verification_unmatched) > 0) {
+  cat("\n WARNING: Some taxa still don't match on WoRMS:\n")
+  print(verification_unmatched)
+} else {
+  cat("\n SUCCESS: All taxa match on WoRMS!\n")
+}
+
 # Merge the zooplankton dataframe with validated WoRMS taxonomy,
 # merge with ids data frame and sample metadata from worms, reorder and rename columns,
 # and remove duplicates to produce a clean, analysis-ready taxa dataframe.
-
 taxa_df <-
-  bio |>
+  update_bio |>
   dplyr::select(
     "dat_id",
     "sample_id",
@@ -126,8 +168,6 @@ taxa_df <-
   janitor::clean_names() |>
   dplyr::select(-"dat_id") |>
   dplyr::left_join(ids, by = c("date", "sample_id")) |>
-  dplyr::select(-c("filtered_volume_m3")) |>
-  #dplyr::relocate("filtered_volume_m3", .before = "ind_m3") |>
   dplyr::relocate("stage", .after = "ind_m3") |>
   dplyr::relocate("date", .after = "sample_id") |>
   dplyr::arrange(.data$sample_id) |>
@@ -161,9 +201,6 @@ unmatched <-
     "lifestage" = NA_character_
   )
 
-# to upload to sharepoint
-xlsx::write.xlsx(unmatched, "unmatched_worms.xlsx", sheetName = "unmatch")
-
 # prepare ready for export
 tidy_data <-
   taxa_df |>
@@ -177,28 +214,32 @@ tidy_data <-
     "lifeStage"
   ) |>
   dplyr::distinct() |> # keeps only one copy of each unique combination
-  dplyr::filter(!is.na(.data$lsid)) |> # filter, Remove unvalidated taxa, keep only those with a valid lsid (found in WoRMS), automatically exclude all 53 taxa in “unmatched”
+  dplyr::filter(!is.na(.data$lsid)) |> # filter, Remove unvalidated taxa, keep only those with a valid lsid (found in WoRMS), automatically exclude all taxa “unmatched”
   dplyr::mutate(
     # standardize the format of vital stages
     lifeStage = dplyr::case_when(
       .data$lifeStage == "f+m" ~ "fm",
       .data$lifeStage == "f+m+j" ~ "fmj",
+       .data$lifeStage == "larvae" ~ "lar",
+      .data$lifeStage == "eggs" ~ "egg",
       TRUE ~ .data$lifeStage # for all other cases, leave the original value unchanged.
     )
-  ) |>
+  )|>
   dplyr::mutate(
     IndividualCount = dplyr::if_else(
-      IndividualCount == "#N/D",
+      IndividualCount %in% c("#N/D", "#N/A"),
       NA_character_,
-      IndividualCount
+      IndividualCount      # convert "#N/D" e "#N/A" in NA
     ),
     lifeStage = dplyr::if_else(
       lifeStage == "#N/D",
       NA_character_,
       lifeStage
     ),
-    IndividualCount = as.numeric(IndividualCount),
+    IndividualCount = as.numeric(IndividualCount),   # convert from character to numeric 
   )
+
+tidy_data |> View()
 
 # export csv and parquet tidy files to hot storage bucket
 # vreate a vector with the two formats to be generated
