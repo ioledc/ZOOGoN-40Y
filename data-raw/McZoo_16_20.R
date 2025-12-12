@@ -38,10 +38,10 @@ bio <- download_sharepoint_file(
 
 ## Data Integration
 # previous run of the code highlighted some taxa that did not match on worms
-# downloading this data into a dataframe called “unmatched” 
-# where the accepted scientific name and the respective AphiaID were added. 
+# downloading this data into a dataframe called “unmatched”
+# where the accepted scientific name and the respective AphiaID were added.
 
-# integrate unmatched taxa 
+# integrate unmatched taxa
 unmatched_fixed <-
   download_sharepoint_file(
     prefix = "unmatched_worms_16_20.xlsx",
@@ -51,7 +51,7 @@ unmatched_fixed <-
   ) |>
   janitor::clean_names()
 
-# Add worms unmatched to our dataset 
+# Add worms unmatched to our dataset
 update_bio <-
   bio |>
   dplyr::left_join(unmatched_fixed, by = c("taxa" = "reported_taxa")) |>
@@ -109,7 +109,6 @@ worms_matched <- purrr::map2_dfr(
   }
 )
 
-worms_matched |> View()
 ## Data WoRMS TEST
 # Check for any unmatched taxa
 # Filter taxa that did not find a valid match on WoRMS under two conditions: AphiaID is NA (no ID found); match_type = “no_match” (explicitly marked as not matched)
@@ -118,7 +117,6 @@ verification_unmatched <-
   dplyr::filter(is.na(valid_AphiaID) | match_type == "no_match") |>
   dplyr::distinct(original)
 
-verification_unmatched |> View()
 
 cat("Unmatched taxa found:", nrow(verification_unmatched), "\n")
 
@@ -219,26 +217,24 @@ tidy_data <-
     lifeStage = dplyr::case_when(
       .data$lifeStage == "f+m" ~ "fm",
       .data$lifeStage == "f+m+j" ~ "fmj",
-       .data$lifeStage == "larvae" ~ "lar",
+      .data$lifeStage == "larvae" ~ "lar",
       .data$lifeStage == "eggs" ~ "egg",
       TRUE ~ .data$lifeStage # for all other cases, leave the original value unchanged.
     )
-  )|>
+  ) |>
   dplyr::mutate(
     IndividualCount = dplyr::if_else(
       IndividualCount %in% c("#N/D", "#N/A"),
       NA_character_,
-      IndividualCount      # convert "#N/D" e "#N/A" in NA
+      IndividualCount # convert "#N/D" e "#N/A" in NA
     ),
     lifeStage = dplyr::if_else(
       lifeStage == "#N/D",
       NA_character_,
       lifeStage
     ),
-    IndividualCount = as.numeric(IndividualCount),   # convert from character to numeric 
+    IndividualCount = as.numeric(IndividualCount), # convert from character to numeric
   )
-
-tidy_data |> View()
 
 # export csv and parquet tidy files to hot storage bucket
 # vreate a vector with the two formats to be generated
