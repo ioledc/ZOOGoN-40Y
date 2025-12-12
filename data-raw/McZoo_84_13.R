@@ -194,7 +194,9 @@ tidy_data <-
       .data$lifeStage == "eggs" ~ "egg",
       TRUE ~ .data$lifeStage
     )
-  )
+  ) |>
+  # remove NA counts
+  dplyr::filter(!is.na(.data$individualCount))
 
 # export csv and parquet tidy files to hot storage bucket
 formats <- c("parquet", "csv")

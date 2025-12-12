@@ -46,7 +46,10 @@ docs
 *.csv
 *.tsv
 *.parquet
+*.xml
+*.zip
 /.quarto/
+
 
 
 ## Other

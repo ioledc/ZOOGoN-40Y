@@ -61,6 +61,14 @@ reference:
       - read_config
       - load_dotenv
 
+  - title: "Publishing"
+    desc: "Build and register Darwin Core Archives"
+    contents:
+      - dc_to_archive
+      - register_gbif_dataset
+      - register_gbif_dataset_test
+      - add_gbif_license_block
+
 articles:
   - title: "Getting Started"
     navbar: "Getting Started"

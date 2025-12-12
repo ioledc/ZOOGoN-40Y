@@ -146,17 +146,20 @@ raw_to_dc <- function(
     dplyr::arrange(.data$eventDate) |>
     dplyr::distinct() |>
     dplyr::mutate(
+      eventDate = as.character(.data$eventDate),
       decimalLatitude = 40.81,
       decimalLongitude = 14.25,
-      locality = "LTER-MareChiara station",
-      country = "Italy",
+      geodeticDatum = "WGS84",
+      continent = "Europe",
+      countryCode = "IT",
+      institutionCode = "SZN",
+      datasetName = "ZooGoN", # to do: verify dataset name
+      locality = "Gulf of Naples",
       stateProvince = "Campania",
-      waterBody = "Mediterranean Sea",
+      waterBody = "Tyrrhenian Sea",
       maximumDepthInMeters = 50,
       minimumDepthInMeters = 0,
-      samplingProtocol = "Vertical tow 0-50m depth",
-      sampleSizeValue = 1,
-      sampleSizeUnit = "sample"
+      samplingProtocol = "Vertical tow 0-50m depth"
     )
 
   # Create Darwin Core Occurrence extension
@@ -173,13 +176,15 @@ raw_to_dc <- function(
       ),
       occurrenceID = paste0(.data$eventID, "-occ", dplyr::row_number())
     ) |>
-    dplyr::relocate("occurrenceID", .after = "eventDate") |>
+    dplyr::relocate("occurrenceID", .after = "eventID") |>
     dplyr::distinct()
 
   occurrence_table <- full_table |>
+    dplyr::mutate(basisOfRecord = "MachineObservation") |>
     dplyr::select(
       "eventID",
       "occurrenceID",
+      "basisOfRecord",
       scientificName = "scientificname",
       scientificNameID = "lsid",
       "occurrenceStatus"
@@ -205,15 +210,22 @@ raw_to_dc <- function(
       names_to = "measurementType",
       values_to = "measurementValue"
     ) |>
-    # to do: check if this is necessary or how to deal with missing values
-    dplyr::filter(
-      !is.na(.data$measurementValue),
-      .data$measurementValue != ""
-    ) |>
     dplyr::mutate(
+      measurementValue = dplyr::case_when(
+        .data$measurementValue == "f" ~ "female",
+        .data$measurementValue == "m" ~ "male",
+        .data$measurementValue == "fm" ~ "male+female",
+        .data$measurementValue == "fmj" ~ "juvenile+adult",
+        .data$measurementValue == "j" ~ "juvenile",
+        is.na(.data$measurementValue) &
+          .data$measurementType == "lifeStage" ~ "not specified",
+        TRUE ~ NA_character_
+      ),
       measurementType = dplyr::case_when(
-        .data$measurementValue %in% c("f", "m", "fm", "fmj") ~ "sex",
-        .data$measurementValue %in% c("j") ~ "lifeStage",
+        .data$measurementValue %in%
+          c("female", "male", "male+female") ~ "sex",
+        .data$measurementValue %in%
+          c("juvenile", "juvenile+adult") ~ "lifeStage",
         TRUE ~ .data$measurementType
       ),
       measurementTypeID = dplyr::case_when(
@@ -222,22 +234,32 @@ raw_to_dc <- function(
         .data$measurementType ==
           "lifeStage" ~ "http://vocab.nerc.ac.uk/collection/P01/current/LSTAGE01/",
         .data$measurementType ==
-          "individualCount" ~ "https://vocab.nerc.ac.uk/collection/S06/current/S0600002/",
+          "individualCount" ~ "http://vocab.nerc.ac.uk/collection/P01/current/MZBNMITX/", #to do: is it correct? or is better http://vocab.nerc.ac.uk/collection/P01/current/OCOUNT01/
         TRUE ~ .data$measurementType
       ),
       measurementValueID = dplyr::case_when(
-        .data$measurementValue == "f" ~
+        .data$measurementValue == "female" ~
           "http://vocab.nerc.ac.uk/collection/S10/current/S102/",
-        .data$measurementValue == "m" ~
+        .data$measurementValue == "male" ~
           "http://vocab.nerc.ac.uk/collection/S10/current/S103/",
-        .data$measurementValue == "fm" ~
+        .data$measurementValue == "male+female" ~
           "http://vocab.nerc.ac.uk/collection/S10/current/S108/",
-        .data$measurementValue == "j" ~
-          "https://vocab.nerc.ac.uk/collection/S11/current/S1127/",
-        .data$measurementValue == "fmj" ~
+        .data$measurementValue == "juvenile" ~
+          "http://vocab.nerc.ac.uk/collection/S11/current/S1127/",
+        .data$measurementValue == "juvenile+adult" ~
           "http://vocab.nerc.ac.uk/collection/S11/current/S1145/",
+        .data$measurementValue == "not specified" &
+          .data$measurementType == "sex" ~
+          "http://vocab.nerc.ac.uk/collection/S10/current/S104/",
+        .data$measurementValue == "not specified" &
+          .data$measurementType == "lifeStage" ~
+          "https://vocab.nerc.ac.uk/collection/S11/current/S1131/",
         TRUE ~
           NA_character_
+      ),
+      measurementUnit = dplyr::case_when(
+        .data$measurementType == "individualCount" ~ "Number per cubic metre",
+        TRUE ~ NA_character_
       ),
       measurementUnitID = dplyr::case_when(
         .data$measurementType ==

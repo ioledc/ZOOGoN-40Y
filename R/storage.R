@@ -472,7 +472,9 @@ get_content_type <- function(format) {
     format,
     csv = "text/csv",
     tsv = "text/tab-separated-values",
-    parquet = "application/vnd.apache.parquet"
+    parquet = "application/vnd.apache.parquet",
+    zip = "application/zip",
+    stop(sprintf("Unsupported format: %s", format), call. = FALSE)
   )
 }
 
