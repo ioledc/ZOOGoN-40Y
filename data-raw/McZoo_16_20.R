@@ -7,15 +7,13 @@ conf <- read_config()
 # get legacy data from legacy_data bucket from sharepoint, formatting data and name
 ids <-
   download_sharepoint_file(
-    prefix = "ids_16_20.csv",
+    prefix = "ids_84_15.csv",
     options = conf$storage$sharepoint,
     bucket = "legacy_data",
     filename = TRUE
   ) |>
-  dplyr::rename(sample_id = id) |>
-  dplyr::select(-"filtered_volume_m3")|>
   dplyr::mutate(
-    date = lubridate::mdy(.data$date),
+    date = lubridate::as_date(as.numeric(.data$date), origin = "1899-12-30"),
     sample_id = janitor::make_clean_names(.data$sample_id),
     sample_id = stringr::str_replace_all(.data$sample_id, "_", "")
   )
@@ -111,25 +109,7 @@ worms_matched <- purrr::map2_dfr(
   }
 )
 
-# Ensure we get one AphiaID per taxon
-worms_matched_clean <-
-  worms_matched |>
-  dplyr::select(
-    # select only some columns from the data frame "worms_matched"
-    "original",
-    "AphiaID",
-    "lsid",
-    "scientificname",
-    "status",
-    "match_type"
-  ) |>
-  dplyr::distinct() |> # remove duplicates from all selected columns
-  dplyr::group_by(.data$original) |> # group the rows by the value of the original variable (taxa), for each original name, analyze all its possible matches together.
-  dplyr::arrange(.data$AphiaID, .by_group = TRUE) |> # within each group, sort the rows by AphiaID (in ascending order), where a smaller AphiaID corresponds to an older classification.
-  dplyr::slice_head(n = 1) |> # take only the first row by group (i.e. pick the oldest classification), Lowest AphiaID (oldest classification)
-  dplyr::select(-"AphiaID") |> # removes the AphiaID column after making the selection, because it is no longer needed
-  dplyr::ungroup() # removes the group structure, returning a normal dataframe
-
+worms_matched |> View()
 ## Data WoRMS TEST
 # Check for any unmatched taxa
 # Filter taxa that did not find a valid match on WoRMS under two conditions: AphiaID is NA (no ID found); match_type = “no_match” (explicitly marked as not matched)
@@ -150,6 +130,25 @@ if (nrow(verification_unmatched) > 0) {
 } else {
   cat("\n SUCCESS: All taxa match on WoRMS!\n")
 }
+
+# Ensure we get one AphiaID per taxon
+worms_matched_clean <-
+  worms_matched |>
+  dplyr::select(
+    # select only some columns from the data frame "worms_matched"
+    "original",
+    "AphiaID",
+    "lsid",
+    "scientificname",
+    "status",
+    "match_type"
+  ) |>
+  dplyr::distinct() |> # remove duplicates from all selected columns
+  dplyr::group_by(.data$original) |> # group the rows by the value of the original variable (taxa), for each original name, analyze all its possible matches together.
+  dplyr::arrange(.data$AphiaID, .by_group = TRUE) |> # within each group, sort the rows by AphiaID (in ascending order), where a smaller AphiaID corresponds to an older classification.
+  dplyr::slice_head(n = 1) |> # take only the first row by group (i.e. pick the oldest classification), Lowest AphiaID (oldest classification)
+  dplyr::select(-"AphiaID") |> # removes the AphiaID column after making the selection, because it is no longer needed
+  dplyr::ungroup() # removes the group structure, returning a normal dataframe
 
 # Merge the zooplankton dataframe with validated WoRMS taxonomy,
 # merge with ids data frame and sample metadata from worms, reorder and rename columns,
