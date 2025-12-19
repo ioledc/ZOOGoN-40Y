@@ -8,7 +8,7 @@ conf <- read_config()
 ids <-
   download_sharepoint_file(
     prefix = "ids_84_15.csv",
-    options = conf$storage$sharepoint,
+    options = conf$storage$sharepoint$credentials,
     bucket = "legacy_data",
     filename = TRUE
   ) |>
@@ -22,7 +22,7 @@ ids <-
 bio <-
   download_sharepoint_file(
     prefix = "zoo_84_15.csv",
-    options = conf$storage$sharepoint,
+    options = conf$storage$sharepoint$credentials,
     bucket = "legacy_data",
     filename = TRUE
   ) |>
@@ -39,8 +39,8 @@ dates <-
 unmatched_fixed <-
   download_sharepoint_file(
     prefix = "unmatched_worms_84_15.xlsx",
-    options = conf$storage$sharepoint,
-    bucket = "worms_unmatched",
+    options = conf$storage$sharepoint$credentials,
+    bucket = conf$storage$sharepoint$buckets$unmatched_bucket,
     filename = TRUE
   ) |>
   janitor::clean_names()
@@ -215,8 +215,8 @@ purrr::walk(formats, function(fmt) {
   upload_sharepoint_df(
     data = tidy_data,
     prefix = filename,
-    bucket = "hot_storage",
-    options = conf$storage$sharepoint,
+    bucket = conf$storage$sharepoint$buckets$hot_bucket,
+    options = conf$storage$sharepoint$credentials,
     format = fmt,
     filename = TRUE
   )

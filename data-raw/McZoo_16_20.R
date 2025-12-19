@@ -8,7 +8,7 @@ conf <- read_config()
 ids <-
   download_sharepoint_file(
     prefix = "ids_84_15.csv",
-    options = conf$storage$sharepoint,
+    options = conf$storage$sharepoint$credentials,
     bucket = "legacy_data",
     filename = TRUE
   ) |>
@@ -25,7 +25,7 @@ ids <-
 # get legacy data from legacy_data bucket from sharepoint, formatting data
 bio <- download_sharepoint_file(
   prefix = "zoo_16_20.csv",
-  options = conf$storage$sharepoint,
+  options = conf$storage$sharepoint$credentials,
   bucket = "legacy_data",
   filename = TRUE
 ) |>
@@ -45,8 +45,8 @@ bio <- download_sharepoint_file(
 unmatched_fixed <-
   download_sharepoint_file(
     prefix = "unmatched_worms_16_20.xlsx",
-    options = conf$storage$sharepoint,
-    bucket = "worms_unmatched",
+    options = conf$storage$sharepoint$credentials,
+    bucket = conf$storage$sharepoint$buckets$unmatched_bucket,
     filename = TRUE
   ) |>
   janitor::clean_names()
@@ -171,7 +171,7 @@ taxa_df <-
   dplyr::rename(
     eventID = "sample_id",
     eventDate = "date",
-    IndividualCount = "ind_m3",
+    individualCount = "ind_m3",
     lifeStage = "stage"
   ) |>
   dplyr::distinct()
@@ -207,7 +207,7 @@ tidy_data <-
     "eventDate",
     "scientificname",
     "lsid",
-    "IndividualCount",
+    "individualCount",
     "lifeStage"
   ) |>
   dplyr::distinct() |> # keeps only one copy of each unique combination
@@ -223,17 +223,17 @@ tidy_data <-
     )
   ) |>
   dplyr::mutate(
-    IndividualCount = dplyr::if_else(
-      IndividualCount %in% c("#N/D", "#N/A"),
+    individualCount = dplyr::if_else(
+      individualCount %in% c("#N/D", "#N/A"),
       NA_character_,
-      IndividualCount # convert "#N/D" e "#N/A" in NA
+      individualCount # convert "#N/D" e "#N/A" in NA
     ),
     lifeStage = dplyr::if_else(
-      lifeStage == "#N/D",
+      lifeStage %in% c("#N/D", "#N/A"),
       NA_character_,
       lifeStage
     ),
-    IndividualCount = as.numeric(IndividualCount), # convert from character to numeric
+    individualCount = as.numeric(individualCount), # convert from character to numeric
   )
 
 # export csv and parquet tidy files to hot storage bucket
@@ -256,8 +256,8 @@ purrr::walk(formats, function(fmt) {
   upload_sharepoint_df(
     data = tidy_data,
     prefix = filename,
-    bucket = "hot_storage",
-    options = conf$storage$sharepoint,
+    bucket = conf$storage$sharepoint$buckets$hot_bucket,
+    options = conf$storage$sharepoint$credentials,
     format = fmt,
     filename = TRUE
   )

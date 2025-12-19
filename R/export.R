@@ -59,9 +59,9 @@ dc_to_archive <- function(dc_list = NULL) {
     emlLocation = basename(eml_path)
   )
 
-  sp_conn <- connect_to_sharepoint(conf$storage$sharepoint)
+  sp_conn <- connect_to_sharepoint(conf$storage$sharepoint$credentials)
   remote_path <- file.path(
-    conf$storage$sharepoint$hot_bucket,
+    conf$storage$sharepoint$buckets$darwin_core_bucket,
     basename(zip_file)
   )
 

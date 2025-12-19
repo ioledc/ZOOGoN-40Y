@@ -19,7 +19,7 @@ download_sharepoint_file(
 
 \item{bucket}{Bucket name (optional)}
 
-\item{format}{File format: "csv", "tsv", or "parquet". Default is "csv"}
+\item{format}{File format: "csv", "tsv", "xlsx", or "parquet". Default is "csv"}
 
 \item{filename}{Logical. If TRUE, treat prefix as exact filename. Default is FALSE}
 }

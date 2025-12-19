@@ -131,17 +131,27 @@ raw_to_dc <- function(
   legacy_84_13 <-
     download_sharepoint_file(
       prefix = "McZoo_84-13.parquet",
-      options = conf$storage$sharepoint,
-      bucket = conf$storage$sharepoint$hot_bucket,
+      options = conf$storage$sharepoint$credentials,
+      bucket = conf$storage$sharepoint$buckets$hot_bucket,
       filename = TRUE
     )
+
+  legacy_16_20 <-
+    download_sharepoint_file(
+      prefix = "McZoo_16-20.parquet",
+      options = conf$storage$sharepoint$credentials,
+      bucket = conf$storage$sharepoint$buckets$hot_bucket,
+      filename = TRUE
+    )
+
+  legacy_84_20 <- dplyr::bind_rows(legacy_84_13, legacy_16_20)
 
   # Create Darwin Core Event extension
   if (verbose) {
     message("Creating Event extension table...")
   }
 
-  event_ext <- legacy_84_13 |>
+  event_ext <- legacy_84_20 |>
     dplyr::select(dplyr::all_of(c("eventID", "eventDate"))) |>
     dplyr::arrange(.data$eventDate) |>
     dplyr::distinct() |>
@@ -167,7 +177,7 @@ raw_to_dc <- function(
     message("Creating Occurrence extension table...")
   }
 
-  full_table <- legacy_84_13 |>
+  full_table <- legacy_84_20 |>
     dplyr::mutate(
       occurrenceStatus = dplyr::if_else(
         .data$individualCount > 0,
@@ -217,6 +227,8 @@ raw_to_dc <- function(
         .data$measurementValue == "fm" ~ "male+female",
         .data$measurementValue == "fmj" ~ "juvenile+adult",
         .data$measurementValue == "j" ~ "juvenile",
+        .data$measurementValue == "egg" ~ "egg",
+        .data$measurementValue == "lar" ~ "larva",
         is.na(.data$measurementValue) &
           .data$measurementType == "lifeStage" ~ "not specified",
         TRUE ~ NA_character_
@@ -234,7 +246,7 @@ raw_to_dc <- function(
         .data$measurementType ==
           "lifeStage" ~ "http://vocab.nerc.ac.uk/collection/P01/current/LSTAGE01/",
         .data$measurementType ==
-          "individualCount" ~ "http://vocab.nerc.ac.uk/collection/P01/current/MZBNMITX/", #to do: is it correct? or is better http://vocab.nerc.ac.uk/collection/P01/current/OCOUNT01/
+          "individualCount" ~ "http://vocab.nerc.ac.uk/collection/P01/current/ZU00M00D/",
         TRUE ~ .data$measurementType
       ),
       measurementValueID = dplyr::case_when(
@@ -248,9 +260,14 @@ raw_to_dc <- function(
           "http://vocab.nerc.ac.uk/collection/S11/current/S1127/",
         .data$measurementValue == "juvenile+adult" ~
           "http://vocab.nerc.ac.uk/collection/S11/current/S1145/",
+        .data$measurementValue == "larva" ~
+          "http://vocab.nerc.ac.uk/collection/S11/current/S1128/",
+        .data$measurementValue == "egg" ~
+          "http://vocab.nerc.ac.uk/collection/S11/current/S1122/",
         .data$measurementValue == "not specified" &
           .data$measurementType == "sex" ~
           "http://vocab.nerc.ac.uk/collection/S10/current/S104/",
+
         .data$measurementValue == "not specified" &
           .data$measurementType == "lifeStage" ~
           "https://vocab.nerc.ac.uk/collection/S11/current/S1131/",
@@ -287,7 +304,7 @@ raw_to_dc <- function(
   )
 
   metadata_df <- tibble::tibble(
-    dataset_title = "40 years of Zooplankton data at LTER MareChiara site (Gulf of Naples, Mediterranean Sea) 1984-2024",
+    dataset_title = "40 years of Zooplankton data at LTER MareChiara site (Gulf of Naples, Mediterranean Sea) 1984-2024", # to do: depends on the data we are going to publish
     contact = "Dr. Iole Di Capua (iole.dicapua@szn.it)",
     institution = "Stazione Zoologica Anton Dohrn",
     license = "CC-BY-NC",
