@@ -42,8 +42,8 @@ Imports:
     purrr,
     EML,
     LivingNorwayR,
-    lubridate,
-    xml2
+    xml2,
+    openxlsx
 Remotes:
     LivingNorway/LivingNorwayR
 Suggests: 
@@ -51,7 +51,8 @@ Suggests:
     knitr,
     rmarkdown,
     pkgdown,
-    worrms
+    worrms,
+    lubridate
 Config/testthat/edition: 3
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

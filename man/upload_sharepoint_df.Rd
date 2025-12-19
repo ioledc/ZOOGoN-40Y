@@ -9,7 +9,7 @@ upload_sharepoint_df(
   prefix,
   options,
   bucket = NULL,
-  format = c("csv", "tsv", "parquet"),
+  format = c("csv", "tsv", "parquet", "xlsx"),
   filename = FALSE
 )
 }
@@ -22,7 +22,7 @@ upload_sharepoint_df(
 
 \item{bucket}{Bucket name (optional)}
 
-\item{format}{File format: "csv", "tsv", or "parquet". Default is "csv"}
+\item{format}{File format: "csv", "tsv", "xlsx", or "parquet". Default is "csv"}
 
 \item{filename}{Logical. If TRUE, treat prefix as exact filename and skip versioning. Default is FALSE}
 }

@@ -12,15 +12,19 @@ default:
         file_prefix: "preprocessed-surveys"
   storage:
     sharepoint:
-      aut_bucket: zoogon_mc-dev
-      legacy_bucket: legacy_data
-      hot_bucket: hot_storage
-      site_url: "https://sznit.sharepoint.com/sites/BioFlow-ZOOGoN-40Y"
-      client_id: !expr Sys.getenv('SHAREPOINT_CLIENT_ID')
-      tenant_id: !expr Sys.getenv('SHAREPOINT_TENANT_ID')
-      client_secret: !expr Sys.getenv('SHAREPOINT_CLIENT_SECRET')
+      buckets:
+        automation_bucket: zoogon_mc-dev
+        legacy_bucket: legacy_data
+        hot_bucket: hot_storage
+        unmatched_bucket: worms_unmatched
+        darwin_core_bucket: darwincore_archives
+      credentials:
+        site_url: "https://sznit.sharepoint.com/sites/BioFlow-ZOOGoN-40Y"
+        client_id: !expr Sys.getenv('SHAREPOINT_CLIENT_ID')
+        tenant_id: !expr Sys.getenv('SHAREPOINT_TENANT_ID')
+        client_secret: !expr Sys.getenv('SHAREPOINT_CLIENT_SECRET')
 
 production:
   storage:
     sharepoint:
-      aut_bucket: zoogon_mc-prod
+      automation_bucket: zoogon_mc-prod

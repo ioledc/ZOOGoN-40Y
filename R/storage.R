@@ -24,7 +24,7 @@
 #' @param prefix File prefix path (e.g., "raw", "preprocessed"), or exact filename if filename = TRUE
 #' @param options SharePoint configuration list from config$storage$sharepoint
 #' @param bucket Bucket name (optional)
-#' @param format File format: "csv", "tsv", or "parquet". Default is "csv"
+#' @param format File format: "csv", "tsv", "xlsx", or "parquet". Default is "csv"
 #' @param filename Logical. If TRUE, treat prefix as exact filename and skip versioning. Default is FALSE
 #'
 #' @return Invisible NULL
@@ -45,7 +45,7 @@ upload_sharepoint_df <- function(
   prefix,
   options,
   bucket = NULL,
-  format = c("csv", "tsv", "parquet"),
+  format = c("csv", "tsv", "parquet", "xlsx"),
   filename = FALSE
 ) {
   # Set bucket if provided
@@ -57,10 +57,10 @@ upload_sharepoint_df <- function(
     # Use exact filename without versioning
     remote_filename <- prefix
     format <- tools::file_ext(prefix)
-    if (!format %in% c("csv", "tsv", "parquet")) {
+    if (!format %in% c("csv", "tsv", "parquet", "xlsx")) {
       stop(
         sprintf(
-          "Unsupported file format: %s. Must be csv, tsv, or parquet",
+          "Unsupported file format: %s. Must be csv, tsv, xlsx or parquet",
           format
         ),
         call. = FALSE
@@ -100,7 +100,7 @@ upload_sharepoint_df <- function(
 #' @param prefix File prefix path (e.g., "raw", "preprocessed"), or exact filename if filename = TRUE
 #' @param options SharePoint configuration list from config$storage$sharepoint
 #' @param bucket Bucket name (optional)
-#' @param format File format: "csv", "tsv", or "parquet". Default is "csv"
+#' @param format File format: "csv", "tsv", "xlsx", or "parquet". Default is "csv"
 #' @param filename Logical. If TRUE, treat prefix as exact filename. Default is FALSE
 #'
 #' @return Data frame with downloaded data
@@ -120,7 +120,7 @@ download_sharepoint_file <- function(
   prefix,
   options,
   bucket = NULL,
-  format = c("csv", "tsv", "parquet"),
+  format = c("csv", "tsv", "parquet", "xlsx"),
   filename = FALSE
 ) {
   # Set bucket if provided
@@ -132,10 +132,10 @@ download_sharepoint_file <- function(
     # Treat prefix as exact filename
     remote_path <- file.path(options$bucket, prefix)
     format <- tools::file_ext(prefix)
-    if (!format %in% c("csv", "tsv", "parquet")) {
+    if (!format %in% c("csv", "tsv", "parquet", "xlsx")) {
       stop(
         sprintf(
-          "Unsupported file format: %s. Must be csv, tsv, or parquet",
+          "Unsupported file format: %s. Must be csv, tsv, xlsx, or parquet",
           format
         ),
         call. = FALSE
@@ -171,7 +171,8 @@ download_sharepoint_file <- function(
     format,
     csv = readr::read_csv(temp_file, show_col_types = FALSE),
     tsv = readr::read_tsv(temp_file, show_col_types = FALSE),
-    parquet = arrow::read_parquet(temp_file)
+    parquet = arrow::read_parquet(temp_file),
+    xlsx = openxlsx::read.xlsx(temp_file)
   )
 }
 
@@ -453,12 +454,11 @@ write_df_to_temp <- function(df, format) {
     format,
     csv = readr::write_csv(df, temp_file),
     tsv = readr::write_tsv(df, temp_file),
-    parquet = arrow::write_parquet(df, temp_file)
+    parquet = arrow::write_parquet(df, temp_file),
+    xlsx = openxlsx::write.xlsx(df, temp_file)
   )
-
   temp_file
 }
-
 #' Get MIME content type for file format
 #'
 #' Returns the appropriate MIME type for the specified file format.
