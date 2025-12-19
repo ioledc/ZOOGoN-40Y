@@ -1,25 +1,28 @@
-## code to prepare zoo data (1984-2013)
+## code to prepare zoo data (1984-2015)
 
 # load configuration parameters
+devtools::load_all()
 conf <- read_config()
 
 # get legacy data from legacy_data bucket
 ids <-
   download_sharepoint_file(
-    prefix = "ids_84_13.csv",
-    options = conf$storage$sharepoint,
+    prefix = "ids_84_15.csv",
+    options = conf$storage$sharepoint$credentials,
     bucket = "legacy_data",
     filename = TRUE
   ) |>
   dplyr::mutate(
     date = lubridate::as_date(as.numeric(.data$date), origin = "1899-12-30"),
-    sample_id = janitor::make_clean_names(.data$sample_id)
+    sample_id = janitor::make_clean_names(.data$sample_id),
+    sample_id = stringr::str_replace_all(.data$sample_id, "_", "")
   )
+
 
 bio <-
   download_sharepoint_file(
-    prefix = "zoo_84_13.csv",
-    options = conf$storage$sharepoint,
+    prefix = "zoo_84_15.csv",
+    options = conf$storage$sharepoint$credentials,
     bucket = "legacy_data",
     filename = TRUE
   ) |>
@@ -31,6 +34,28 @@ bio <-
 dates <-
   bio |>
   dplyr::select(-c(1:10), "dat_id")
+
+
+unmatched_fixed <-
+  download_sharepoint_file(
+    prefix = "unmatched_worms_84_15.xlsx",
+    options = conf$storage$sharepoint$credentials,
+    bucket = conf$storage$sharepoint$buckets$unmatched_bucket,
+    filename = TRUE
+  ) |>
+  janitor::clean_names()
+
+bio <-
+  bio |>
+  dplyr::left_join(unmatched_fixed, by = c("TAXA" = "reported_taxa")) |>
+  dplyr::mutate(
+    TAXA = dplyr::case_when(
+      TAXA = !is.na(accepted_scientific_name) ~ accepted_scientific_name,
+      TRUE ~ TAXA
+    ),
+    stage = dplyr::case_when(!is.na(lifestage) ~ lifestage, TRUE ~ stage)
+  ) |>
+  dplyr::select(-c(accepted_scientific_name, aphia_id, lifestage))
 
 # match taxa down to worms
 
@@ -89,7 +114,7 @@ taxa_df <-
   dplyr::select(
     "dat_id",
     reported_taxa = "TAXA",
-    "stage"
+    "stage",
   ) |>
   dplyr::full_join(worms_matched_clean, by = c("reported_taxa" = "original")) |>
   dplyr::full_join(dates, by = "dat_id") |>
@@ -116,6 +141,7 @@ taxa_df <-
   dplyr::relocate("stage", .after = "ind_m3") |>
   dplyr::relocate("date", .after = "sample_id") |>
   dplyr::arrange(.data$sample_id) |>
+  dplyr::arrange(.data$date, .data$sample_id) |>
   dplyr::rename(
     eventID = "sample_id",
     eventDate = "date",
@@ -125,7 +151,6 @@ taxa_df <-
   dplyr::distinct()
 
 # Check for unmatched taxa (to be checked by curators)
-
 unmatched <-
   taxa_df |>
   dplyr::select(
@@ -138,11 +163,13 @@ unmatched <-
   dplyr::distinct() |>
   dplyr::filter(is.na(.data$lsid)) |>
   dplyr::select("reported_taxa") |>
-  dplyr::pull()
+  dplyr::distinct() |>
+  dplyr::mutate(
+    "accepted scientific name" = NA_character_,
+    "lifestage" = NA_character_
+  )
 
-
-# prepare long format ready for export
-
+# prepare ready for export
 tidy_data <-
   taxa_df |>
   dplyr::select(
@@ -153,6 +180,9 @@ tidy_data <-
     "individualCount",
     "lifeStage"
   ) |>
+  dplyr::rename(
+    scientificName = scientificname
+  ) |>
   dplyr::distinct() |>
   dplyr::filter(!is.na(.data$lsid)) |>
   # standardize lifeStage format
@@ -160,18 +190,19 @@ tidy_data <-
     lifeStage = dplyr::case_when(
       .data$lifeStage == "f/m" ~ "fm",
       .data$lifeStage == "f+m+j" ~ "fmj",
+      .data$lifeStage == "larvae" ~ "lar",
+      .data$lifeStage == "eggs" ~ "egg",
       TRUE ~ .data$lifeStage
     )
   ) |>
   # remove NA counts
   dplyr::filter(!is.na(.data$individualCount))
 
-
 # export csv and parquet tidy files to hot storage bucket
 formats <- c("parquet", "csv")
 
 purrr::walk(formats, function(fmt) {
-  filename <- paste0("McZoo_84-13.", fmt)
+  filename <- paste0("McZoo_84-15.", fmt)
 
   # Write locally
   if (fmt == "parquet") {
@@ -184,8 +215,8 @@ purrr::walk(formats, function(fmt) {
   upload_sharepoint_df(
     data = tidy_data,
     prefix = filename,
-    bucket = "hot_storage",
-    options = conf$storage$sharepoint,
+    bucket = conf$storage$sharepoint$buckets$hot_bucket,
+    options = conf$storage$sharepoint$credentials,
     format = fmt,
     filename = TRUE
   )

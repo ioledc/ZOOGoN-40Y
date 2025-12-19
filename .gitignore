@@ -1,6 +1,7 @@
 ## Authentication
 auth/*
-.env*
+.env
+
 
 ## R & Rstudio
 .Rhistory
