@@ -20,8 +20,8 @@ preprocess_surveys <- function(raw_data = NULL) {
   raw_surveys <-
     download_sharepoint_file(
       prefix = conf$ingestion$surveys$raw$file_prefix,
-      options = conf$storage$sharepoint,
-      bucket = conf$storage$sharepoint$aut_bucket,
+      options = conf$storage$sharepoint$credentials,
+      bucket = conf$storage$sharepoint$buckets$automation_bucket,
       format = "csv"
     ) |>
     # remove kobo metadata columns
@@ -66,7 +66,13 @@ preprocess_surveys <- function(raw_data = NULL) {
     dplyr::full_join(cruise_info, taxa_info, by = "submission_id") |>
     janitor::clean_names()
 
-  # process abundances
+  # to do: process abundances (ind_m3)
+  #ind_m3_male, ind_m3_female
+
+  # mutate per creare le colonne
+  #case_when per calcolo condizionale
+
+  ##
 
   upload_sharepoint_df(
     data = preprocessed_survey,

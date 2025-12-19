@@ -59,8 +59,8 @@ ingest_surveys <- function() {
   upload_sharepoint_df(
     data = raw_survey,
     prefix = conf$ingestion$surveys$raw$file_prefix,
-    options = conf$storage$sharepoint,
-    bucket = conf$storage$sharepoint$aut_bucket,
+    options = conf$storage$sharepoint$credentials,
+    bucket = conf$storage$sharepoint$buckets$automation_bucket,
     format = "csv"
   )
 }
