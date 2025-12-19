@@ -9,7 +9,7 @@ download_sharepoint_file(
   prefix,
   options,
   bucket = NULL,
-  format = c("csv", "tsv", "parquet"),
+  format = c("csv", "tsv", "parquet", "xlsx"),
   filename = FALSE
 )
 ```
@@ -31,7 +31,7 @@ download_sharepoint_file(
 
 - format:
 
-  File format: "csv", "tsv", or "parquet". Default is "csv"
+  File format: "csv", "tsv", "xlsx", or "parquet". Default is "csv"
 
 - filename:
 
