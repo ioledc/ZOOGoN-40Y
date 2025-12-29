@@ -341,3 +341,5 @@ raw_to_dc <- function(
 
   return(darwin_core_data)
 }
+
+#devtools::check()
