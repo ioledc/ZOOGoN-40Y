@@ -7,13 +7,14 @@ conf <- read_config()
 # get legacy data from legacy_data bucket from sharepoint, formatting data and name
 ids <-
   download_sharepoint_file(
-    prefix = "ids_84_15.csv",
+    prefix = "ids_16_20.csv",
     options = conf$storage$sharepoint$credentials,
     bucket = "legacy_data",
     filename = TRUE
   ) |>
+  dplyr::rename(sample_id = id) |>
   dplyr::mutate(
-    date = lubridate::as_date(as.numeric(.data$date), origin = "1899-12-30"),
+    date = lubridate::mdy(.data$date),
     sample_id = janitor::make_clean_names(.data$sample_id),
     sample_id = stringr::str_replace_all(.data$sample_id, "_", "")
   )
