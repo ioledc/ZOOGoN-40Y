@@ -41,7 +41,7 @@ preprocess_surveys <- function(raw_data = NULL) {
     dplyr::rename_with(~ stringr::str_remove(., "group_abundance/")) |>
     dplyr::rename_with(~ stringr::str_remove(., "group_sample/")) |>
     dplyr::mutate(
-      filtered_volume_m3 = c(12.5, 12.5, 12.5, 10.8, 12.825, 12.5, 12.5, 12.5, 12.5)) |> # to do: add other volumes
+      filtered_volume_m3 = c(12.5, 12.5, 12.5, 10.8, 12.825, 12.5, 12.5, 12.5, 12.5)) |>         # TO DO: add other volumes
   dplyr::relocate(filtered_volume_m3, .before = water_column_sampled) |>
     # remove legacy columns
     dplyr::select(-"sampling_name")
@@ -70,7 +70,7 @@ preprocess_surveys <- function(raw_data = NULL) {
     dplyr::full_join(cruise_info, taxa_info, by = "submission_id") |>
     janitor::clean_names()
 
-  # to do: process abundances (ind_m3)
+  # process abundances (ind_m3)
   preprocessed_complete <-
     preprocessed_survey |>
     dplyr::mutate(
@@ -106,7 +106,8 @@ preprocess_surveys <- function(raw_data = NULL) {
   return(preprocessed_complete)
 }
 
-# to do: belongs to the function reinsert after Lorenzo's check
+# TO DO: 
+# belongs to the function reinsert after Lorenzo's check
  # upload_sharepoint_df(
     # data = preprocessed_survey,
     # prefix = conf$ingestion$surveys$preprocessed$file_prefix,
