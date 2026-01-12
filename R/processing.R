@@ -130,7 +130,7 @@ raw_to_dc <- function(
 
   legacy_84_13 <-
     download_sharepoint_file(
-      prefix = "McZoo_84-13.parquet",
+      prefix = "McZoo_84-15.parquet",
       options = conf$storage$sharepoint$credentials,
       bucket = conf$storage$sharepoint$buckets$hot_bucket,
       filename = TRUE
@@ -341,5 +341,3 @@ raw_to_dc <- function(
 
   return(darwin_core_data)
 }
-
-#devtools::check()

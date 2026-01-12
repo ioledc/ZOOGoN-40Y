@@ -235,7 +235,9 @@ tidy_data <-
       lifeStage
     ),
     individualCount = as.numeric(individualCount), # convert from character to numeric
-  )
+  ) |>
+  # drop NA dates
+  dplyr::filter(!is.na(.data$eventDate))
 
 # export csv and parquet tidy files to hot storage bucket
 # vreate a vector with the two formats to be generated

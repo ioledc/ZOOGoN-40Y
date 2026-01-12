@@ -15,7 +15,6 @@
 #' }
 #' @export
 preprocess_surveys <- function(raw_data = NULL) {
- 
   conf <- read_config()
 
   raw_surveys <-
@@ -40,9 +39,13 @@ preprocess_surveys <- function(raw_data = NULL) {
     dplyr::rename_with(~ stringr::str_remove(., "group_cruise/")) |>
     dplyr::rename_with(~ stringr::str_remove(., "group_abundance/")) |>
     dplyr::rename_with(~ stringr::str_remove(., "group_sample/")) |>
-    dplyr::mutate(
-      filtered_volume_m3 = c(12.5, 12.5, 12.5, 10.8, 12.825, 12.5, 12.5, 12.5, 12.5)) |>         # TO DO: add other volumes
-  dplyr::relocate(filtered_volume_m3, .before = water_column_sampled) |>
+    dplyr::rename(filtered_volume_m3 = "Filtered_Volume_m") |>
+    dplyr::mutate(sampling_id = as.integer(.data$sampling_id)) |>
+    #janitor::clean_names() |>
+    dplyr::relocate(
+      "filtered_volume_m3",
+      .before = .data$water_column_sampled
+    ) |>
     # remove legacy columns
     dplyr::select(-"sampling_name")
 
@@ -53,18 +56,22 @@ preprocess_surveys <- function(raw_data = NULL) {
     dplyr::mutate(
       taxon = dplyr::coalesce(
         .data$taxon_cope_sel,
-        .data$taxon_noncope_sel,
-        .data$other_taxon
+        .data$taxon_noncope_sel
+        # TO DO: fix missing other_taxon
+        #.data$other_taxon
       )
     ) |>
     dplyr::select(
       -dplyr::all_of(c(
         "taxon_cope_sel",
-        "taxon_noncope_sel",
-        "other_taxon"
+        "taxon_noncope_sel"
+        # TO DO: fix missing other_taxon
+        #"other_taxon"
       ))
     ) |>
-    dplyr::relocate("taxon", .after = "n_sample")
+    dplyr::relocate("taxon", .after = "n_sample") |>
+    # remove old duplicated labels
+    dplyr::mutate(taxon = stringr::str_replace(.data$taxon, "_1", ""))
 
   preprocessed_survey <-
     dplyr::full_join(cruise_info, taxa_info, by = "submission_id") |>
@@ -74,49 +81,35 @@ preprocess_surveys <- function(raw_data = NULL) {
   preprocessed_complete <-
     preprocessed_survey |>
     dplyr::mutate(
-      n_male = as.numeric(n_male),
-      n_female = as.numeric(n_female),
-      n_copepodite = as.numeric(n_copepodite),
-      n_undetermined = as.numeric(n_undetermined),
-      n_larvae = as.numeric(n_larvae),
-      n_eggs = as.numeric(n_eggs)
-    ) |>
-    dplyr::mutate(
-      ind_m3_male = n_male *
-        (total_volume / subsample_volume) /
-        filtered_volume_m3,
-      ind_m3_female = n_female *
-        (total_volume / subsample_volume) /
-        filtered_volume_m3,
-      ind_m3_juvenile = n_copepodite *
-        (total_volume / subsample_volume) /
-        filtered_volume_m3,
-      ind_m3_undetermined = n_undetermined *
-        (total_volume / subsample_volume) /
-        filtered_volume_m3,
-      ind_m3_larvae = n_larvae *
-        (total_volume / subsample_volume) /
-        filtered_volume_m3,
-      ind_m3_eggs = n_eggs *
-        (total_volume / subsample_volume) /
-        filtered_volume_m3,
+      dplyr::across(
+        .cols = c(
+          "n_male",
+          "n_female",
+          "n_copepodite",
+          "n_undetermined",
+          "n_larvae",
+          "n_eggs"
+        ),
+        ~ as.numeric(.x) *
+          (.data$total_volume / .data$subsample_volume) /
+          .data$filtered_volume_m3
+      )
     )
-# to see the final results 
-# after run the fuction create and execute the object "results <- preprocess_surveys()" in the console  
+  # to see the final results
+  # after run the fuction create and execute the object "results <- preprocess_surveys()" in the console
   return(preprocessed_complete)
 }
 
-# TO DO: 
+# TO DO:
 # belongs to the function reinsert after Lorenzo's check
- # upload_sharepoint_df(
-    # data = preprocessed_survey,
-    # prefix = conf$ingestion$surveys$preprocessed$file_prefix,
-    # options = conf$storage$sharepoint,
-    # bucket = conf$storage$sharepoint$aut_bucket,
-    # format = "csv"
-  # )
+# upload_sharepoint_df(
+# data = preprocessed_survey,
+# prefix = conf$ingestion$surveys$preprocessed$file_prefix,
+# options = conf$storage$sharepoint,
+# bucket = conf$storage$sharepoint$aut_bucket,
+# format = "csv"
+# )
 #}
-
 
 #' Prepare repeat answers from Kobo survey forms
 #'
