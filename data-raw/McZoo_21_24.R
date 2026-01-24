@@ -11,7 +11,7 @@ ingest_surveys()
 results <- preprocess_surveys()
 results |> View()
 
-# Data Cleaning 
+# Data Cleaning
 # Select relevant columns and create event identifiers
 Clean_21_24 <-
   results |>
@@ -45,7 +45,7 @@ get_worms_info <- function(aphia_id) {
           encoding = "UTF-8"
         ))
 
-       # Build complete scientific name with authority
+        # Build complete scientific name with authority
         scientific_name_full <- if (
           !is.null(data$authority) &&
             !is.na(data$authority) &&
@@ -53,7 +53,7 @@ get_worms_info <- function(aphia_id) {
         ) {
           authority <- data$authority
 
-           # Remove parentheses if already present in authority
+          # Remove parentheses if already present in authority
           authority_clean <- gsub("^\\((.+)\\)$", "\\1", authority)
 
           paste0(data$scientificname, " (", authority_clean, ")")
@@ -112,12 +112,12 @@ Zoo_21_24 <-
   Clean_21_24_temp |>
   dplyr::left_join(name_mapping, by = "aphia_id") |>
   dplyr::relocate(scientific_name, lsid, .after = aphia_id) |>
-   # Pivot abundance columns to long format
-  tidyr::pivot_longer(                       
+  # Pivot abundance columns to long format
+  tidyr::pivot_longer(
     cols = c(n_male, n_female, n_copepodite, n_undetermined, n_larvae, n_eggs),
     names_to = "life_stage_temp",
     values_to = "individual_count"
-  ) |>           
+  ) |>
   # Convert abundance to numeric and map life stages
   dplyr::mutate(
     individual_count = as.numeric(individual_count),
