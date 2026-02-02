@@ -1,4 +1,10 @@
 ---
+name: ZooGon Kobo Automation
+'on':
+  push: 
+  schedule:
+    - cron: 0 0 * * *
+
 env:
   KOBO_TOKEN: ${{ secrets.KOBO_TOKEN }}
   KOBO_ASSET_ID: ${{ secrets.KOBO_ASSET_ID }}
