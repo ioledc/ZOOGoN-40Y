@@ -3,6 +3,8 @@
 export("%>%")
 export(add_gbif_license_block)
 export(add_version)
+export(build_emof_events)
+export(build_emof_occurrence)
 export(dc_to_archive)
 export(download_sharepoint_file)
 export(flatten_field)

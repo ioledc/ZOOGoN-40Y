@@ -43,7 +43,7 @@ worms_records <-
   dplyr::mutate(aphia_id = as.character(aphia_id))
 
 # Data harmonization as other matrices
-zoo_21_24 <-
+tidy_data <-
   clean_21_24 |>
   dplyr::left_join(worms_records, by = "aphia_id") |>
   dplyr::relocate("scientificname", "lsid", .after = "aphia_id") |>
@@ -81,12 +81,27 @@ zoo_21_24 <-
   ) |>
   dplyr::filter(!is.na(individual_count)) |>
   dplyr::rename(
+    scientificName = "scientificname",
     eventID = "event_id",
     eventDate = "event_date",
     lifeStage = "life_stage",
     individualCount = "individual_count"
   ) |>
-  dplyr::distinct()
+  dplyr::distinct() |>
+  # remove NA counts & IDs
+  dplyr::filter(
+    !is.na(.data$individualCount),
+    !is.na(.data$eventDate),
+    !is.na(.data$eventID)
+  ) |>
+  # remove duplicates
+  dplyr::group_by(eventID, eventDate, scientificName, lsid, lifeStage) |>
+  dplyr::summarise(
+    individualCount = sum(individualCount, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  dplyr::relocate("individualCount", .before = "lifeStage")
+
 
 # export csv and parquet tidy files to hot storage bucket
 # vreate a vector with the two formats to be generated

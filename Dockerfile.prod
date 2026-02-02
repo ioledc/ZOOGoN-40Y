@@ -1,0 +1,41 @@
+FROM rocker/tidyverse:4
+
+# Install imports
+RUN install2.r --error --skipinstalled \
+    readr \
+    stringr \
+    tibble \
+    janitor \
+    magrittr \
+    rlang \
+    dotenv \
+    httr2 \
+    arrow \
+    git2r \
+    config \
+    logger \
+    purrr \
+    EML \
+    LivingNorwayR \
+    xml2 \
+    openxlsx
+
+
+# Install suggests
+RUN install2.r --error --skipinstalled \
+    testthat (>= 3.0.0) \
+    knitr \
+    rmarkdown \
+    pkgdown \
+    worrms \
+    lubridate
+
+# Install specific version of rfishbase
+#RUN Rscript -e 'remotes::install_version("rfishbase", version = "5.0.1")'
+
+# Install local package
+COPY . /home
+WORKDIR /home
+RUN Rscript -e 'remotes::install_local(dependencies = TRUE, upgrade = "never")'
+
+ENTRYPOINT ["Rscript"]

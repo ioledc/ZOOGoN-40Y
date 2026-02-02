@@ -33,7 +33,7 @@
 #' \itemize{
 #'   \item \code{eventID}: Unique sampling event identifier (e.g., "mc_1", "mc_2")
 #'   \item \code{eventDate}: Sampling date in Date format (YYYY-MM-DD)
-#'   \item \code{scientificname}: Full scientific name with WoRMS validation
+#'   \item \code{scientificName}: Full scientific name with WoRMS validation
 #'   \item \code{lsid}: WoRMS Life Science Identifier URN (e.g.,
 #'     "urn:lsid:marinespecies.org:taxname:104251")
 #'   \item \code{individualCount}: Abundance measurement (ind/m³)
@@ -128,7 +128,7 @@ raw_to_dc <- function(
     message("Starting LTER-MareChiara data processing...")
   }
 
-  legacy_84_13 <-
+  legacy_84_15 <-
     download_sharepoint_file(
       prefix = "McZoo_84-15.parquet",
       options = conf$storage$sharepoint$credentials,
@@ -144,19 +144,29 @@ raw_to_dc <- function(
       filename = TRUE
     )
 
-  legacy_84_20 <- dplyr::bind_rows(legacy_84_13, legacy_16_20)
+  legacy_21_24 <-
+    download_sharepoint_file(
+      prefix = "McZoo_21-24.parquet",
+      options = conf$storage$sharepoint$credentials,
+      bucket = conf$storage$sharepoint$buckets$hot_bucket,
+      filename = TRUE
+    )
+
+  legacy_84_24 <-
+    dplyr::bind_rows(legacy_84_15, legacy_16_20, legacy_21_24)
 
   # Create Darwin Core Event extension
   if (verbose) {
     message("Creating Event extension table...")
   }
 
-  event_ext <- legacy_84_20 |>
+  event_ext <- legacy_84_24 |>
     dplyr::select(dplyr::all_of(c("eventID", "eventDate"))) |>
     dplyr::arrange(.data$eventDate) |>
     dplyr::distinct() |>
     dplyr::mutate(
       eventDate = as.character(.data$eventDate),
+      eventType = "Site Visit",
       decimalLatitude = 40.81,
       decimalLongitude = 14.25,
       geodeticDatum = "WGS84",
@@ -177,7 +187,7 @@ raw_to_dc <- function(
     message("Creating Occurrence extension table...")
   }
 
-  full_table <- legacy_84_20 |>
+  full_table <- legacy_84_24 |>
     dplyr::mutate(
       occurrenceStatus = dplyr::if_else(
         .data$individualCount > 0,
@@ -195,7 +205,7 @@ raw_to_dc <- function(
       "eventID",
       "occurrenceID",
       "basisOfRecord",
-      scientificName = "scientificname",
+      "scientificName",
       scientificNameID = "lsid",
       "occurrenceStatus"
     )
@@ -205,93 +215,9 @@ raw_to_dc <- function(
     message("Creating eMoF extension table...")
   }
 
-  emof_table <- full_table |>
-    dplyr::select(
-      -dplyr::all_of(c(
-        "scientificname",
-        "occurrenceStatus",
-        "lsid"
-      ))
-    ) |>
-    dplyr::distinct() |>
-    dplyr::mutate(dplyr::across(dplyr::everything(), as.character)) |>
-    tidyr::pivot_longer(
-      cols = -dplyr::all_of(c("eventID", "eventDate", "occurrenceID")),
-      names_to = "measurementType",
-      values_to = "measurementValue"
-    ) |>
-    dplyr::mutate(
-      measurementValue = dplyr::case_when(
-        .data$measurementValue == "f" ~ "female",
-        .data$measurementValue == "m" ~ "male",
-        .data$measurementValue == "fm" ~ "male+female",
-        .data$measurementValue == "fmj" ~ "juvenile+adult",
-        .data$measurementValue == "j" ~ "juvenile",
-        .data$measurementValue == "egg" ~ "egg",
-        .data$measurementValue == "lar" ~ "larva",
-        is.na(.data$measurementValue) &
-          .data$measurementType == "lifeStage" ~ "not specified",
-        TRUE ~ NA_character_
-      ),
-      measurementType = dplyr::case_when(
-        .data$measurementValue %in%
-          c("female", "male", "male+female") ~ "sex",
-        .data$measurementValue %in%
-          c("juvenile", "juvenile+adult") ~ "lifeStage",
-        TRUE ~ .data$measurementType
-      ),
-      measurementTypeID = dplyr::case_when(
-        .data$measurementType ==
-          "sex" ~ "http://vocab.nerc.ac.uk/collection/P01/current/ENTSEX01/",
-        .data$measurementType ==
-          "lifeStage" ~ "http://vocab.nerc.ac.uk/collection/P01/current/LSTAGE01/",
-        .data$measurementType ==
-          "individualCount" ~ "http://vocab.nerc.ac.uk/collection/P01/current/ZU00M00D/",
-        TRUE ~ .data$measurementType
-      ),
-      measurementValueID = dplyr::case_when(
-        .data$measurementValue == "female" ~
-          "http://vocab.nerc.ac.uk/collection/S10/current/S102/",
-        .data$measurementValue == "male" ~
-          "http://vocab.nerc.ac.uk/collection/S10/current/S103/",
-        .data$measurementValue == "male+female" ~
-          "http://vocab.nerc.ac.uk/collection/S10/current/S108/",
-        .data$measurementValue == "juvenile" ~
-          "http://vocab.nerc.ac.uk/collection/S11/current/S1127/",
-        .data$measurementValue == "juvenile+adult" ~
-          "http://vocab.nerc.ac.uk/collection/S11/current/S1145/",
-        .data$measurementValue == "larva" ~
-          "http://vocab.nerc.ac.uk/collection/S11/current/S1128/",
-        .data$measurementValue == "egg" ~
-          "http://vocab.nerc.ac.uk/collection/S11/current/S1122/",
-        .data$measurementValue == "not specified" &
-          .data$measurementType == "sex" ~
-          "http://vocab.nerc.ac.uk/collection/S10/current/S104/",
-
-        .data$measurementValue == "not specified" &
-          .data$measurementType == "lifeStage" ~
-          "https://vocab.nerc.ac.uk/collection/S11/current/S1131/",
-        TRUE ~
-          NA_character_
-      ),
-      measurementUnit = dplyr::case_when(
-        .data$measurementType == "individualCount" ~ "Number per cubic metre",
-        TRUE ~ NA_character_
-      ),
-      measurementUnitID = dplyr::case_when(
-        .data$measurementType ==
-          "individualCount" ~ "http://vocab.nerc.ac.uk/collection/P06/current/UPMM/",
-        TRUE ~ NA_character_
-      )
-    ) |>
-    dplyr::relocate(
-      "measurementTypeID",
-      .after = "measurementType"
-    ) |>
-    dplyr::relocate(
-      "measurementValueID",
-      .after = "measurementValue"
-    )
+  emof_occ <- build_emof_occurrence(data = full_table)
+  emof_events <- build_emof_events(data = full_table)
+  emof_table <- dplyr::bind_rows(emof_occ, emof_events)
 
   # Prepare output
   processing_info <- list(
@@ -320,7 +246,7 @@ raw_to_dc <- function(
     event = event_ext,
     occurrence = occurrence_table,
     emof = emof_table,
-    raw_data = legacy_84_13,
+    raw_data = legacy_84_24,
     processing_info = processing_info,
     metadata = metadata_df
   )
@@ -340,4 +266,216 @@ raw_to_dc <- function(
   }
 
   return(darwin_core_data)
+}
+
+
+#' Build occurrence-level eMoF table
+#'
+#' Converts occurrence attributes (abundance, sex, life stage) to
+#' Darwin Core eMoF format. Recodes legacy life stage/sex codes to
+#' controlled vocabularies (NERC P01/S10/S11) and assigns units for
+#' abundance (ind/m³).
+#'
+#' @param data A data frame containing at least `eventID`, `eventDate`,
+#'   `occurrenceID`, `individualCount`, and `lifeStage`.
+#'
+#' @return A tibble in eMoF format with one row per occurrence-level
+#'   measurement and the columns:
+#'   `eventID`, `occurrenceID`, `eventDate`,
+#'   `measurementType`, `measurementTypeID`,
+#'   `measurementValue`, `measurementValueID`,
+#'   `measurementUnit`, `measurementUnitID`.
+#'
+#' @export
+build_emof_occurrence <- function(data = NULL) {
+  sex_map <- tibble::tribble(
+    ~code , ~value        , ~value_id                                              ,
+    "f"   , "female"      , "http://vocab.nerc.ac.uk/collection/S10/current/S102/" ,
+    "m"   , "male"        , "http://vocab.nerc.ac.uk/collection/S10/current/S103/" ,
+    "fm"  , "male+female" , "http://vocab.nerc.ac.uk/collection/S10/current/S108/"
+  )
+
+  stage_map <- tibble::tribble(
+    ~code , ~value           , ~value_id                                               ,
+    "j"   , "juvenile"       , "http://vocab.nerc.ac.uk/collection/S11/current/S1127/" ,
+    "fmj" , "juvenile+adult" , "http://vocab.nerc.ac.uk/collection/S11/current/S1145/" ,
+    "lar" , "larva"          , "http://vocab.nerc.ac.uk/collection/S11/current/S1128/" ,
+    "egg" , "egg"            , "http://vocab.nerc.ac.uk/collection/S11/current/S1122/" ,
+    "nau" , "nauplius"       , "http://vocab.nerc.ac.uk/collection/S11/current/S1130/"
+  )
+
+  type_ids <- c(
+    sex = "http://vocab.nerc.ac.uk/collection/P01/current/ENTSEX01/",
+    lifeStage = "http://vocab.nerc.ac.uk/collection/P01/current/LSTAGE01/",
+    individualCount = "http://vocab.nerc.ac.uk/collection/P01/current/ZU00M00D/"
+  )
+
+  data |>
+    dplyr::select(-"scientificName", -"occurrenceStatus", -"lsid") |>
+    dplyr::distinct() |>
+    dplyr::mutate(dplyr::across(
+      -c("eventID", "eventDate", "occurrenceID"),
+      as.character
+    )) |>
+    tidyr::pivot_longer(
+      cols = -c("eventID", "eventDate", "occurrenceID"),
+      names_to = "measurementType",
+      values_to = "raw"
+    ) |>
+    dplyr::mutate(raw = as.character(.data$raw)) |>
+    dplyr::left_join(sex_map, by = c("raw" = "code")) |>
+    dplyr::left_join(
+      stage_map,
+      by = c("raw" = "code"),
+      suffix = c("_sex", "_stage")
+    ) |>
+    dplyr::mutate(
+      measurementValue = dplyr::coalesce(
+        .data$value_sex,
+        .data$value_stage,
+        .data$raw
+      ),
+      measurementValueID = dplyr::coalesce(
+        .data$value_id_sex,
+        .data$value_id_stage
+      ),
+      measurementType = dplyr::case_when(
+        !is.na(.data$value_sex) ~ "sex",
+        !is.na(.data$value_stage) ~ "lifeStage",
+        TRUE ~ .data$measurementType
+      ),
+      measurementValue = dplyr::case_when(
+        .data$measurementType %in%
+          c("sex", "lifeStage") &
+          is.na(.data$measurementValue) ~ "not specified",
+        TRUE ~ .data$measurementValue
+      ),
+      measurementValueID = dplyr::case_when(
+        !is.na(.data$value_id_sex) ~ .data$value_id_sex,
+        !is.na(.data$value_id_stage) ~ .data$value_id_stage,
+        .data$measurementValue == "not specified" &
+          .data$measurementType == "sex" ~
+          "http://vocab.nerc.ac.uk/collection/S10/current/S104/",
+        .data$measurementValue == "not specified" &
+          .data$measurementType == "lifeStage" ~
+          "https://vocab.nerc.ac.uk/collection/S11/current/S1131/",
+        TRUE ~ NA_character_
+      ),
+      measurementTypeID = unname(type_ids[.data$measurementType]),
+      measurementUnit = dplyr::if_else(
+        .data$measurementType == "individualCount",
+        "Number per cubic metre",
+        NA_character_
+      ),
+      measurementUnitID = dplyr::if_else(
+        .data$measurementType == "individualCount",
+        "http://vocab.nerc.ac.uk/collection/P06/current/UPMM/",
+        NA_character_
+      )
+    ) |>
+    dplyr::select(
+      "eventID",
+      "occurrenceID",
+      "eventDate",
+      "measurementType",
+      "measurementTypeID",
+      "measurementValue",
+      "measurementValueID",
+      "measurementUnit",
+      "measurementUnitID"
+    ) |>
+    dplyr::mutate(eventDate = as.character(.data$eventDate))
+}
+
+#' Build event-level eMoF sampling metadata
+#'
+#' Creates one set of sampling metadata per event, including
+#' sampling protocol, instrument type, net mouth area and diameter.
+#' Instrument and geometry depend on sampling period (pre/post 2016-02-18).
+#'
+#' @param data A data frame containing at least `eventID` and `eventDate`.
+#'
+#' @return A tibble in eMoF format with event-level measurements
+#'   (`occurrenceID = NA`) and controlled NERC vocabulary identifiers
+#'   for protocol (P01/SAMPPROT), instrument (P01/NMSPINST + L22),
+#'   mouth area (P01/MTHAREA1, m²) and mouth diameter (P01/DSAMPA01, m).
+#'
+#' @export
+build_emof_events <- function(data = NULL) {
+  events <- data |>
+    dplyr::distinct(.data$eventID, .data$eventDate) |>
+    dplyr::mutate(
+      period = ifelse(.data$eventDate < as.Date("2016-02-18"), "old", "new"),
+      eventDate = as.character(.data$eventDate)
+    )
+
+  dplyr::bind_rows(
+    # protocol
+    events |>
+      dplyr::transmute(
+        .data$eventID,
+        .data$eventDate,
+        occurrenceID = NA_character_,
+        measurementType = "samplingProtocol",
+        measurementTypeID = "http://vocab.nerc.ac.uk/collection/P01/current/SAMPPROT/",
+        measurementValue = "Vertical zooplankton net tow from 50 m depth to surface",
+        measurementValueID = NA_character_,
+        measurementUnit = NA_character_,
+        measurementUnitID = NA_character_
+      ),
+
+    # instrument
+    events |>
+      dplyr::transmute(
+        .data$eventID,
+        .data$eventDate,
+        occurrenceID = NA_character_,
+        measurementType = "samplingInstrument",
+        measurementTypeID = "https://vocab.nerc.ac.uk/collection/P01/current/NMSPINST/",
+        measurementValue = dplyr::if_else(
+          .data$period == "old",
+          "Indian Ocean net",
+          "WP2 plankton net"
+        ),
+        measurementValueID = dplyr::if_else(
+          .data$period == "old",
+          "https://vocab.nerc.ac.uk/collection/L22/current/TOOL0979/",
+          "https://vocab.nerc.ac.uk/collection/L22/current/NETT0075/"
+        ),
+        measurementUnit = NA_character_,
+        measurementUnitID = NA_character_
+      ),
+
+    # mouth area
+    events |>
+      dplyr::transmute(
+        .data$eventID,
+        .data$eventDate,
+        occurrenceID = NA_character_,
+        measurementType = "mouthArea",
+        measurementTypeID = "https://vocab.nerc.ac.uk/collection/P01/current/MTHAREA1/",
+        measurementValue = dplyr::if_else(.data$period == "old", "1", "0.25"),
+        measurementValueID = NA_character_,
+        measurementUnit = "m2",
+        measurementUnitID = "https://vocab.nerc.ac.uk/collection/P06/current/UMSQ/"
+      ),
+
+    # mouth diameter
+    events |>
+      dplyr::transmute(
+        .data$eventID,
+        .data$eventDate,
+        occurrenceID = NA_character_,
+        measurementType = "mouthDiameter",
+        measurementTypeID = "https://vocab.nerc.ac.uk/collection/P01/current/DSAMPA01/",
+        measurementValue = dplyr::if_else(
+          .data$period == "old",
+          "1.13",
+          "0.57"
+        ),
+        measurementValueID = NA_character_,
+        measurementUnit = "m",
+        measurementUnitID = "https://vocab.nerc.ac.uk/collection/P06/current/ULAA/"
+      )
+  )
 }

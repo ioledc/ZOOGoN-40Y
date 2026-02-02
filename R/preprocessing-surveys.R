@@ -95,6 +95,15 @@ preprocess_surveys <- function(raw_data = NULL) {
           .data$filtered_volume_m3
       )
     )
+
+  upload_sharepoint_df(
+    data = preprocessed_complete,
+    prefix = conf$ingestion$survey$preprocessed$file_prefix,
+    options = conf$storage$sharepoint$credentials,
+    bucket = conf$storage$sharepoint$buckets$automation_bucket,
+    format = "csv"
+  )
+
   # to see the final results
   # after run the fuction create and execute the object "results <- preprocess_surveys()" in the console
   return(preprocessed_complete)

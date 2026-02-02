@@ -1,0 +1,59 @@
+---
+env:
+  KOBO_TOKEN: ${{ secrets.KOBO_TOKEN }}
+  KOBO_ASSET_ID: ${{ secrets.KOBO_ASSET_ID }}
+  KOBO_USERNAME: ${{ secrets.KOBO_USERNAME }}
+  KOBO_PASSWORD: ${{ secrets.KOBO_PASSWORD }}
+  SHAREPOINT_CLIENT_ID: ${{ secrets.SHAREPOINT_CLIENT_ID }}
+  SHAREPOINT_TENANT_ID: ${{ secrets.SHAREPOINT_TENANT_ID }}
+  SHAREPOINT_CLIENT_SECRET: ${{ secrets.SHAREPOINT_CLIENT_SECRET }}
+
+
+jobs:
+  build-container:
+    name: Build R container
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - id: build-docker
+        name: Build image with cache
+        uses: whoan/docker-build-with-cache-action@v5
+        with:
+          dockerfile: Dockerfile.prod
+          image_name: r-runner-zoogon-mc
+          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: docker.pkg.github.com
+          username: $GITHUB_ACTOR
+
+  ingest-kobo-surveys:
+    container:
+      credentials:
+        password: ${{ secrets.GITHUB_TOKEN }}
+        username: ${{ github.actor }}
+      image: docker.pkg.github.com/ioledc/ZOOGoN-40Y/r-runner-zoogon-mc
+    name: Ingest MC kobo surveys
+    needs: build-container
+    runs-on: ubuntu-latest
+    steps:
+      - if: endsWith(github.ref, '/main')
+        name: Set env to production
+        run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
+      - name: Call ingest_surveys()
+        run: Rscript -e 'ZooGoN:ingest_surveys()'
+
+  process-kobo-surveys:
+    container:
+      credentials:
+        password: ${{ secrets.GITHUB_TOKEN }}
+        username: ${{ github.actor }}
+      image: docker.pkg.github.com/ioledc/ZOOGoN-40Y/r-runner-zoogon-mc
+    name: Process MC kobo surveys
+    needs: ingest-kobo-surveys
+    runs-on: ubuntu-latest
+    steps:
+      - if: endsWith(github.ref, '/main')
+        name: Set env to production
+        run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
+      - name: Call preprocess_surveys()
+        run: Rscript -e 'ZooGoN:preprocess_surveys()'

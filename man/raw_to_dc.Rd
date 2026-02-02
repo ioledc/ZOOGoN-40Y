@@ -42,7 +42,7 @@ following structure:
 \itemize{
 \item \code{eventID}: Unique sampling event identifier (e.g., "mc_1", "mc_2")
 \item \code{eventDate}: Sampling date in Date format (YYYY-MM-DD)
-\item \code{scientificname}: Full scientific name with WoRMS validation
+\item \code{scientificName}: Full scientific name with WoRMS validation
 \item \code{lsid}: WoRMS Life Science Identifier URN (e.g.,
 "urn:lsid:marinespecies.org:taxname:104251")
 \item \code{individualCount}: Abundance measurement (ind/m³)
