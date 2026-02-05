@@ -16,6 +16,8 @@ library(lubridate)
 library(tidyverse)
 install.packages("viridis")
 library(viridis)
+install.packages("cowplot")
+library(cowplot)
 
 # load all developed matrices
 # 84-15
@@ -122,6 +124,205 @@ heatmap_temora <- plot_species_heatmap("Temora stylifera")
 heatmap_acartia
 heatmap_temora
 
+# TO DO: improve the plot's quality, legend ecc
+# heatmap with more graphics # TO DO: improve the plot's quality
+# Function to create complex heatmap for a single species with life stage separation
+plot_species_heatmap_complex <- function(species_name, log = TRUE) {
+  
+  # Filter data for selected species
+  data <- zoo_heatmap |>
+    dplyr::filter(scientificName == species_name)
+  
+  # Legend text based on log parameter
+  legend_text <- ifelse(isTRUE(log), 
+                        expression(log(ind ~ m^-3)), 
+                        expression(ind ~ m^-3))
+  
+  # Create list to store plots for each life stage
+  combined_plots <- list()
+  
+  # Get unique life stages
+  life_stages <- unique(data$lifeStage)
+  
+  # Loop through each life stage
+  for (stage in life_stages) {
+    
+    # Filter data for current life stage
+    stage_data <- data |>
+      dplyr::filter(lifeStage == stage) |>
+      dplyr::mutate(abundance_plot = dplyr::case_when(
+        isTRUE(log) ~ log_abundance,
+        TRUE ~ abundance
+      ))
+    
+    # Main heatmap
+    heatmap_plot <- stage_data |>
+      ggplot2::ggplot(ggplot2::aes(x = week, y = year, fill = abundance_plot)) +
+      ggplot2::geom_tile(color = "grey90") +
+      ggplot2::theme_bw() +
+      ggplot2::scale_fill_gradientn(
+        colours = c("blue", "cyan", "green", "yellow", "orange", "red"),
+        na.value = "grey90"
+      ) +
+      ggplot2::coord_cartesian(expand = FALSE) +
+      ggplot2::scale_x_continuous(breaks = seq(1, 52, by = 4)) +
+      ggplot2::scale_y_continuous(breaks = seq(1984, 2024, by = 2)) +
+      ggplot2::theme(
+        legend.position = "bottom",
+        legend.key.width = unit(1, "cm"),
+        panel.background = ggplot2::element_blank(),
+        panel.grid = ggplot2::element_blank(),
+        legend.direction = "horizontal",
+        legend.key.size = unit(0.3, "cm"),
+        legend.title = ggplot2::element_text(size = 10),
+        legend.box.just = "left"
+      ) +
+      ggplot2::labs(
+        x = "Weeks",
+        y = "Years",
+        fill = legend_text
+      )
+    
+    # Marginal line plot (top)
+    line <- stage_data |>
+      dplyr::group_by(week) |>
+      dplyr::summarise(abundance_plot = mean(abundance_plot, na.rm = TRUE))
+    
+    # Calcola min e max considerando TUTTI i valori (anche 0)
+    minmax <- line |>
+      dplyr::mutate(label_row = dplyr::case_when(
+        abundance_plot == min(abundance_plot, na.rm = TRUE) ~ "min",
+        abundance_plot == max(abundance_plot, na.rm = TRUE) ~ "max",
+        TRUE ~ NA_character_
+      )) |>
+      dplyr::filter(!is.na(label_row)) |>
+      dplyr::arrange(abundance_plot)
+    
+    line_plot <- ggplot2::ggplot() +
+      ggplot2::theme_void() +
+      ggplot2::stat_smooth(data = line, 
+                           ggplot2::aes(week, abundance_plot),
+                           method = "loess", color = "#d64d4d", 
+                           se = FALSE, span = 0.25, linewidth = 0.5) +
+      ggplot2::geom_area(data = line, 
+                         ggplot2::aes(week, abundance_plot), 
+                         fill = "grey90", color = "transparent") +
+      ggplot2::geom_point(data = line, 
+                          ggplot2::aes(week, abundance_plot, 
+                                       color = abundance_plot)) +
+      ggplot2::annotate("text", 
+                        x = minmax$week[1], 
+                        y = minmax$abundance_plot[1], 
+                        label = round(minmax$abundance_plot[1], 1), 
+                        vjust = -1, color = "firebrick", size = 3) +
+      ggplot2::annotate("text",
+                        x = minmax$week[nrow(minmax)], 
+                        y = minmax$abundance_plot[nrow(minmax)], 
+                        label = round(minmax$abundance_plot[nrow(minmax)], 1),
+                        vjust = +1, hjust = 1.5, color = "firebrick", size = 3) +
+      ggplot2::annotate("point", 
+                        x = minmax$week[1], 
+                        y = minmax$abundance_plot[1], 
+                        color = "firebrick") +
+      ggplot2::annotate("point", 
+                        x = minmax$week[nrow(minmax)], 
+                        y = minmax$abundance_plot[nrow(minmax)], 
+                        color = "firebrick") +
+      ggplot2::scale_color_gradientn(
+        colours = c("blue", "cyan", "green", "yellow", "orange", "red")
+      ) +
+      ggplot2::coord_cartesian(expand = FALSE) +
+      ggplot2::theme(
+        legend.position = "none",
+        plot.margin = margin(t = 5, b = 0, l = 48, r = 50)
+      ) +
+      ggplot2::labs(subtitle = paste("Life stage:", stage))
+    
+    # Side panel (anomalies)
+    side_tile <- stage_data |>
+      dplyr::group_by(year) |>
+      dplyr::summarise(abundance_plot = mean(abundance_plot, na.rm = TRUE)) |>
+      dplyr::mutate(
+        mean_abundance = mean(abundance_plot, na.rm = TRUE),
+        mean_anomaly = (abundance_plot - mean_abundance) / mean_abundance * 100,
+        mean_anomaly_scale = dplyr::case_when(
+          mean_anomaly < -100 ~ -100,
+          mean_anomaly > 100 ~ 100,
+          TRUE ~ mean_anomaly
+        )
+      )
+    
+    side_plot <- side_tile |>
+      dplyr::mutate(dummy = "group") |>
+      ggplot2::ggplot() +
+      ggplot2::geom_tile(ggplot2::aes(x = dummy, y = year, fill = mean_anomaly_scale), 
+                         alpha = 0.6, color = "grey90") +
+      ggplot2::geom_text(ggplot2::aes(
+        x = dummy, y = year,
+        label = ifelse(!is.na(mean_anomaly), paste0(round(mean_anomaly, 0), "%"), "-")
+      ), size = 2.5, color = "grey30") +
+      ggplot2::theme_void() +
+      ggplot2::scale_fill_gradient2(
+        low = "#56a8a9",
+        mid = "white",
+        high = "#a95756",
+        midpoint = 0,
+        na.value = "white"
+      ) +
+      ggplot2::scale_y_continuous(breaks = seq(1984, 2024, by = 2)) +
+      ggplot2::coord_cartesian(expand = FALSE) +
+      ggplot2::labs(fill = "Mean difference (%)") +
+      ggplot2::theme(
+        legend.position = "bottom",
+        plot.margin = margin(t = 0, r = +12, b = 0, l = -3.5),
+        legend.key.width = unit(0.5, "cm"),
+        legend.key.size = unit(0.25, "cm"),
+        legend.title = ggplot2::element_text(size = 10),
+        legend.direction = "horizontal",
+        legend.box.just = "left"
+      )
+    
+    # Combine heatmap and side plot
+    p1 <- cowplot::plot_grid(heatmap_plot, side_plot, 
+                             ncol = 2, rel_widths = c(12, 1), align = "h")
+    
+    # Combine with top line plot
+    combined <- cowplot::plot_grid(line_plot, p1, 
+                                   nrow = 2, rel_heights = c(1, 5))
+    
+    combined_plots[[stage]] <- combined
+  }
+  
+  # Combine all life stages HORIZONTALLY
+  final_plot <- cowplot::plot_grid(
+    plotlist = combined_plots,
+    ncol = length(life_stages),
+    labels = NULL
+  )
+  
+  # Add overall title
+  title <- cowplot::ggdraw() + 
+    cowplot::draw_label(
+      bquote(italic(.(species_name))),
+      fontface = 'bold.italic',
+      size = 18,
+      x = 0,
+      hjust = 0
+    ) +
+    ggplot2::theme(
+      plot.margin = margin(0, 0, 0, 7)
+    )
+  
+  cowplot::plot_grid(
+    title, 
+    final_plot,
+    ncol = 1,
+    rel_heights = c(0.05, 1)
+  )
+}
+
+# Esempio di utilizzo:
+plot_species_heatmap_complex(species_name = "Acartia clausi", log = TRUE)
 
 # time series - trend Ab
 # Function to create temporal trend plot
