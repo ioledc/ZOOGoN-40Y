@@ -1,5 +1,12 @@
 FROM rocker/tidyverse:4
 
+# System deps (needed for R package jqr -> libjq.so.1)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    jq \
+    libjq1 \
+    libjq-dev \
+  && rm -rf /var/lib/apt/lists/*
+
 # Install imports
 RUN install2.r --error --skipinstalled \
     readr \
