@@ -80,7 +80,7 @@ jobs:
         run: Rscript -e 'ZooGoN::preprocess_surveys()'
 
   merge-tidy-data:
-    name: Merge tidy analysis-ready dataset
+    name: Merge datasets into analysis-ready
     needs: process-kobo-surveys
     runs-on: ubuntu-latest
     container:
@@ -96,7 +96,7 @@ jobs:
         run: Rscript -e 'ZooGoN::raw_to_tidy()'
 
   convert-to-darwincore:
-    name: Convert to Darwin Core format
+    name: Merge datasets and convert to Darwin Core
     needs: process-kobo-surveys
     runs-on: ubuntu-latest
     container:
