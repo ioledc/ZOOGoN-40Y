@@ -17,6 +17,7 @@
 preprocess_surveys <- function(raw_data = NULL) {
   conf <- read_config()
 
+  logger::log_info("Downloading raw survey data...", namespace = "ZooGoN")
   raw_surveys <-
     download_sharepoint_file(
       prefix = conf$ingestion$surveys$raw$file_prefix,
@@ -31,6 +32,9 @@ preprocess_surveys <- function(raw_data = NULL) {
       -dplyr::all_of(c("formhub/uuid", "start", "end", "today"))
     )
 
+  logger::log_info("[preprocess_surveys] Raw surveys: {nrow(raw_surveys)} rows")
+
+  logger::log_info("[preprocess_surveys] Extracting cruise info...")
   cruise_info <-
     raw_surveys |>
     dplyr::select("submission_id", !dplyr::starts_with("group_taxa")) |>
@@ -49,6 +53,7 @@ preprocess_surveys <- function(raw_data = NULL) {
     # remove legacy columns
     dplyr::select(-"sampling_name")
 
+  logger::log_info("[preprocess_surveys] Extracting taxa info...")
   taxa_info <-
     raw_surveys |>
     dplyr::select("submission_id", dplyr::starts_with("group_taxa")) |>
@@ -118,8 +123,11 @@ preprocess_surveys <- function(raw_data = NULL) {
     # TO DO: Ideally there should be no NAs unless the net was empty(!), to clarify. Meanwhile we drop all NAs
     dplyr::filter(!is.na(.data$aphia_id))
 
+  logger::log_info("[preprocess_surveys] Cleaned data: {nrow(clean_21_24)} rows")
+
   # Get unique AphiaID
   unique_aphia_ids <- as.numeric(unique(clean_21_24$aphia_id))
+  logger::log_info("[preprocess_surveys] Querying WoRMS for {length(unique_aphia_ids)} unique AphiaIDs...")
 
   worms_records <-
     unique_aphia_ids |>
@@ -193,6 +201,8 @@ preprocess_surveys <- function(raw_data = NULL) {
     ) |>
     dplyr::relocate("individualCount", .before = "lifeStage")
 
+  logger::log_info("[preprocess_surveys] Preprocessed data: {nrow(tidy_data)} rows, {length(unique(tidy_data$scientificName))} unique taxa")
+  logger::log_info("[preprocess_surveys] Uploading preprocessed data (CSV + Parquet)...")
   c("csv", "parquet") |>
     purrr::walk(
       ~ upload_sharepoint_df(
@@ -203,6 +213,7 @@ preprocess_surveys <- function(raw_data = NULL) {
         format = .
       )
     )
+  logger::log_info("[preprocess_surveys] Done.")
   # upload_sharepoint_df(
   #   data = preprocessed_complete,
   #   prefix = conf$ingestion$survey$preprocessed$file_prefix,

@@ -91,7 +91,7 @@ upload_sharepoint_df <- function(
     format = format
   )
 
-  message(sprintf("Uploaded to: %s", remote_path))
+  logger::log_info("Uploaded to: {remote_path}")
   invisible(NULL)
 }
 
@@ -141,12 +141,12 @@ download_sharepoint_file <- function(
         call. = FALSE
       )
     }
-    message(sprintf("Downloading file: %s", prefix))
+    logger::log_info("Downloading file: {prefix}")
   } else {
     # Find the latest versioned file with this prefix
     format <- match.arg(format)
     remote_path <- find_latest_version(prefix, options$bucket, format, options)
-    message(sprintf("Found file: %s", basename(remote_path)))
+    logger::log_info("Found file: {basename(remote_path)}")
   }
 
   # Get SharePoint connection details
@@ -164,7 +164,7 @@ download_sharepoint_file <- function(
     token = sharepoint_conn$token
   )
 
-  message("Downloaded successfully")
+  logger::log_info("Downloaded successfully")
 
   # Read and return data
   switch(
@@ -379,6 +379,7 @@ upload_large_file_to_sharepoint <- function(
   chunk_size = 10 * 1024 * 1024
 ) {
   file_size <- file.info(file_path)$size
+  logger::log_info("Large file upload: {basename(file_path)} ({round(file_size / 1024 / 1024, 1)} MB)")
 
   # Create upload session
   encoded_path <- utils::URLencode(remote_path, reserved = TRUE)
@@ -430,6 +431,7 @@ upload_large_file_to_sharepoint <- function(
       httr2::resp_check_status()
 
     offset <- offset + current_chunk_size
+    logger::log_info("Uploaded {round(offset / file_size * 100)}% ({round(offset / 1024 / 1024, 1)} / {round(file_size / 1024 / 1024, 1)} MB)")
   }
 
   invisible(NULL)
