@@ -1,0 +1,53 @@
+FROM rocker/tidyverse:4
+
+# System deps (needed for R package jqr -> libjq.so.1)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    jq \
+    libjq1 \
+    libjq-dev \
+  && rm -rf /var/lib/apt/lists/*
+
+# Install imports
+RUN install2.r --error --skipinstalled \
+    readr \
+    stringr \
+    tibble \
+    janitor \
+    magrittr \
+    rlang \
+    dotenv \
+    httr2 \
+    arrow \
+    git2r \
+    config \
+    logger \
+    purrr \
+    EML \
+    xml2 \
+    openxlsx \
+    remotes
+
+
+# Install suggests
+RUN install2.r --error --skipinstalled \
+    testthat \
+    knitr \
+    rmarkdown \
+    pkgdown \
+    worrms \
+    lubridate
+
+# Install from github
+RUN Rscript -e 'remotes::install_github("LivingNorway/LivingNorwayR")'
+
+
+
+# Install local package
+COPY . /home
+WORKDIR /home
+RUN Rscript -e 'remotes::install_local(dependencies = TRUE, upgrade = "never")'
+
+# Validate installation
+RUN Rscript -e 'library(ZooGoN); cat("ZooGoN loaded successfully\n")'
+
+ENTRYPOINT ["Rscript"]

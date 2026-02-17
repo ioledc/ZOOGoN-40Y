@@ -7,13 +7,14 @@ conf <- read_config()
 # get legacy data from legacy_data bucket from sharepoint, formatting data and name
 ids <-
   download_sharepoint_file(
-    prefix = "ids_84_15.csv",
+    prefix = "ids_16_20.csv",
     options = conf$storage$sharepoint$credentials,
     bucket = "legacy_data",
     filename = TRUE
   ) |>
+  dplyr::rename(sample_id = id) |>
   dplyr::mutate(
-    date = lubridate::as_date(as.numeric(.data$date), origin = "1899-12-30"),
+    date = lubridate::mdy(.data$date),
     sample_id = janitor::make_clean_names(.data$sample_id),
     sample_id = stringr::str_replace_all(.data$sample_id, "_", "")
   )
@@ -205,7 +206,7 @@ tidy_data <-
     # select only the columns needed for export
     "eventID",
     "eventDate",
-    "scientificname",
+    scientificName = "scientificname",
     "lsid",
     "individualCount",
     "lifeStage"
@@ -234,7 +235,20 @@ tidy_data <-
       lifeStage
     ),
     individualCount = as.numeric(individualCount), # convert from character to numeric
-  )
+  ) |>
+  # remove NA counts & IDs
+  dplyr::filter(
+    !is.na(.data$individualCount),
+    !is.na(.data$eventDate),
+    !is.na(.data$eventID)
+  ) |>
+  # remove duplicates
+  dplyr::group_by(eventID, eventDate, scientificName, lsid, lifeStage) |>
+  dplyr::summarise(
+    individualCount = sum(individualCount, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  dplyr::relocate("individualCount", .before = "lifeStage")
 
 # export csv and parquet tidy files to hot storage bucket
 # vreate a vector with the two formats to be generated

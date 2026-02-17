@@ -28,5 +28,7 @@ upload_file_to_sharepoint(
 }
 \description{
 Uploads a local file to a SharePoint document library using Microsoft Graph API.
+Files larger than 4 MB are automatically uploaded via a resumable upload session;
+smaller files use a simple PUT request.
 }
 \keyword{internal}

@@ -35,10 +35,13 @@ navbar:
       href: https://dto-bioflow.eu
 
 reference:
-  - title: "Darwin Core Conversion"
-    desc: "Convert legacy data to Darwin Core format"
+  - title: "Data Processing"
+    desc: "Merge, harmonize, and convert zooplankton data"
     contents:
+      - raw_to_tidy
       - raw_to_dc
+      - build_emof_occurrence
+      - build_emof_events
 
   - title: "Cloud Storage"
     desc: "SharePoint integration for data storage and retrieval"

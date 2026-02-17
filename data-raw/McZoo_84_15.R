@@ -31,6 +31,7 @@ bio <-
     TAXA = stringr::str_trim(.data$TAXA)
   )
 
+
 dates <-
   bio |>
   dplyr::select(-c(1:10), "dat_id")
@@ -195,8 +196,20 @@ tidy_data <-
       TRUE ~ .data$lifeStage
     )
   ) |>
-  # remove NA counts
-  dplyr::filter(!is.na(.data$individualCount))
+  # remove NA counts & IDs
+  dplyr::filter(
+    !is.na(.data$individualCount),
+    !is.na(.data$eventDate),
+    !is.na(.data$eventID)
+  ) |>
+  # remove duplicates
+  dplyr::group_by(eventID, eventDate, scientificName, lsid, lifeStage) |>
+  dplyr::summarise(
+    individualCount = sum(individualCount, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  dplyr::relocate("individualCount", .before = "lifeStage")
+
 
 # export csv and parquet tidy files to hot storage bucket
 formats <- c("parquet", "csv")

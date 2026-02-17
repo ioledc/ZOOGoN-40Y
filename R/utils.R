@@ -11,10 +11,10 @@
 #'
 load_dotenv <- function(file = ".env") {
   if (file.exists(file)) {
-    logger::log_info("Loading environment variables from {file}")
+    logger::log_debug("Loading environment variables from {file}", namespace = "ZooGoN")
     dotenv::load_dot_env(file = file)
   } else {
-    logger::log_debug("No .env file found at {file}, skipping dotenv loading")
+    logger::log_debug("No .env file found at {file}, skipping dotenv loading", namespace = "ZooGoN")
   }
   invisible(NULL)
 }
@@ -34,7 +34,7 @@ read_config <- function() {
   # Load .env file first to make variables available to config.yml
   load_dotenv()
 
-  logger::log_info("Loading configuration file...")
+  logger::log_info("Loading configuration file...", namespace = "ZooGoN")
 
   conf <- config::get(
     config = Sys.getenv("R_CONFIG_ACTIVE", "default"),
@@ -43,8 +43,8 @@ read_config <- function() {
       package = "ZooGoN"
     )
   )
-  logger::log_info("Using configutation: {attr(conf, 'config')}")
-  logger::log_debug("Running with parameters {conf}")
+  logger::log_info("Using configuration: {attr(conf, 'config')}", namespace = "ZooGoN")
+  logger::log_debug("Running with parameters {conf}", namespace = "ZooGoN")
 
   conf
 }
