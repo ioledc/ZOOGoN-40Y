@@ -1,9 +1,14 @@
 ---
 name: ZooGon Kobo Automation
-'on':
-  push: 
+
+on:
+  push:
   schedule:
-    - cron: 0 0 * * *
+    - cron: "0 0 * * *"
+
+permissions:
+  contents: read
+  packages: write
 
 env:
   KOBO_TOKEN: ${{ secrets.KOBO_TOKEN }}
@@ -14,7 +19,6 @@ env:
   SHAREPOINT_TENANT_ID: ${{ secrets.SHAREPOINT_TENANT_ID }}
   SHAREPOINT_CLIENT_SECRET: ${{ secrets.SHAREPOINT_CLIENT_SECRET }}
 
-
 jobs:
   build-container:
     name: Build R container
@@ -22,92 +26,103 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - id: build-docker
-        name: Build image with cache
-        uses: whoan/docker-build-with-cache-action@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
-          dockerfile: Dockerfile.prod
-          image_name: r-runner-zoogon-mc
+          registry: ghcr.io
+          username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          registry: docker.pkg.github.com
-          username: $GITHUB_ACTOR
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.prod
+          push: true
+          tags: ghcr.io/ioledc/zoogon-40y/r-runner-zoogon-mc:latest
+          cache-from: type=registry,ref=ghcr.io/ioledc/zoogon-40y/r-runner-zoogon-mc:buildcache
+          cache-to: type=registry,ref=ghcr.io/ioledc/zoogon-40y/r-runner-zoogon-mc:buildcache,mode=max
 
   ingest-kobo-surveys:
-    container:
-      credentials:
-        password: ${{ secrets.GITHUB_TOKEN }}
-        username: ${{ github.actor }}
-      image: docker.pkg.github.com/ioledc/ZOOGoN-40Y/r-runner-zoogon-mc
     name: Ingest MC kobo surveys
     needs: build-container
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/ioledc/zoogon-40y/r-runner-zoogon-mc:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - if: endsWith(github.ref, '/main')
-        name: Set env to production
+      - name: Set env to production
+        if: endsWith(github.ref, '/main')
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call ingest_surveys()
         run: Rscript -e 'ZooGoN::ingest_surveys()'
 
   process-kobo-surveys:
-    container:
-      credentials:
-        password: ${{ secrets.GITHUB_TOKEN }}
-        username: ${{ github.actor }}
-      image: docker.pkg.github.com/ioledc/ZOOGoN-40Y/r-runner-zoogon-mc
     name: Process MC kobo surveys
     needs: ingest-kobo-surveys
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/ioledc/zoogon-40y/r-runner-zoogon-mc:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - if: endsWith(github.ref, '/main')
-        name: Set env to production
+      - name: Set env to production
+        if: endsWith(github.ref, '/main')
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call preprocess_surveys()
         run: Rscript -e 'ZooGoN::preprocess_surveys()'
 
   merge-tidy-data:
-    container:
-      credentials:
-        password: ${{ secrets.GITHUB_TOKEN }}
-        username: ${{ github.actor }}
-      image: docker.pkg.github.com/ioledc/ZOOGoN-40Y/r-runner-zoogon-mc
     name: Merge tidy analysis-ready dataset
     needs: process-kobo-surveys
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/ioledc/zoogon-40y/r-runner-zoogon-mc:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - if: endsWith(github.ref, '/main')
-        name: Set env to production
+      - name: Set env to production
+        if: endsWith(github.ref, '/main')
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call raw_to_tidy()
         run: Rscript -e 'ZooGoN::raw_to_tidy()'
 
   convert-to-darwincore:
-    container:
-      credentials:
-        password: ${{ secrets.GITHUB_TOKEN }}
-        username: ${{ github.actor }}
-      image: docker.pkg.github.com/ioledc/ZOOGoN-40Y/r-runner-zoogon-mc
     name: Convert to Darwin Core format
     needs: process-kobo-surveys
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/ioledc/zoogon-40y/r-runner-zoogon-mc:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - if: endsWith(github.ref, '/main')
-        name: Set env to production
+      - name: Set env to production
+        if: endsWith(github.ref, '/main')
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call raw_to_dc()
         run: Rscript -e 'ZooGoN::raw_to_dc()'
 
   build-darwincore-archive:
-    container:
-      credentials:
-        password: ${{ secrets.GITHUB_TOKEN }}
-        username: ${{ github.actor }}
-      image: docker.pkg.github.com/ioledc/ZOOGoN-40Y/r-runner-zoogon-mc
     name: Build Darwin Core Archive
     needs: convert-to-darwincore
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/ioledc/zoogon-40y/r-runner-zoogon-mc:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - if: endsWith(github.ref, '/main')
-        name: Set env to production
+      - name: Set env to production
+        if: endsWith(github.ref, '/main')
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call dc_to_archive()
         run: Rscript -e 'ZooGoN::dc_to_archive()'
