@@ -9,7 +9,7 @@
 dc_to_archive <- function() {
   conf <- read_config()
 
-  logger::log_info("[dc_to_archive] Downloading Darwin Core tables from SharePoint...")
+  logger::log_info("Downloading Darwin Core tables from SharePoint...", namespace = "ZooGoN")
   dc_list <-
     download_sharepoint_file(
       prefix = conf$ingestion$surveys$darwincore$file_prefix,
@@ -17,11 +17,11 @@ dc_to_archive <- function() {
       bucket = conf$storage$sharepoint$buckets$automation_bucket,
       format = "rds"
     )
-  logger::log_info("[dc_to_archive] Tables loaded: {nrow(dc_list$event)} events, {nrow(dc_list$occurrence)} occurrences, {nrow(dc_list$emof)} measurements")
+  logger::log_debug("Tables loaded: {nrow(dc_list$event)} events, {nrow(dc_list$occurrence)} occurrences, {nrow(dc_list$emof)} measurements", namespace = "ZooGoN")
 
   event_df <- dc_list$event
 
-  logger::log_info("[dc_to_archive] Initializing DwC core and extensions...")
+  logger::log_info("Initializing DwC core and extensions...", namespace = "ZooGoN")
   core_event <- LivingNorwayR::initializeGBIFEvent(
     event_df,
     idColumnInfo = "eventID",
@@ -40,14 +40,14 @@ dc_to_archive <- function() {
     nameAutoMap = TRUE
   )
 
-  logger::log_info("[dc_to_archive] Generating EML metadata...")
+  logger::log_info("Generating EML metadata...", namespace = "ZooGoN")
   eml_obj <- get_metadata(event_df)
   eml_path <- file.path(tempdir(), "mc_eml.xml")
 
   EML::write_eml(eml_obj, eml_path)
   add_gbif_license_block(eml_path)
   EML::eml_validate(eml_path)
-  logger::log_info("[dc_to_archive] EML validated successfully")
+  logger::log_debug("EML validated successfully", namespace = "ZooGoN")
 
   metadata <- LivingNorwayR::initializeDwCMetadata(
     fileLocation = eml_path,
@@ -63,13 +63,13 @@ dc_to_archive <- function() {
 
   zip_file <- add_version("ZooGoN_dwca", extension = "zip")
 
-  logger::log_info("[dc_to_archive] Exporting DwC-A zip: {basename(zip_file)}")
+  logger::log_info("Exporting DwC-A zip: {basename(zip_file)}", namespace = "ZooGoN")
   dwc$exportAsDwCArchive(
     fileName = zip_file,
     emlLocation = basename(eml_path)
   )
 
-  logger::log_info("[dc_to_archive] Uploading archive to SharePoint...")
+  logger::log_info("Uploading archive to SharePoint...", namespace = "ZooGoN")
   sp_conn <- connect_to_sharepoint(conf$storage$sharepoint$credentials)
   remote_path <- file.path(
     conf$storage$sharepoint$buckets$darwin_core_bucket,
@@ -84,7 +84,7 @@ dc_to_archive <- function() {
     format = "zip"
   )
 
-  logger::log_info("[dc_to_archive] Done. Archive uploaded to: {remote_path}")
+  logger::log_success("dc_to_archive complete — uploaded to: {remote_path}", namespace = "ZooGoN")
   invisible(list(archive_path = zip_file, eml_path = eml_path))
 }
 

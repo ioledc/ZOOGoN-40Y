@@ -91,7 +91,7 @@ upload_sharepoint_df <- function(
     format = format
   )
 
-  logger::log_info("Uploaded to: {remote_path}")
+  logger::log_debug("Uploaded to: {remote_path}", namespace = "ZooGoN")
   invisible(NULL)
 }
 
@@ -141,12 +141,12 @@ download_sharepoint_file <- function(
         call. = FALSE
       )
     }
-    logger::log_info("Downloading file: {prefix}")
+    logger::log_debug("Downloading file: {prefix}", namespace = "ZooGoN")
   } else {
     # Find the latest versioned file with this prefix
     format <- match.arg(format)
     remote_path <- find_latest_version(prefix, options$bucket, format, options)
-    logger::log_info("Found file: {basename(remote_path)}")
+    logger::log_debug("Found file: {basename(remote_path)}", namespace = "ZooGoN")
   }
 
   # Get SharePoint connection details
@@ -164,7 +164,7 @@ download_sharepoint_file <- function(
     token = sharepoint_conn$token
   )
 
-  logger::log_info("Downloaded successfully")
+  logger::log_debug("Downloaded successfully", namespace = "ZooGoN")
 
   # Read and return data
   switch(
@@ -379,7 +379,7 @@ upload_large_file_to_sharepoint <- function(
   chunk_size = 10 * 1024 * 1024
 ) {
   file_size <- file.info(file_path)$size
-  logger::log_info("Large file upload: {basename(file_path)} ({round(file_size / 1024 / 1024, 1)} MB)")
+  logger::log_info("Large file upload: {basename(file_path)} ({round(file_size / 1024 / 1024, 1)} MB)", namespace = "ZooGoN")
 
   # Create upload session
   encoded_path <- utils::URLencode(remote_path, reserved = TRUE)
@@ -431,7 +431,7 @@ upload_large_file_to_sharepoint <- function(
       httr2::resp_check_status()
 
     offset <- offset + current_chunk_size
-    logger::log_info("Uploaded {round(offset / file_size * 100)}% ({round(offset / 1024 / 1024, 1)} / {round(file_size / 1024 / 1024, 1)} MB)")
+    logger::log_debug("Uploaded {round(offset / file_size * 100)}% ({round(offset / 1024 / 1024, 1)} / {round(file_size / 1024 / 1024, 1)} MB)", namespace = "ZooGoN")
   }
 
   invisible(NULL)

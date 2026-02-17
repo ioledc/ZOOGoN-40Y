@@ -32,9 +32,9 @@ preprocess_surveys <- function(raw_data = NULL) {
       -dplyr::all_of(c("formhub/uuid", "start", "end", "today"))
     )
 
-  logger::log_info("[preprocess_surveys] Raw surveys: {nrow(raw_surveys)} rows")
+  logger::log_debug("Raw surveys: {nrow(raw_surveys)} rows", namespace = "ZooGoN")
 
-  logger::log_info("[preprocess_surveys] Extracting cruise info...")
+  logger::log_info("Extracting cruise info...", namespace = "ZooGoN")
   cruise_info <-
     raw_surveys |>
     dplyr::select("submission_id", !dplyr::starts_with("group_taxa")) |>
@@ -53,7 +53,7 @@ preprocess_surveys <- function(raw_data = NULL) {
     # remove legacy columns
     dplyr::select(-"sampling_name")
 
-  logger::log_info("[preprocess_surveys] Extracting taxa info...")
+  logger::log_info("Extracting taxa info...", namespace = "ZooGoN")
   taxa_info <-
     raw_surveys |>
     dplyr::select("submission_id", dplyr::starts_with("group_taxa")) |>
@@ -123,11 +123,11 @@ preprocess_surveys <- function(raw_data = NULL) {
     # TO DO: Ideally there should be no NAs unless the net was empty(!), to clarify. Meanwhile we drop all NAs
     dplyr::filter(!is.na(.data$aphia_id))
 
-  logger::log_info("[preprocess_surveys] Cleaned data: {nrow(clean_21_24)} rows")
+  logger::log_debug("Cleaned data: {nrow(clean_21_24)} rows", namespace = "ZooGoN")
 
   # Get unique AphiaID
   unique_aphia_ids <- as.numeric(unique(clean_21_24$aphia_id))
-  logger::log_info("[preprocess_surveys] Querying WoRMS for {length(unique_aphia_ids)} unique AphiaIDs...")
+  logger::log_info("Querying WoRMS for {length(unique_aphia_ids)} unique AphiaIDs...", namespace = "ZooGoN")
 
   worms_records <-
     unique_aphia_ids |>
@@ -201,8 +201,8 @@ preprocess_surveys <- function(raw_data = NULL) {
     ) |>
     dplyr::relocate("individualCount", .before = "lifeStage")
 
-  logger::log_info("[preprocess_surveys] Preprocessed data: {nrow(tidy_data)} rows, {length(unique(tidy_data$scientificName))} unique taxa")
-  logger::log_info("[preprocess_surveys] Uploading preprocessed data (CSV + Parquet)...")
+  logger::log_info("Preprocessed data: {nrow(tidy_data)} rows, {length(unique(tidy_data$scientificName))} unique taxa", namespace = "ZooGoN")
+  logger::log_info("Uploading preprocessed data (CSV + Parquet)...", namespace = "ZooGoN")
   c("csv", "parquet") |>
     purrr::walk(
       ~ upload_sharepoint_df(
@@ -213,7 +213,7 @@ preprocess_surveys <- function(raw_data = NULL) {
         format = .
       )
     )
-  logger::log_info("[preprocess_surveys] Done.")
+  logger::log_success("preprocess_surveys complete", namespace = "ZooGoN")
   # upload_sharepoint_df(
   #   data = preprocessed_complete,
   #   prefix = conf$ingestion$survey$preprocessed$file_prefix,
