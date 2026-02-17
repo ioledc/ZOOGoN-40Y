@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">ZooGoN</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">3.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">3.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -36,9 +36,9 @@
     </div>
 
     <div class="section level2">
-      <h2 id="darwin-core-conversion">Darwin Core Conversion<a class="anchor" aria-label="anchor" href="#darwin-core-conversion"></a></h2>
+      <h2 id="data-processing">Data Processing<a class="anchor" aria-label="anchor" href="#data-processing"></a></h2>
 
-      <div class="section-desc"><p>Convert legacy data to Darwin Core format</p></div>
+      <div class="section-desc"><p>Merge, harmonize, and convert zooplankton data</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -47,10 +47,31 @@
 
       <dl><dt>
 
+          <code><a href="raw_to_tidy.html">raw_to_tidy()</a></code>
+
+        </dt>
+        <dd>Merge all zooplankton datasets into an analysis-ready tidy table</dd>
+
+        <dt>
+
           <code><a href="raw_to_dc.html">raw_to_dc()</a></code>
 
         </dt>
         <dd>Convert legacy LTER-MareChiara zooplankton data to Darwin Core format</dd>
+
+        <dt>
+
+          <code><a href="build_emof_occurrence.html">build_emof_occurrence()</a></code>
+
+        </dt>
+        <dd>Build occurrence-level eMoF table</dd>
+
+        <dt>
+
+          <code><a href="build_emof_events.html">build_emof_events()</a></code>
+
+        </dt>
+        <dd>Build event-level eMoF sampling metadata</dd>
       </dl></div><div class="section level2">
       <h2 id="cloud-storage">Cloud Storage<a class="anchor" aria-label="anchor" href="#cloud-storage"></a></h2>
 

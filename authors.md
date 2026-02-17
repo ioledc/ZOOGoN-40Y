@@ -12,14 +12,14 @@
 Source:
 [`DESCRIPTION`](https://github.com/ioledc/ZOOGoN-40Y/blob/main/DESCRIPTION)
 
-Longobardi L, Di Capua I (2025). *ZooGoN: Gulf of Naples 40-Year
+Longobardi L, Di Capua I (2026). *ZooGoN: Gulf of Naples 40-Year
 Zooplankton Biodiversity Assessment and Standardization*. R package
-version 3.0.0, <https://github.com/ioledc/ZOOGoN-40Y>.
+version 3.1.0, <https://github.com/ioledc/ZOOGoN-40Y>.
 
     @Manual{,
       title = {ZooGoN: Gulf of Naples 40-Year Zooplankton Biodiversity Assessment and Standardization},
       author = {Lorenzo Longobardi and Iole {Di Capua}},
-      year = {2025},
-      note = {R package version 3.0.0},
+      year = {2026},
+      note = {R package version 3.1.0},
       url = {https://github.com/ioledc/ZOOGoN-40Y},
     }

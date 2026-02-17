@@ -25,7 +25,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">ZooGoN</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">3.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">3.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -76,13 +76,12 @@
 <h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
 </h2>
 <p>This vignette shows how the package builds Darwin Core tables from
-the legacy LTER-MareChiara zooplankton dataset. The workflow is
-implemented in <code><a href="../reference/raw_to_dc.html">raw_to_dc()</a></code>, which downloads a preprocessed
-parquet file from SharePoint (see <code>inst/config.yml</code> for
-buckets and credentials), adds the required Darwin Core fields, and
-returns the tables as a list. The function uses data that already
-contain WoRMS LSIDs and does not perform additional taxonomic
-queries.</p>
+the LTER-MareChiara zooplankton dataset. The conversion is handled by
+<code><a href="../reference/raw_to_dc.html">raw_to_dc()</a></code>, which downloads the merged tidy dataset from
+SharePoint (produced by <code><a href="../reference/raw_to_tidy.html">raw_to_tidy()</a></code>), adds the required
+Darwin Core fields, and uploads the resulting tables back to SharePoint
+as a versioned RDS file. The function uses data that already contains
+WoRMS LSIDs and does not perform additional taxonomic queries.</p>
 <div class="section level3">
 <h3 id="prerequisites">Prerequisites<a class="anchor" aria-label="anchor" href="#prerequisites"></a>
 </h3>
@@ -90,8 +89,9 @@ queries.</p>
 <li>
 <code>inst/config.yml</code> configured with SharePoint credentials
 and bucket names.</li>
-<li>The file <code>McZoo_84-13.parquet</code> available in the
-<code>hot_bucket</code> defined in the config. This file should contain
+<li>The tidy dataset must exist in the <code>automation_bucket</code>
+(produced by running <code><a href="../reference/raw_to_tidy.html">raw_to_tidy()</a></code> earlier in the
+pipeline). This merged dataset covers 1984-2024 and contains
 preprocessed records with WoRMS LSIDs.</li>
 <li>Optional: set <code>verbose = FALSE</code> to silence log
 messages.</li>
@@ -101,7 +101,7 @@ messages.</li>
 <div class="section level2">
 <h2 id="expected-input-structure">Expected Input Structure<a class="anchor" aria-label="anchor" href="#expected-input-structure"></a>
 </h2>
-<p><code><a href="../reference/raw_to_dc.html">raw_to_dc()</a></code> expects the parquet file to contain at
+<p><code><a href="../reference/raw_to_dc.html">raw_to_dc()</a></code> expects the tidy dataset to contain at
 least:</p>
 <ul>
 <li>
@@ -128,18 +128,17 @@ measurement table.</p>
 <h2 id="running-the-conversion">Running the conversion<a class="anchor" aria-label="anchor" href="#running-the-conversion"></a>
 </h2>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">dc_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/raw_to_dc.html">raw_to_dc</a></span><span class="op">(</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Darwin Core tables</span></span>
-<span><span class="va">event_table</span> <span class="op">&lt;-</span> <span class="va">dc_data</span><span class="op">$</span><span class="va">event</span></span>
-<span><span class="va">occurrence_table</span> <span class="op">&lt;-</span> <span class="va">dc_data</span><span class="op">$</span><span class="va">occurrence</span></span>
-<span><span class="va">emof_table</span> <span class="op">&lt;-</span> <span class="va">dc_data</span><span class="op">$</span><span class="va">emof</span></span>
-<span></span>
-<span><span class="co"># Processing metadata</span></span>
-<span><span class="va">dc_data</span><span class="op">$</span><span class="va">processing_info</span></span>
-<span><span class="va">dc_data</span><span class="op">$</span><span class="va">metadata</span></span></code></pre></div>
-<p>The function fetches the parquet file from SharePoint, builds the
-tables, and returns them without writing to disk.</p>
+<code class="sourceCode R"><span><span class="co"># Convert tidy data to Darwin Core format</span></span>
+<span><span class="co"># Tables are uploaded to SharePoint automatically</span></span>
+<span><span class="fu"><a href="../reference/raw_to_dc.html">raw_to_dc</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p>The function downloads the tidy dataset from SharePoint, builds the
+three Darwin Core tables (Event, Occurrence, eMoF), and uploads them as
+a versioned RDS file to the <code>automation_bucket</code>.</p>
+<p>To build a Darwin Core Archive with EML metadata on top of the
+tables:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Build DwC-A zip and upload to SharePoint</span></span>
+<span><span class="fu"><a href="../reference/dc_to_archive.html">dc_to_archive</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="darwin-core-tables">Darwin Core tables<a class="anchor" aria-label="anchor" href="#darwin-core-tables"></a>
@@ -149,10 +148,11 @@ tables, and returns them without writing to disk.</p>
 </h3>
 <p><code><a href="../reference/raw_to_dc.html">raw_to_dc()</a></code> builds one row per unique event with fixed
 station metadata.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">event_table</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">eventID</span>, <span class="va">eventDate</span>, <span class="va">decimalLatitude</span>, <span class="va">decimalLongitude</span>, <span class="va">samplingProtocol</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># After downloading the DC tables from SharePoint:</span></span>
+<span><span class="co"># event_table %&gt;%</span></span>
+<span><span class="co">#   select(eventID, eventDate, decimalLatitude, decimalLongitude, samplingProtocol) %&gt;%</span></span>
+<span><span class="co">#   head()</span></span></code></pre></div>
 <p>Columns include:</p>
 <ul>
 <li>
@@ -176,12 +176,8 @@ station metadata.</p>
 <div class="section level3">
 <h3 id="occurrence">Occurrence<a class="anchor" aria-label="anchor" href="#occurrence"></a>
 </h3>
-<p>Occurrences are derived from the legacy data with an automatically
+<p>Occurrences are derived from the tidy data with an automatically
 generated <code>occurrenceID</code> and presence flag.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">occurrence_table</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/select.html" class="external-link">select</a></span><span class="op">(</span><span class="va">eventID</span>, <span class="va">occurrenceID</span>, <span class="va">scientificName</span>, <span class="va">scientificNameID</span>, <span class="va">occurrenceStatus</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <ul>
 <li>
 <code>occurrenceStatus</code> is set to <code>"present"</code> when
@@ -197,10 +193,6 @@ directly from the input (no new validation is run).</li>
 </h3>
 <p>Measurements are produced by pivoting the remaining columns per
 occurrence.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">emof_table</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/count.html" class="external-link">count</a></span><span class="op">(</span><span class="va">measurementType</span>, <span class="va">measurementTypeID</span><span class="op">)</span> <span class="op"><a href="../reference/pipe.html">%&gt;%</a></span></span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/arrange.html" class="external-link">arrange</a></span><span class="op">(</span><span class="va">measurementType</span><span class="op">)</span></span></code></pre></div>
 <p>Mapping logic implemented in <code><a href="../reference/raw_to_dc.html">raw_to_dc()</a></code>:</p>
 <ul>
 <li>Measurements with values <code>f</code>, <code>m</code>,
@@ -225,33 +217,16 @@ and
 <div class="section level2">
 <h2 id="processing-metadata">Processing metadata<a class="anchor" aria-label="anchor" href="#processing-metadata"></a>
 </h2>
-<p>The function returns a small metadata bundle alongside the
-tables.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">dc_data</span><span class="op">$</span><span class="va">processing_info</span></span>
-<span><span class="va">dc_data</span><span class="op">$</span><span class="va">metadata</span></span></code></pre></div>
-<p><code>processing_info</code> summarises counts (events, occurrences,
-measurements), date range, and unique taxa. <code>metadata</code> is a
-tibble with dataset title, contact, institution, license, project tag,
-and the processing statistics recorded during the run.</p>
-</div>
-<div class="section level2">
-<h2 id="exporting-results">Exporting results<a class="anchor" aria-label="anchor" href="#exporting-results"></a>
-</h2>
-<p>Use base R or the storage helpers to persist the output.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Write locally</span></span>
-<span><span class="fu">readr</span><span class="fu">::</span><span class="fu"><a href="https://readr.tidyverse.org/reference/write_delim.html" class="external-link">write_csv</a></span><span class="op">(</span><span class="va">dc_data</span><span class="op">$</span><span class="va">event</span>, <span class="st">"event.csv"</span><span class="op">)</span></span>
-<span><span class="fu">readr</span><span class="fu">::</span><span class="fu"><a href="https://readr.tidyverse.org/reference/write_delim.html" class="external-link">write_csv</a></span><span class="op">(</span><span class="va">dc_data</span><span class="op">$</span><span class="va">occurrence</span>, <span class="st">"occurrence.csv"</span><span class="op">)</span></span>
-<span><span class="fu">readr</span><span class="fu">::</span><span class="fu"><a href="https://readr.tidyverse.org/reference/write_delim.html" class="external-link">write_csv</a></span><span class="op">(</span><span class="va">dc_data</span><span class="op">$</span><span class="va">emof</span>, <span class="st">"emof.csv"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Or upload back to SharePoint with versioning</span></span>
-<span><span class="fu"><a href="../reference/upload_sharepoint_df.html">upload_sharepoint_df</a></span><span class="op">(</span></span>
-<span>  data <span class="op">=</span> <span class="va">dc_data</span><span class="op">$</span><span class="va">emof</span>,</span>
-<span>  prefix <span class="op">=</span> <span class="st">"darwin-core/emof"</span>,</span>
-<span>  options <span class="op">=</span> <span class="fu"><a href="../reference/read_config.html">read_config</a></span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="va">storage</span><span class="op">$</span><span class="va">sharepoint</span>,</span>
-<span>  format <span class="op">=</span> <span class="st">"csv"</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+<p><code><a href="../reference/raw_to_dc.html">raw_to_dc()</a></code> stores processing metadata alongside the
+tables:</p>
+<ul>
+<li>
+<code>processing_info</code>: event, occurrence and measurement
+counts, date range, unique taxa count.</li>
+<li>
+<code>metadata</code>: dataset title, contact, institution, license,
+project tag, and the processing statistics.</li>
+</ul>
 </div>
 <div class="section level2">
 <h2 id="publishing-optional">Publishing (optional)<a class="anchor" aria-label="anchor" href="#publishing-optional"></a>
@@ -269,9 +244,6 @@ a public DwC-A URL to check the flow safely.</li>
 <h2 id="limitations-and-next-steps">Limitations and next steps<a class="anchor" aria-label="anchor" href="#limitations-and-next-steps"></a>
 </h2>
 <ul>
-<li>The current implementation processes a single legacy file
-(<code>McZoo_84-13.parquet</code>). Additional years will need to be
-added explicitly.</li>
 <li>The function assumes WoRMS identifiers are already present; it does
 not call external taxonomic services.</li>
 <li>No automated quality control is applied beyond field renaming and

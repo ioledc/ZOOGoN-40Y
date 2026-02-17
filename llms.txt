@@ -45,29 +45,38 @@ pak::pak("ioledc/ZOOGoN-40Y")
 
 ## Usage
 
-### Darwin Core Conversion
+### Automated Pipeline
 
-Convert preprocessed legacy zooplankton data to Darwin Core format:
+ZooGoN provides a fully automated data pipeline that processes
+zooplankton data from field collection to Darwin Core Archive. Each step
+reads its input from SharePoint and uploads results back automatically:
 
 ``` r
 library(ZooGoN)
 
-# Convert legacy data to Darwin Core format
-dc_data <- raw_to_dc()
+# 1. Ingest field surveys from KoboToolbox
+ingest_surveys()
 
-# Access Darwin Core extension tables
-event_table <- dc_data$event              # Sampling events
-occurrence_table <- dc_data$occurrence    # Species occurrences
-measurements <- dc_data$emof              # Extended measurements
+# 2. Preprocess and standardize survey data
+preprocess_surveys()
 
-# View processing summary
-dc_data$processing_info
+# 3. Merge legacy + ongoing data into an analysis-ready dataset
+raw_to_tidy()
+
+# 4. Convert tidy data to Darwin Core format (Event, Occurrence, eMoF)
+raw_to_dc()
+
+# 5. Build Darwin Core Archive with EML metadata and upload
+dc_to_archive()
 ```
 
-The function creates OBIS-compliant tables with: - **Event Extension**:
-Sampling event metadata with geographic coordinates - **Occurrence
-Extension**: Species occurrences with WoRMS LSIDs - **eMoF Extension**:
-Measurements with BODC NERC Vocabulary standards
+The pipeline produces OBIS-compliant Darwin Core tables: - **Event
+Extension**: Sampling event metadata with geographic coordinates -
+**Occurrence Extension**: Species occurrences with WoRMS LSIDs - **eMoF
+Extension**: Measurements with BODC NERC Vocabulary standards
+
+All steps are also run automatically via GitHub Actions on a scheduled
+basis.
 
 ### Cloud Storage Operations
 
@@ -138,8 +147,11 @@ standards:
 
 ## Publishing to GBIF (optional)
 
-- Build a Darwin Core Archive and EML with `dc_to_archive(raw_to_dc())`
-  (writes the zip and uploads it to SharePoint).
+- Build a Darwin Core Archive and EML with
+  [`dc_to_archive()`](https://ioledc.github.io/ZOOGoN-40Y/reference/dc_to_archive.md)
+  (writes the zip and uploads it to SharePoint). This reads the Darwin
+  Core tables produced by
+  [`raw_to_dc()`](https://ioledc.github.io/ZOOGoN-40Y/reference/raw_to_dc.md).
 - Production registration: use
   [`register_gbif_dataset()`](https://ioledc.github.io/ZOOGoN-40Y/reference/register_gbif_dataset.md)
   with your real GBIF organization key, installation key, credentials,
@@ -183,27 +195,30 @@ This work is supported by the DTO-BioFlow project
 
 **Institution**: WorldFish
 
-**ORCID**: [0000-0003-2959-8977](https://orcid.org/0000-0003-3126-7341)
+**ORCID**: [0000-0003-3126-7341](https://orcid.org/0000-0003-3126-7341)
 
-- ## Acknowledgments
+## Acknowledgments
 
 - LTER-MareChiara research station
-
-- DTO-BioFlow project consortium
-
+- DTO-BioFlow project consortium  
 - EMODnet Biology data infrastructure
-
 - European Digital Twin of the Ocean initiative
 
 # Package index
 
-## Darwin Core Conversion
+## Data Processing
 
-Convert legacy data to Darwin Core format
+Merge, harmonize, and convert zooplankton data
 
+- [`raw_to_tidy()`](https://ioledc.github.io/ZOOGoN-40Y/reference/raw_to_tidy.md)
+  : Merge all zooplankton datasets into an analysis-ready tidy table
 - [`raw_to_dc()`](https://ioledc.github.io/ZOOGoN-40Y/reference/raw_to_dc.md)
   : Convert legacy LTER-MareChiara zooplankton data to Darwin Core
   format
+- [`build_emof_occurrence()`](https://ioledc.github.io/ZOOGoN-40Y/reference/build_emof_occurrence.md)
+  : Build occurrence-level eMoF table
+- [`build_emof_events()`](https://ioledc.github.io/ZOOGoN-40Y/reference/build_emof_events.md)
+  : Build event-level eMoF sampling metadata
 
 ## Cloud Storage
 

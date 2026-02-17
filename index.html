@@ -30,7 +30,7 @@
 
     <a class="navbar-brand me-2" href="index.html">ZooGoN</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">3.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">3.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -112,23 +112,28 @@
 <h2 id="usage">Usage<a class="anchor" aria-label="anchor" href="#usage"></a>
 </h2>
 <div class="section level3">
-<h3 id="darwin-core-conversion">Darwin Core Conversion<a class="anchor" aria-label="anchor" href="#darwin-core-conversion"></a>
+<h3 id="automated-pipeline">Automated Pipeline<a class="anchor" aria-label="anchor" href="#automated-pipeline"></a>
 </h3>
-<p>Convert preprocessed legacy zooplankton data to Darwin Core format:</p>
+<p>ZooGoN provides a fully automated data pipeline that processes zooplankton data from field collection to Darwin Core Archive. Each step reads its input from SharePoint and uploads results back automatically:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/ioledc/ZOOGoN-40Y" class="external-link">ZooGoN</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Convert legacy data to Darwin Core format</span></span>
-<span><span class="va">dc_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/raw_to_dc.html">raw_to_dc</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co"># 1. Ingest field surveys from KoboToolbox</span></span>
+<span><span class="fu"><a href="reference/ingest_surveys.html">ingest_surveys</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Access Darwin Core extension tables</span></span>
-<span><span class="va">event_table</span> <span class="op">&lt;-</span> <span class="va">dc_data</span><span class="op">$</span><span class="va">event</span>              <span class="co"># Sampling events</span></span>
-<span><span class="va">occurrence_table</span> <span class="op">&lt;-</span> <span class="va">dc_data</span><span class="op">$</span><span class="va">occurrence</span>    <span class="co"># Species occurrences</span></span>
-<span><span class="va">measurements</span> <span class="op">&lt;-</span> <span class="va">dc_data</span><span class="op">$</span><span class="va">emof</span>              <span class="co"># Extended measurements</span></span>
+<span><span class="co"># 2. Preprocess and standardize survey data</span></span>
+<span><span class="fu"><a href="reference/preprocess_surveys.html">preprocess_surveys</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># View processing summary</span></span>
-<span><span class="va">dc_data</span><span class="op">$</span><span class="va">processing_info</span></span></code></pre></div>
-<p>The function creates OBIS-compliant tables with: - <strong>Event Extension</strong>: Sampling event metadata with geographic coordinates - <strong>Occurrence Extension</strong>: Species occurrences with WoRMS LSIDs - <strong>eMoF Extension</strong>: Measurements with BODC NERC Vocabulary standards</p>
+<span><span class="co"># 3. Merge legacy + ongoing data into an analysis-ready dataset</span></span>
+<span><span class="fu"><a href="reference/raw_to_tidy.html">raw_to_tidy</a></span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># 4. Convert tidy data to Darwin Core format (Event, Occurrence, eMoF)</span></span>
+<span><span class="fu"><a href="reference/raw_to_dc.html">raw_to_dc</a></span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># 5. Build Darwin Core Archive with EML metadata and upload</span></span>
+<span><span class="fu"><a href="reference/dc_to_archive.html">dc_to_archive</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p>The pipeline produces OBIS-compliant Darwin Core tables: - <strong>Event Extension</strong>: Sampling event metadata with geographic coordinates - <strong>Occurrence Extension</strong>: Species occurrences with WoRMS LSIDs - <strong>eMoF Extension</strong>: Measurements with BODC NERC Vocabulary standards</p>
+<p>All steps are also run automatically via GitHub Actions on a scheduled basis.</p>
 </div>
 <div class="section level3">
 <h3 id="cloud-storage-operations">Cloud Storage Operations<a class="anchor" aria-label="anchor" href="#cloud-storage-operations"></a>
@@ -242,7 +247,7 @@
 <h2 id="publishing-to-gbif-optional">Publishing to GBIF (optional)<a class="anchor" aria-label="anchor" href="#publishing-to-gbif-optional"></a>
 </h2>
 <ul>
-<li>Build a Darwin Core Archive and EML with <code>dc_to_archive(raw_to_dc())</code> (writes the zip and uploads it to SharePoint).</li>
+<li>Build a Darwin Core Archive and EML with <code><a href="reference/dc_to_archive.html">dc_to_archive()</a></code> (writes the zip and uploads it to SharePoint). This reads the Darwin Core tables produced by <code><a href="reference/raw_to_dc.html">raw_to_dc()</a></code>.</li>
 <li>Production registration: use <code><a href="reference/register_gbif_dataset.html">register_gbif_dataset()</a></code> with your real GBIF organization key, installation key, credentials, and a public DwC-A URL.</li>
 <li>Test registration: use <code><a href="reference/register_gbif_dataset_test.html">register_gbif_dataset_test()</a></code> with the GBIF-Test demo credentials (ws_client_demo/Demo123) and your public DwC-A URL to exercise the flow safely.</li>
 </ul>
@@ -287,13 +292,17 @@
 <strong>Principal Analyst</strong>: Lorenzo Longobardi (<a href="mailto:lorenzo.longobardi@gmail.com" class="email">lorenzo.longobardi@gmail.com</a>)</li>
 </ul>
 <p><strong>Institution</strong>: WorldFish</p>
-<p><strong>ORCID</strong>: <a href="https://orcid.org/0000-0003-3126-7341" class="external-link">0000-0003-2959-8977</a></p>
+<p><strong>ORCID</strong>: <a href="https://orcid.org/0000-0003-3126-7341" class="external-link">0000-0003-3126-7341</a></p>
+</div>
+<div class="section level2">
+<h2 id="acknowledgments">Acknowledgments<a class="anchor" aria-label="anchor" href="#acknowledgments"></a>
+</h2>
 <ul>
-<li><h2 id="acknowledgments">Acknowledgments</h2></li>
-<li><p>LTER-MareChiara research station</p></li>
-<li><p>DTO-BioFlow project consortium</p></li>
-<li><p>EMODnet Biology data infrastructure</p></li>
-<li><p>European Digital Twin of the Ocean initiative</p></li>
+<li>LTER-MareChiara research station</li>
+<li>DTO-BioFlow project consortium<br>
+</li>
+<li>EMODnet Biology data infrastructure</li>
+<li>European Digital Twin of the Ocean initiative</li>
 </ul>
 </div>
 </div>

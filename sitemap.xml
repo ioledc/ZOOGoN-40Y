@@ -12,6 +12,8 @@
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/add_gbif_license_block.html</loc></url>
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/add_version.html</loc></url>
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/add_version_to_path.html</loc></url>
+<url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/build_emof_events.html</loc></url>
+<url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/build_emof_occurrence.html</loc></url>
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/clean_path.html</loc></url>
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/connect_to_sharepoint.html</loc></url>
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/dc_to_archive.html</loc></url>
@@ -32,12 +34,14 @@
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/pipe.html</loc></url>
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/preprocess_surveys.html</loc></url>
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/raw_to_dc.html</loc></url>
+<url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/raw_to_tidy.html</loc></url>
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/read_config.html</loc></url>
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/register_gbif_dataset.html</loc></url>
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/register_gbif_dataset_test.html</loc></url>
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/rename_child.html</loc></url>
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/reshape_kobo_repeat.html</loc></url>
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/upload_file_to_sharepoint.html</loc></url>
+<url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/upload_large_file_to_sharepoint.html</loc></url>
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/upload_sharepoint_df.html</loc></url>
 <url><loc>https://ioledc.github.io/ZOOGoN-40Y/reference/write_df_to_temp.html</loc></url>
 </urlset>

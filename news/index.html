@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">ZooGoN</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">3.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">3.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -36,6 +36,45 @@
       <small>Source: <a href="https://github.com/ioledc/ZOOGoN-40Y/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="3.1.0" id="zoogon-310">ZooGoN 3.1.0<a class="anchor" aria-label="anchor" href="#zoogon-310"></a></h2>
+<div class="section level3">
+<h3 id="full-automated-pipeline-3-1-0">Full Automated Pipeline<a class="anchor" aria-label="anchor" href="#full-automated-pipeline-3-1-0"></a></h3>
+<p>This release completes the end-to-end data pipeline from field survey collection to Darwin Core Archive publication.</p>
+<div class="section level4">
+<h4 id="new-functions-3-1-0">New Functions<a class="anchor" aria-label="anchor" href="#new-functions-3-1-0"></a></h4>
+<ul><li>
+<strong><code><a href="../reference/raw_to_tidy.html">raw_to_tidy()</a></code></strong>: Merges legacy datasets (1984-2020) with preprocessed ongoing surveys into a single analysis-ready dataset. Uploads the merged data in both CSV and Parquet formats to SharePoint.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="pipeline--automation-3-1-0">Pipeline &amp; Automation<a class="anchor" aria-label="anchor" href="#pipeline--automation-3-1-0"></a></h4>
+<ul><li>Complete 6-step GitHub Actions pipeline: build container → ingest surveys → preprocess → merge tidy data → Darwin Core conversion → build archive.</li>
+<li>
+<code><a href="../reference/raw_to_dc.html">raw_to_dc()</a></code> now reads from the tidy data output (produced by <code><a href="../reference/raw_to_tidy.html">raw_to_tidy()</a></code>) instead of merging legacy files internally. Results are uploaded to SharePoint as versioned RDS.</li>
+<li>
+<code><a href="../reference/dc_to_archive.html">dc_to_archive()</a></code> no longer takes arguments — it downloads Darwin Core tables from SharePoint automatically.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="storage-improvements-3-1-0">Storage Improvements<a class="anchor" aria-label="anchor" href="#storage-improvements-3-1-0"></a></h4>
+<ul><li>
+<strong>Large file upload support</strong>: Files larger than 4 MB are uploaded via Microsoft Graph API resumable upload sessions with chunked transfer (10 MB chunks).</li>
+<li>
+<strong>RDS format support</strong> in <code><a href="../reference/upload_sharepoint_df.html">upload_sharepoint_df()</a></code>, <code><a href="../reference/download_sharepoint_file.html">download_sharepoint_file()</a></code>, and related helpers.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="production-hardening-3-1-0">Production Hardening<a class="anchor" aria-label="anchor" href="#production-hardening-3-1-0"></a></h4>
+<ul><li>Fixed Dockerfile.prod syntax (<code>install2.r</code> does not accept version specs) and added a library validation step.</li>
+<li>Bumped minimum R version to <code>R (&gt;= 4.1)</code> (required for the native pipe <code>|&gt;</code>).</li>
+<li>Fixed scalar logical operators (<code>||</code> instead of <code>|</code>) in KoboToolbox validation.</li>
+<li>Internal helpers (<code>flatten_row</code>, <code>flatten_field</code>, <code>rename_child</code>) are no longer exported.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="documentation-3-1-0">Documentation<a class="anchor" aria-label="anchor" href="#documentation-3-1-0"></a></h4>
+<ul><li>Updated README, data-processing vignette, and darwin-core vignette to reflect the full pipeline workflow.</li>
+<li>Reorganised pkgdown reference index with a “Data Processing” section.</li>
+</ul></div>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="3.0.0" id="zoogon-300">ZooGoN 3.0.0<a class="anchor" aria-label="anchor" href="#zoogon-300"></a></h2>
 <ul><li>Added automated GBIF publishing helpers: <code><a href="../reference/register_gbif_dataset.html">register_gbif_dataset()</a></code> for production use and <code><a href="../reference/register_gbif_dataset_test.html">register_gbif_dataset_test()</a></code> for the GBIF-Test demo flow; both take a public DwC-A URL and handle dataset registration.</li>

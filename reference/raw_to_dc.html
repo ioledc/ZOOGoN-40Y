@@ -15,7 +15,7 @@ WoRMS LSIDs (Life Science Identifiers)."><meta property="og:image" content="http
 
     <a class="navbar-brand me-2" href="../index.html">ZooGoN</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">3.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">3.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -68,49 +68,26 @@ WoRMS LSIDs (Life Science Identifiers).</p>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A list containing Darwin Core formatted tables and metadata:</p><dl><dt>event</dt>
-<dd><p>Event extension table with sampling event information (eventID,
-eventDate, geographic coordinates, sampling protocol)</p></dd>
-
-<dt>occurrence</dt>
-<dd><p>Occurrence extension table with species occurrence data
-(eventID, occurrenceID, scientificName, scientificNameID, occurrenceStatus)</p></dd>
-
-<dt>emof</dt>
-<dd><p>Extended Measurement or Fact (eMoF) table with measurements
-(occurrenceID, measurementType, measurementValue, measurementTypeID,
-measurementValueID, measurementUnitID) including individual counts, sex,
-and life stage information</p></dd>
-
-<dt>raw_data</dt>
-<dd><p>Original preprocessed data before Darwin Core conversion</p></dd>
-
-<dt>processing_info</dt>
-<dd><p>List with processing metadata (processing_date,
-total_events, total_occurrences, total_measurements, date_range, unique_taxa)</p></dd>
-
-<dt>metadata</dt>
-<dd><p>Tibble with dataset-level metadata (title, contact,
-institution, license, project information)</p></dd>
-
-
-</dl></div>
+    <p>Invisible NULL. The Darwin Core data (event, occurrence, emof tables
+plus raw data, processing info, and metadata) is uploaded as a versioned
+RDS file to SharePoint.</p>
+    </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p><strong>Input Data Format:</strong></p>
 <p>The function expects preprocessed legacy data in parquet format with the
 following structure:</p><ul><li><p><code>eventID</code>: Unique sampling event identifier (e.g., "mc_1", "mc_2")</p></li>
 <li><p><code>eventDate</code>: Sampling date in Date format (YYYY-MM-DD)</p></li>
-<li><p><code>scientificname</code>: Full scientific name with WoRMS validation</p></li>
+<li><p><code>scientificName</code>: Full scientific name with WoRMS validation</p></li>
 <li><p><code>lsid</code>: WoRMS Life Science Identifier URN (e.g.,
 "urn:lsid:marinespecies.org:taxname:104251")</p></li>
 <li><p><code>individualCount</code>: Abundance measurement (ind/m³)</p></li>
 <li><p><code>lifeStage</code>: Life stage code ("f" = female, "m" = male, "j" = juvenile,
 "fm" = both sexes, "fmj" = all stages)</p></li>
 </ul><p><strong>Current Implementation:</strong></p>
-<p>Currently processes the file <code>McZoo_84-13.parquet</code> (1984-2013 data).
-Future versions will support additional legacy files (<code>McZoo_16.parquet</code>,
-<code>McZoo_17.parquet</code>, etc.) following the same standardized format.</p>
+<p>Merges legacy data (1984-2020 from hot storage) with ongoing survey landings
+(2021-present from the automation bucket) and converts the combined dataset
+to Darwin Core format. Output is uploaded as a versioned RDS to SharePoint.</p>
 <p><strong>Darwin Core Conversion:</strong></p>
 <p>The function creates three Darwin Core extension tables following OBIS
 (Ocean Biodiversity Information System) standards:</p>
@@ -153,22 +130,11 @@ vocabulary terms from BODC NERC Vocabulary Server (NVS):</p><ul><li><p>Individua
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
-<span class="r-in"><span><span class="co"># Process legacy data to Darwin Core format</span></span></span>
-<span class="r-in"><span><span class="va">dc_data</span> <span class="op">&lt;-</span> <span class="fu">raw_to_dc</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Access individual Darwin Core extension tables</span></span></span>
-<span class="r-in"><span><span class="va">events</span> <span class="op">&lt;-</span> <span class="va">dc_data</span><span class="op">$</span><span class="va">event</span></span></span>
-<span class="r-in"><span><span class="va">occurrences</span> <span class="op">&lt;-</span> <span class="va">dc_data</span><span class="op">$</span><span class="va">occurrence</span></span></span>
-<span class="r-in"><span><span class="va">measurements</span> <span class="op">&lt;-</span> <span class="va">dc_data</span><span class="op">$</span><span class="va">emof</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># View processing summary</span></span></span>
-<span class="r-in"><span><span class="va">dc_data</span><span class="op">$</span><span class="va">processing_info</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Access metadata</span></span></span>
-<span class="r-in"><span><span class="va">dc_data</span><span class="op">$</span><span class="va">metadata</span></span></span>
+<span class="r-in"><span><span class="co"># Process legacy data and upload Darwin Core output to SharePoint</span></span></span>
+<span class="r-in"><span><span class="fu">raw_to_dc</span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Silent processing (no console messages)</span></span></span>
-<span class="r-in"><span><span class="va">dc_data</span> <span class="op">&lt;-</span> <span class="fu">raw_to_dc</span><span class="op">(</span>verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">raw_to_dc</span><span class="op">(</span>verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>

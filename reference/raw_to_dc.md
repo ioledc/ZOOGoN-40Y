@@ -20,38 +20,9 @@ raw_to_dc(verbose = TRUE)
 
 ## Value
 
-A list containing Darwin Core formatted tables and metadata:
-
-- event:
-
-  Event extension table with sampling event information (eventID,
-  eventDate, geographic coordinates, sampling protocol)
-
-- occurrence:
-
-  Occurrence extension table with species occurrence data (eventID,
-  occurrenceID, scientificName, scientificNameID, occurrenceStatus)
-
-- emof:
-
-  Extended Measurement or Fact (eMoF) table with measurements
-  (occurrenceID, measurementType, measurementValue, measurementTypeID,
-  measurementValueID, measurementUnitID) including individual counts,
-  sex, and life stage information
-
-- raw_data:
-
-  Original preprocessed data before Darwin Core conversion
-
-- processing_info:
-
-  List with processing metadata (processing_date, total_events,
-  total_occurrences, total_measurements, date_range, unique_taxa)
-
-- metadata:
-
-  Tibble with dataset-level metadata (title, contact, institution,
-  license, project information)
+Invisible NULL. The Darwin Core data (event, occurrence, emof tables
+plus raw data, processing info, and metadata) is uploaded as a versioned
+RDS file to SharePoint.
 
 ## Details
 
@@ -64,7 +35,7 @@ following structure:
 
 - `eventDate`: Sampling date in Date format (YYYY-MM-DD)
 
-- `scientificname`: Full scientific name with WoRMS validation
+- `scientificName`: Full scientific name with WoRMS validation
 
 - `lsid`: WoRMS Life Science Identifier URN (e.g.,
   "urn:lsid:marinespecies.org:taxname:104251")
@@ -76,10 +47,10 @@ following structure:
 
 **Current Implementation:**
 
-Currently processes the file `McZoo_84-13.parquet` (1984-2013 data).
-Future versions will support additional legacy files
-(`McZoo_16.parquet`, `McZoo_17.parquet`, etc.) following the same
-standardized format.
+Merges legacy data (1984-2020 from hot storage) with ongoing survey
+landings (2021-present from the automation bucket) and converts the
+combined dataset to Darwin Core format. Output is uploaded as a
+versioned RDS to SharePoint.
 
 **Darwin Core Conversion:**
 
@@ -152,21 +123,10 @@ events:
 
 ``` r
 if (FALSE) { # \dontrun{
-# Process legacy data to Darwin Core format
-dc_data <- raw_to_dc()
-
-# Access individual Darwin Core extension tables
-events <- dc_data$event
-occurrences <- dc_data$occurrence
-measurements <- dc_data$emof
-
-# View processing summary
-dc_data$processing_info
-
-# Access metadata
-dc_data$metadata
+# Process legacy data and upload Darwin Core output to SharePoint
+raw_to_dc()
 
 # Silent processing (no console messages)
-dc_data <- raw_to_dc(verbose = FALSE)
+raw_to_dc(verbose = FALSE)
 } # }
 ```

@@ -10,7 +10,7 @@ upload_sharepoint_df(
   prefix,
   options,
   bucket = NULL,
-  format = c("csv", "tsv", "parquet", "xlsx"),
+  format = c("csv", "tsv", "parquet", "xlsx", "rds"),
   filename = FALSE
 )
 ```
@@ -36,7 +36,8 @@ upload_sharepoint_df(
 
 - format:
 
-  File format: "csv", "tsv", "xlsx", or "parquet". Default is "csv"
+  File format: "csv", "tsv", "xlsx", "parquet", or "rds". Default is
+  "csv"
 
 - filename:
 

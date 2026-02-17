@@ -1,12 +1,18 @@
 # Package index
 
-## Darwin Core Conversion
+## Data Processing
 
-Convert legacy data to Darwin Core format
+Merge, harmonize, and convert zooplankton data
 
+- [`raw_to_tidy()`](https://ioledc.github.io/ZOOGoN-40Y/reference/raw_to_tidy.md)
+  : Merge all zooplankton datasets into an analysis-ready tidy table
 - [`raw_to_dc()`](https://ioledc.github.io/ZOOGoN-40Y/reference/raw_to_dc.md)
   : Convert legacy LTER-MareChiara zooplankton data to Darwin Core
   format
+- [`build_emof_occurrence()`](https://ioledc.github.io/ZOOGoN-40Y/reference/build_emof_occurrence.md)
+  : Build occurrence-level eMoF table
+- [`build_emof_events()`](https://ioledc.github.io/ZOOGoN-40Y/reference/build_emof_events.md)
+  : Build event-level eMoF sampling metadata
 
 ## Cloud Storage
 
