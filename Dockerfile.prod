@@ -23,7 +23,7 @@ RUN install2.r --error --skipinstalled \
 
 # Install suggests
 RUN install2.r --error --skipinstalled \
-    testthat (>= 3.0.0) \
+    testthat \
     knitr \
     rmarkdown \
     pkgdown \
@@ -39,5 +39,8 @@ RUN Rscript -e 'remotes::install_github("LivingNorway/LivingNorwayR")'
 COPY . /home
 WORKDIR /home
 RUN Rscript -e 'remotes::install_local(dependencies = TRUE, upgrade = "never")'
+
+# Validate installation
+RUN Rscript -e 'library(ZooGoN); cat("ZooGoN loaded successfully\n")'
 
 ENTRYPOINT ["Rscript"]

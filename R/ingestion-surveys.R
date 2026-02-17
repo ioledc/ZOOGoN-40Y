@@ -56,13 +56,16 @@ ingest_surveys <- function() {
     dplyr::bind_rows() %>%
     dplyr::rename(submission_id = "_id")
 
-  upload_sharepoint_df(
-    data = raw_survey,
-    prefix = conf$ingestion$surveys$raw$file_prefix,
-    options = conf$storage$sharepoint$credentials,
-    bucket = conf$storage$sharepoint$buckets$automation_bucket,
-    format = "csv"
-  )
+  c("csv", "parquet") |>
+    purrr::walk(
+      ~ upload_sharepoint_df(
+        data = raw_survey,
+        prefix = conf$ingestion$surveys$raw$file_prefix,
+        options = conf$storage$sharepoint$credentials,
+        bucket = conf$storage$sharepoint$buckets$automation_bucket,
+        format = .
+      )
+    )
 }
 
 #' Retrieve Data from Kobotoolbox API
@@ -113,16 +116,16 @@ get_kobo_data <- function(
   if (!is.character(assetid)) {
     stop("assetid entered is not a string")
   }
-  if (is.null(url) | url == "") {
+  if (is.null(url) || url == "") {
     stop("URL empty")
   }
-  if (is.null(uname) | uname == "") {
+  if (is.null(uname) || uname == "") {
     stop("uname (username) empty")
   }
-  if (is.null(pwd) | pwd == "") {
+  if (is.null(pwd) || pwd == "") {
     stop("pwd (password) empty")
   }
-  if (is.null(assetid) | assetid == "") {
+  if (is.null(assetid) || assetid == "") {
     stop("assetid empty")
   }
   if (!format %in% c("json", "xml")) {
@@ -241,7 +244,6 @@ get_kobo_data <- function(
 #' @param x A list representing a row of data, potentially containing nested lists or vectors.
 #' @return A tibble with each row representing flattened survey data.
 #' @keywords internal
-#' @export
 flatten_row <- function(x) {
   x %>%
     # Each row is composed of several fields
@@ -260,7 +262,6 @@ flatten_row <- function(x) {
 #' @param p The prefix or name associated with the field, used for naming during the flattening process.
 #' @return Modified field, either unchanged, unnested, or appropriately renamed.
 #' @keywords internal
-#' @export
 flatten_field <- function(x, p) {
   # If the field is a simple vector do nothing but if the field is a list we
   # need more logic
@@ -295,7 +296,6 @@ flatten_field <- function(x, p) {
 #' @param p The parent name to prepend to the element's existing name for context.
 #' @return A renamed list element, structured to maintain contextual relevance in a flattened dataset.
 #' @keywords internal
-#' @export
 rename_child <- function(x, i, p) {
   if (length(x) == 0) {
     if (is.null(x)) {

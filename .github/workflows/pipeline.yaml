@@ -46,7 +46,7 @@ jobs:
         name: Set env to production
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call ingest_surveys()
-        run: Rscript -e 'ZooGoN:ingest_surveys()'
+        run: Rscript -e 'ZooGoN::ingest_surveys()'
 
   process-kobo-surveys:
     container:
@@ -62,4 +62,52 @@ jobs:
         name: Set env to production
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call preprocess_surveys()
-        run: Rscript -e 'ZooGoN:preprocess_surveys()'
+        run: Rscript -e 'ZooGoN::preprocess_surveys()'
+
+  merge-tidy-data:
+    container:
+      credentials:
+        password: ${{ secrets.GITHUB_TOKEN }}
+        username: ${{ github.actor }}
+      image: docker.pkg.github.com/ioledc/ZOOGoN-40Y/r-runner-zoogon-mc
+    name: Merge tidy analysis-ready dataset
+    needs: process-kobo-surveys
+    runs-on: ubuntu-latest
+    steps:
+      - if: endsWith(github.ref, '/main')
+        name: Set env to production
+        run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
+      - name: Call raw_to_tidy()
+        run: Rscript -e 'ZooGoN::raw_to_tidy()'
+
+  convert-to-darwincore:
+    container:
+      credentials:
+        password: ${{ secrets.GITHUB_TOKEN }}
+        username: ${{ github.actor }}
+      image: docker.pkg.github.com/ioledc/ZOOGoN-40Y/r-runner-zoogon-mc
+    name: Convert to Darwin Core format
+    needs: process-kobo-surveys
+    runs-on: ubuntu-latest
+    steps:
+      - if: endsWith(github.ref, '/main')
+        name: Set env to production
+        run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
+      - name: Call raw_to_dc()
+        run: Rscript -e 'ZooGoN::raw_to_dc()'
+
+  build-darwincore-archive:
+    container:
+      credentials:
+        password: ${{ secrets.GITHUB_TOKEN }}
+        username: ${{ github.actor }}
+      image: docker.pkg.github.com/ioledc/ZOOGoN-40Y/r-runner-zoogon-mc
+    name: Build Darwin Core Archive
+    needs: convert-to-darwincore
+    runs-on: ubuntu-latest
+    steps:
+      - if: endsWith(github.ref, '/main')
+        name: Set env to production
+        run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
+      - name: Call dc_to_archive()
+        run: Rscript -e 'ZooGoN::dc_to_archive()'

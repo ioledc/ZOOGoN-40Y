@@ -1,15 +1,21 @@
 #' Build a Darwin Core Archive and upload to SharePoint
 #'
-#' Takes the tables produced by `raw_to_dc()`, builds a Darwin Core Archive zip
-#' with an EML file, and uploads the archive to SharePoint using the configured
-#' credentials.
-#'
-#' @param dc_list List from `raw_to_dc()` containing `event`, `occurrence`, and `emof`.
+#' Downloads the Darwin Core tables produced by `raw_to_dc()` from SharePoint,
+#' builds a Darwin Core Archive zip with an EML file, and uploads the archive
+#' back to SharePoint.
 #'
 #' @return Invisible list with paths to the archive and EML.
 #' @export
-dc_to_archive <- function(dc_list = NULL) {
+dc_to_archive <- function() {
   conf <- read_config()
+
+  dc_list <-
+    download_sharepoint_file(
+      prefix = conf$ingestion$surveys$darwincore$file_prefix,
+      options = conf$storage$sharepoint$credentials,
+      bucket = conf$storage$sharepoint$buckets$automation_bucket,
+      format = "rds"
+    )
 
   event_df <- dc_list$event
 
