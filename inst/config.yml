@@ -10,6 +10,10 @@ default:
         file_prefix: "raw-surveys"
       preprocessed:
         file_prefix: "preprocessed-surveys"
+      darwincore:
+        file_prefix: "dc-formatted-surveys"
+    tidy_data:
+      file_prefix: "tidy-data"
   storage:
     sharepoint:
       buckets:
