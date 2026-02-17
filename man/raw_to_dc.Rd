@@ -10,22 +10,9 @@ raw_to_dc(verbose = TRUE)
 \item{verbose}{Logical. Whether to print processing messages. Default is TRUE.}
 }
 \value{
-A list containing Darwin Core formatted tables and metadata:
-\describe{
-\item{event}{Event extension table with sampling event information (eventID,
-eventDate, geographic coordinates, sampling protocol)}
-\item{occurrence}{Occurrence extension table with species occurrence data
-(eventID, occurrenceID, scientificName, scientificNameID, occurrenceStatus)}
-\item{emof}{Extended Measurement or Fact (eMoF) table with measurements
-(occurrenceID, measurementType, measurementValue, measurementTypeID,
-measurementValueID, measurementUnitID) including individual counts, sex,
-and life stage information}
-\item{raw_data}{Original preprocessed data before Darwin Core conversion}
-\item{processing_info}{List with processing metadata (processing_date,
-total_events, total_occurrences, total_measurements, date_range, unique_taxa)}
-\item{metadata}{Tibble with dataset-level metadata (title, contact,
-institution, license, project information)}
-}
+Invisible NULL. The Darwin Core data (event, occurrence, emof tables
+plus raw data, processing info, and metadata) is uploaded as a versioned
+RDS file to SharePoint.
 }
 \description{
 This function converts preprocessed legacy zooplankton datasets from the
@@ -42,7 +29,7 @@ following structure:
 \itemize{
 \item \code{eventID}: Unique sampling event identifier (e.g., "mc_1", "mc_2")
 \item \code{eventDate}: Sampling date in Date format (YYYY-MM-DD)
-\item \code{scientificname}: Full scientific name with WoRMS validation
+\item \code{scientificName}: Full scientific name with WoRMS validation
 \item \code{lsid}: WoRMS Life Science Identifier URN (e.g.,
 "urn:lsid:marinespecies.org:taxname:104251")
 \item \code{individualCount}: Abundance measurement (ind/m³)
@@ -52,9 +39,9 @@ following structure:
 
 \strong{Current Implementation:}
 
-Currently processes the file \code{McZoo_84-13.parquet} (1984-2013 data).
-Future versions will support additional legacy files (\code{McZoo_16.parquet},
-\code{McZoo_17.parquet}, etc.) following the same standardized format.
+Merges legacy data (1984-2020 from hot storage) with ongoing survey landings
+(2021-present from the automation bucket) and converts the combined dataset
+to Darwin Core format. Output is uploaded as a versioned RDS to SharePoint.
 
 \strong{Darwin Core Conversion:}
 
@@ -100,22 +87,11 @@ LTER-MareChiara station coordinates are automatically assigned to all events:
 }
 \examples{
 \dontrun{
-# Process legacy data to Darwin Core format
-dc_data <- raw_to_dc()
-
-# Access individual Darwin Core extension tables
-events <- dc_data$event
-occurrences <- dc_data$occurrence
-measurements <- dc_data$emof
-
-# View processing summary
-dc_data$processing_info
-
-# Access metadata
-dc_data$metadata
+# Process legacy data and upload Darwin Core output to SharePoint
+raw_to_dc()
 
 # Silent processing (no console messages)
-dc_data <- raw_to_dc(verbose = FALSE)
+raw_to_dc(verbose = FALSE)
 }
 
 }

@@ -24,7 +24,7 @@
 #' @param prefix File prefix path (e.g., "raw", "preprocessed"), or exact filename if filename = TRUE
 #' @param options SharePoint configuration list from config$storage$sharepoint
 #' @param bucket Bucket name (optional)
-#' @param format File format: "csv", "tsv", "xlsx", or "parquet". Default is "csv"
+#' @param format File format: "csv", "tsv", "xlsx", "parquet", or "rds". Default is "csv"
 #' @param filename Logical. If TRUE, treat prefix as exact filename and skip versioning. Default is FALSE
 #'
 #' @return Invisible NULL
@@ -45,7 +45,7 @@ upload_sharepoint_df <- function(
   prefix,
   options,
   bucket = NULL,
-  format = c("csv", "tsv", "parquet", "xlsx"),
+  format = c("csv", "tsv", "parquet", "xlsx", "rds"),
   filename = FALSE
 ) {
   # Set bucket if provided
@@ -57,10 +57,10 @@ upload_sharepoint_df <- function(
     # Use exact filename without versioning
     remote_filename <- prefix
     format <- tools::file_ext(prefix)
-    if (!format %in% c("csv", "tsv", "parquet", "xlsx")) {
+    if (!format %in% c("csv", "tsv", "parquet", "xlsx", "rds")) {
       stop(
         sprintf(
-          "Unsupported file format: %s. Must be csv, tsv, xlsx or parquet",
+          "Unsupported file format: %s. Must be csv, tsv, xlsx, parquet, or rds",
           format
         ),
         call. = FALSE
@@ -91,7 +91,7 @@ upload_sharepoint_df <- function(
     format = format
   )
 
-  message(sprintf("Uploaded to: %s", remote_path))
+  logger::log_info("Uploaded to: {remote_path}")
   invisible(NULL)
 }
 
@@ -100,7 +100,7 @@ upload_sharepoint_df <- function(
 #' @param prefix File prefix path (e.g., "raw", "preprocessed"), or exact filename if filename = TRUE
 #' @param options SharePoint configuration list from config$storage$sharepoint
 #' @param bucket Bucket name (optional)
-#' @param format File format: "csv", "tsv", "xlsx", or "parquet". Default is "csv"
+#' @param format File format: "csv", "tsv", "xlsx", "parquet", or "rds". Default is "csv"
 #' @param filename Logical. If TRUE, treat prefix as exact filename. Default is FALSE
 #'
 #' @return Data frame with downloaded data
@@ -120,7 +120,7 @@ download_sharepoint_file <- function(
   prefix,
   options,
   bucket = NULL,
-  format = c("csv", "tsv", "parquet", "xlsx"),
+  format = c("csv", "tsv", "parquet", "xlsx", "rds"),
   filename = FALSE
 ) {
   # Set bucket if provided
@@ -132,21 +132,21 @@ download_sharepoint_file <- function(
     # Treat prefix as exact filename
     remote_path <- file.path(options$bucket, prefix)
     format <- tools::file_ext(prefix)
-    if (!format %in% c("csv", "tsv", "parquet", "xlsx")) {
+    if (!format %in% c("csv", "tsv", "parquet", "xlsx", "rds")) {
       stop(
         sprintf(
-          "Unsupported file format: %s. Must be csv, tsv, xlsx, or parquet",
+          "Unsupported file format: %s. Must be csv, tsv, xlsx, parquet, or rds",
           format
         ),
         call. = FALSE
       )
     }
-    message(sprintf("Downloading file: %s", prefix))
+    logger::log_info("Downloading file: {prefix}")
   } else {
     # Find the latest versioned file with this prefix
     format <- match.arg(format)
     remote_path <- find_latest_version(prefix, options$bucket, format, options)
-    message(sprintf("Found file: %s", basename(remote_path)))
+    logger::log_info("Found file: {basename(remote_path)}")
   }
 
   # Get SharePoint connection details
@@ -164,7 +164,7 @@ download_sharepoint_file <- function(
     token = sharepoint_conn$token
   )
 
-  message("Downloaded successfully")
+  logger::log_info("Downloaded successfully")
 
   # Read and return data
   switch(
@@ -172,7 +172,8 @@ download_sharepoint_file <- function(
     csv = readr::read_csv(temp_file, show_col_types = FALSE),
     tsv = readr::read_tsv(temp_file, show_col_types = FALSE),
     parquet = arrow::read_parquet(temp_file),
-    xlsx = openxlsx::read.xlsx(temp_file)
+    xlsx = openxlsx::read.xlsx(temp_file),
+    rds = readr::read_rds(temp_file)
   )
 }
 
@@ -294,6 +295,8 @@ get_site_drive_id <- function(site_id, token) {
 #' Upload file to SharePoint drive
 #'
 #' Uploads a local file to a SharePoint document library using Microsoft Graph API.
+#' Files larger than 4 MB are automatically uploaded via a resumable upload session;
+#' smaller files use a simple PUT request.
 #'
 #' @param file_path Local file path to upload
 #' @param remote_path Destination path in SharePoint
@@ -310,6 +313,21 @@ upload_file_to_sharepoint <- function(
   format,
   overwrite = TRUE
 ) {
+  # Microsoft Graph simple upload limit is 4 MB
+  max_simple_size <- 4 * 1024 * 1024
+  file_size <- file.info(file_path)$size
+
+  if (file_size > max_simple_size) {
+    return(
+      upload_large_file_to_sharepoint(
+        file_path = file_path,
+        remote_path = remote_path,
+        drive_id = drive_id,
+        token = token
+      )
+    )
+  }
+
   # Build upload endpoint
   encoded_path <- utils::URLencode(remote_path, reserved = TRUE)
   upload_endpoint <- sprintf(
@@ -335,6 +353,86 @@ upload_file_to_sharepoint <- function(
   # Execute upload
   httr2::req_perform(req) |>
     httr2::resp_check_status()
+
+  invisible(NULL)
+}
+
+#' Upload large file to SharePoint via resumable upload session
+#'
+#' Uses the Microsoft Graph API createUploadSession endpoint to upload files
+#' larger than 4 MB in chunks. Chunk size must be a multiple of 320 KB;
+#' this implementation uses 10 MB chunks.
+#'
+#' @param file_path Local file path to upload
+#' @param remote_path Destination path in SharePoint
+#' @param drive_id SharePoint drive ID
+#' @param token Microsoft Graph API access token
+#' @param chunk_size Size of each upload chunk in bytes (default: 10 MB).
+#'   Must be a multiple of 327680 (320 KB).
+#' @return Invisible NULL
+#' @keywords internal
+upload_large_file_to_sharepoint <- function(
+  file_path,
+  remote_path,
+  drive_id,
+  token,
+  chunk_size = 10 * 1024 * 1024
+) {
+  file_size <- file.info(file_path)$size
+  logger::log_info("Large file upload: {basename(file_path)} ({round(file_size / 1024 / 1024, 1)} MB)")
+
+  # Create upload session
+  encoded_path <- utils::URLencode(remote_path, reserved = TRUE)
+  session_endpoint <- sprintf(
+    "https://graph.microsoft.com/v1.0/drives/%s/root:/%s:/createUploadSession",
+    drive_id,
+    encoded_path
+  )
+
+  session_resp <- httr2::request(session_endpoint) |>
+    httr2::req_method("POST") |>
+    httr2::req_headers(
+      Authorization = paste("Bearer", token),
+      "Content-Type" = "application/json"
+    ) |>
+    httr2::req_body_json(list(
+      item = list(
+        "@microsoft.graph.conflictBehavior" = "replace"
+      )
+    )) |>
+    httr2::req_perform() |>
+    httr2::resp_check_status()
+
+  upload_url <- httr2::resp_body_json(session_resp)$uploadUrl
+
+  # Upload file in chunks
+  con <- file(file_path, "rb")
+  on.exit(close(con), add = TRUE)
+
+  offset <- 0
+  while (offset < file_size) {
+    chunk_data <- readBin(con, "raw", n = chunk_size)
+    current_chunk_size <- length(chunk_data)
+    range_end <- offset + current_chunk_size - 1
+
+    content_range <- sprintf(
+      "bytes %d-%d/%d",
+      offset, range_end, file_size
+    )
+
+    httr2::request(upload_url) |>
+      httr2::req_method("PUT") |>
+      httr2::req_headers(
+        "Content-Length" = current_chunk_size,
+        "Content-Range" = content_range
+      ) |>
+      httr2::req_body_raw(chunk_data) |>
+      httr2::req_perform() |>
+      httr2::resp_check_status()
+
+    offset <- offset + current_chunk_size
+    logger::log_info("Uploaded {round(offset / file_size * 100)}% ({round(offset / 1024 / 1024, 1)} / {round(file_size / 1024 / 1024, 1)} MB)")
+  }
 
   invisible(NULL)
 }
@@ -455,7 +553,8 @@ write_df_to_temp <- function(df, format) {
     csv = readr::write_csv(df, temp_file),
     tsv = readr::write_tsv(df, temp_file),
     parquet = arrow::write_parquet(df, temp_file),
-    xlsx = openxlsx::write.xlsx(df, temp_file)
+    xlsx = openxlsx::write.xlsx(df, temp_file),
+    rds = readr::write_rds(df, temp_file)
   )
   temp_file
 }
@@ -472,6 +571,7 @@ get_content_type <- function(format) {
     csv = "text/csv",
     tsv = "text/tab-separated-values",
     parquet = "application/vnd.apache.parquet",
+    rds = "application/octet-stream",
     zip = "application/zip",
     stop(sprintf("Unsupported format: %s", format), call. = FALSE)
   )

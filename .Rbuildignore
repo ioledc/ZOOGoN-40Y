@@ -17,4 +17,7 @@
 ^LICENSE$
 ^doc$
 ^Meta$
-^.claude
+^\.claude
+^Dockerfile\.prod$
+^ZooGoN_dwca.*\.zip$
+^dc-formatted-surveys\.rds$

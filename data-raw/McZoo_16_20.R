@@ -206,7 +206,7 @@ tidy_data <-
     # select only the columns needed for export
     "eventID",
     "eventDate",
-    "scientificname",
+    scientificName = "scientificname",
     "lsid",
     "individualCount",
     "lifeStage"
@@ -236,8 +236,19 @@ tidy_data <-
     ),
     individualCount = as.numeric(individualCount), # convert from character to numeric
   ) |>
-  # drop NA dates
-  dplyr::filter(!is.na(.data$eventDate))
+  # remove NA counts & IDs
+  dplyr::filter(
+    !is.na(.data$individualCount),
+    !is.na(.data$eventDate),
+    !is.na(.data$eventID)
+  ) |>
+  # remove duplicates
+  dplyr::group_by(eventID, eventDate, scientificName, lsid, lifeStage) |>
+  dplyr::summarise(
+    individualCount = sum(individualCount, na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  dplyr::relocate("individualCount", .before = "lifeStage")
 
 # export csv and parquet tidy files to hot storage bucket
 # vreate a vector with the two formats to be generated

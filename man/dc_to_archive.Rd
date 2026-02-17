@@ -4,16 +4,13 @@
 \alias{dc_to_archive}
 \title{Build a Darwin Core Archive and upload to SharePoint}
 \usage{
-dc_to_archive(dc_list = NULL)
-}
-\arguments{
-\item{dc_list}{List from \code{raw_to_dc()} containing \code{event}, \code{occurrence}, and \code{emof}.}
+dc_to_archive()
 }
 \value{
 Invisible list with paths to the archive and EML.
 }
 \description{
-Takes the tables produced by \code{raw_to_dc()}, builds a Darwin Core Archive zip
-with an EML file, and uploads the archive to SharePoint using the configured
-credentials.
+Downloads the Darwin Core tables produced by \code{raw_to_dc()} from SharePoint,
+builds a Darwin Core Archive zip with an EML file, and uploads the archive
+back to SharePoint.
 }

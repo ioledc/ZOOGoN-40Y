@@ -1,3 +1,64 @@
+#' Merge all zooplankton datasets into an analysis-ready tidy table
+#'
+#' Combines legacy data (1984-2020) with ongoing Kobo survey landings
+#' (2021-present) into a single long-format dataset ready for analysis.
+#' The output contains one row per taxon-life stage-event combination with
+#' WoRMS-validated taxonomy and abundance in ind/m³.
+#'
+#' @return Invisible NULL. The tidy dataset is uploaded as versioned CSV and
+#'   Parquet files to SharePoint.
+#'
+#' @examples
+#' \dontrun{
+#' raw_to_tidy()
+#' }
+#'
+#' @keywords workflow processing
+#' @export
+raw_to_tidy <- function() {
+  conf <- read_config()
+
+  logger::log_info("Downloading legacy datasets from hot storage...", namespace = "ZooGoN")
+  legacy_84_20 <-
+    c("McZoo_84-15.parquet", "McZoo_16-20.parquet") |>
+    purrr::map(
+      download_sharepoint_file,
+      options = conf$storage$sharepoint$credentials,
+      bucket = conf$storage$sharepoint$buckets$hot_bucket,
+      filename = TRUE
+    ) |>
+    dplyr::bind_rows()
+  logger::log_debug("Legacy data loaded: {nrow(legacy_84_20)} rows", namespace = "ZooGoN")
+
+  logger::log_info("Downloading preprocessed ongoing surveys...", namespace = "ZooGoN")
+  ongoing_landings <-
+    download_sharepoint_file(
+      prefix = conf$ingestion$surveys$preprocessed$file_prefix,
+      options = conf$storage$sharepoint$credentials,
+      bucket = conf$storage$sharepoint$buckets$automation_bucket,
+      format = "parquet"
+    )
+  logger::log_debug("Ongoing surveys loaded: {nrow(ongoing_landings)} rows", namespace = "ZooGoN")
+
+  tidy_data <-
+    legacy_84_20 |>
+    dplyr::bind_rows(ongoing_landings)
+  logger::log_info("Merged tidy dataset: {nrow(tidy_data)} rows", namespace = "ZooGoN")
+
+  logger::log_info("Uploading tidy data (CSV + Parquet)...", namespace = "ZooGoN")
+  c("csv", "parquet") |>
+    purrr::walk(
+      ~ upload_sharepoint_df(
+        data = tidy_data,
+        prefix = conf$ingestion$tidy_data$file_prefix,
+        options = conf$storage$sharepoint$credentials,
+        bucket = conf$storage$sharepoint$buckets$automation_bucket,
+        format = .
+      )
+    )
+  logger::log_success("raw_to_tidy complete", namespace = "ZooGoN")
+}
+
 #' Convert legacy LTER-MareChiara zooplankton data to Darwin Core format
 #'
 #' This function converts preprocessed legacy zooplankton datasets from the
@@ -8,22 +69,9 @@
 #'
 #' @param verbose Logical. Whether to print processing messages. Default is TRUE.
 #'
-#' @return A list containing Darwin Core formatted tables and metadata:
-#' \describe{
-#'   \item{event}{Event extension table with sampling event information (eventID,
-#'     eventDate, geographic coordinates, sampling protocol)}
-#'   \item{occurrence}{Occurrence extension table with species occurrence data
-#'     (eventID, occurrenceID, scientificName, scientificNameID, occurrenceStatus)}
-#'   \item{emof}{Extended Measurement or Fact (eMoF) table with measurements
-#'     (occurrenceID, measurementType, measurementValue, measurementTypeID,
-#'     measurementValueID, measurementUnitID) including individual counts, sex,
-#'     and life stage information}
-#'   \item{raw_data}{Original preprocessed data before Darwin Core conversion}
-#'   \item{processing_info}{List with processing metadata (processing_date,
-#'     total_events, total_occurrences, total_measurements, date_range, unique_taxa)}
-#'   \item{metadata}{Tibble with dataset-level metadata (title, contact,
-#'     institution, license, project information)}
-#' }
+#' @return Invisible NULL. The Darwin Core data (event, occurrence, emof tables
+#'   plus raw data, processing info, and metadata) is uploaded as a versioned
+#'   RDS file to SharePoint.
 #'
 #' @details
 #' **Input Data Format:**
@@ -33,7 +81,7 @@
 #' \itemize{
 #'   \item \code{eventID}: Unique sampling event identifier (e.g., "mc_1", "mc_2")
 #'   \item \code{eventDate}: Sampling date in Date format (YYYY-MM-DD)
-#'   \item \code{scientificname}: Full scientific name with WoRMS validation
+#'   \item \code{scientificName}: Full scientific name with WoRMS validation
 #'   \item \code{lsid}: WoRMS Life Science Identifier URN (e.g.,
 #'     "urn:lsid:marinespecies.org:taxname:104251")
 #'   \item \code{individualCount}: Abundance measurement (ind/m³)
@@ -43,9 +91,9 @@
 #'
 #' **Current Implementation:**
 #'
-#' Currently processes the file \code{McZoo_84-13.parquet} (1984-2013 data).
-#' Future versions will support additional legacy files (\code{McZoo_16.parquet},
-#' \code{McZoo_17.parquet}, etc.) following the same standardized format.
+#' Merges legacy data (1984-2020 from hot storage) with ongoing survey landings
+#' (2021-present from the automation bucket) and converts the combined dataset
+#' to Darwin Core format. Output is uploaded as a versioned RDS to SharePoint.
 #'
 #' **Darwin Core Conversion:**
 #'
@@ -91,22 +139,11 @@
 #'
 #' @examples
 #' \dontrun{
-#' # Process legacy data to Darwin Core format
-#' dc_data <- raw_to_dc()
-#'
-#' # Access individual Darwin Core extension tables
-#' events <- dc_data$event
-#' occurrences <- dc_data$occurrence
-#' measurements <- dc_data$emof
-#'
-#' # View processing summary
-#' dc_data$processing_info
-#'
-#' # Access metadata
-#' dc_data$metadata
+#' # Process legacy data and upload Darwin Core output to SharePoint
+#' raw_to_dc()
 #'
 #' # Silent processing (no console messages)
-#' dc_data <- raw_to_dc(verbose = FALSE)
+#' raw_to_dc(verbose = FALSE)
 #' }
 #'
 #' @seealso
@@ -124,39 +161,45 @@ raw_to_dc <- function(
   verbose = TRUE
 ) {
   conf <- read_config()
-  if (verbose) {
-    message("Starting LTER-MareChiara data processing...")
-  }
+  logger::log_info("Starting Darwin Core conversion...", namespace = "ZooGoN")
 
-  legacy_84_13 <-
-    download_sharepoint_file(
-      prefix = "McZoo_84-15.parquet",
+  logger::log_info("Downloading legacy datasets from hot storage...", namespace = "ZooGoN")
+  legacy_84_20 <-
+    c("McZoo_84-15.parquet", "McZoo_16-20.parquet") |>
+    purrr::map(
+      download_sharepoint_file,
       options = conf$storage$sharepoint$credentials,
       bucket = conf$storage$sharepoint$buckets$hot_bucket,
       filename = TRUE
-    )
+    ) |>
+    dplyr::bind_rows()
+  logger::log_debug("Legacy data loaded: {nrow(legacy_84_20)} rows", namespace = "ZooGoN")
 
-  legacy_16_20 <-
+  logger::log_info("Downloading preprocessed ongoing surveys...", namespace = "ZooGoN")
+  ongoing_landings <-
     download_sharepoint_file(
-      prefix = "McZoo_16-20.parquet",
+      prefix = conf$ingestion$surveys$preprocessed$file_prefix,
       options = conf$storage$sharepoint$credentials,
-      bucket = conf$storage$sharepoint$buckets$hot_bucket,
-      filename = TRUE
+      bucket = conf$storage$sharepoint$buckets$automation_bucket,
+      format = "parquet"
     )
+  logger::log_debug("Ongoing surveys loaded: {nrow(ongoing_landings)} rows", namespace = "ZooGoN")
 
-  legacy_84_20 <- dplyr::bind_rows(legacy_84_13, legacy_16_20)
+  merged_data <-
+    legacy_84_20 |>
+    dplyr::bind_rows(ongoing_landings)
+  logger::log_info("Merged data: {nrow(merged_data)} rows", namespace = "ZooGoN")
 
   # Create Darwin Core Event extension
-  if (verbose) {
-    message("Creating Event extension table...")
-  }
+  logger::log_info("Creating Event extension table...", namespace = "ZooGoN")
 
-  event_ext <- legacy_84_20 |>
+  event_ext <- merged_data |>
     dplyr::select(dplyr::all_of(c("eventID", "eventDate"))) |>
     dplyr::arrange(.data$eventDate) |>
     dplyr::distinct() |>
     dplyr::mutate(
       eventDate = as.character(.data$eventDate),
+      eventType = "Site Visit",
       decimalLatitude = 40.81,
       decimalLongitude = 14.25,
       geodeticDatum = "WGS84",
@@ -173,11 +216,9 @@ raw_to_dc <- function(
     )
 
   # Create Darwin Core Occurrence extension
-  if (verbose) {
-    message("Creating Occurrence extension table...")
-  }
+  logger::log_info("Creating Occurrence extension table...", namespace = "ZooGoN")
 
-  full_table <- legacy_84_20 |>
+  full_table <- merged_data |>
     dplyr::mutate(
       occurrenceStatus = dplyr::if_else(
         .data$individualCount > 0,
@@ -195,103 +236,17 @@ raw_to_dc <- function(
       "eventID",
       "occurrenceID",
       "basisOfRecord",
-      scientificName = "scientificname",
+      "scientificName",
       scientificNameID = "lsid",
       "occurrenceStatus"
     )
 
   # Create Darwin Core eMoF extension
-  if (verbose) {
-    message("Creating eMoF extension table...")
-  }
+  logger::log_info("Creating eMoF extension table...", namespace = "ZooGoN")
 
-  emof_table <- full_table |>
-    dplyr::select(
-      -dplyr::all_of(c(
-        "scientificname",
-        "occurrenceStatus",
-        "lsid"
-      ))
-    ) |>
-    dplyr::distinct() |>
-    dplyr::mutate(dplyr::across(dplyr::everything(), as.character)) |>
-    tidyr::pivot_longer(
-      cols = -dplyr::all_of(c("eventID", "eventDate", "occurrenceID")),
-      names_to = "measurementType",
-      values_to = "measurementValue"
-    ) |>
-    dplyr::mutate(
-      measurementValue = dplyr::case_when(
-        .data$measurementValue == "f" ~ "female",
-        .data$measurementValue == "m" ~ "male",
-        .data$measurementValue == "fm" ~ "male+female",
-        .data$measurementValue == "fmj" ~ "juvenile+adult",
-        .data$measurementValue == "j" ~ "juvenile",
-        .data$measurementValue == "egg" ~ "egg",
-        .data$measurementValue == "lar" ~ "larva",
-        is.na(.data$measurementValue) &
-          .data$measurementType == "lifeStage" ~ "not specified",
-        TRUE ~ NA_character_
-      ),
-      measurementType = dplyr::case_when(
-        .data$measurementValue %in%
-          c("female", "male", "male+female") ~ "sex",
-        .data$measurementValue %in%
-          c("juvenile", "juvenile+adult") ~ "lifeStage",
-        TRUE ~ .data$measurementType
-      ),
-      measurementTypeID = dplyr::case_when(
-        .data$measurementType ==
-          "sex" ~ "http://vocab.nerc.ac.uk/collection/P01/current/ENTSEX01/",
-        .data$measurementType ==
-          "lifeStage" ~ "http://vocab.nerc.ac.uk/collection/P01/current/LSTAGE01/",
-        .data$measurementType ==
-          "individualCount" ~ "http://vocab.nerc.ac.uk/collection/P01/current/ZU00M00D/",
-        TRUE ~ .data$measurementType
-      ),
-      measurementValueID = dplyr::case_when(
-        .data$measurementValue == "female" ~
-          "http://vocab.nerc.ac.uk/collection/S10/current/S102/",
-        .data$measurementValue == "male" ~
-          "http://vocab.nerc.ac.uk/collection/S10/current/S103/",
-        .data$measurementValue == "male+female" ~
-          "http://vocab.nerc.ac.uk/collection/S10/current/S108/",
-        .data$measurementValue == "juvenile" ~
-          "http://vocab.nerc.ac.uk/collection/S11/current/S1127/",
-        .data$measurementValue == "juvenile+adult" ~
-          "http://vocab.nerc.ac.uk/collection/S11/current/S1145/",
-        .data$measurementValue == "larva" ~
-          "http://vocab.nerc.ac.uk/collection/S11/current/S1128/",
-        .data$measurementValue == "egg" ~
-          "http://vocab.nerc.ac.uk/collection/S11/current/S1122/",
-        .data$measurementValue == "not specified" &
-          .data$measurementType == "sex" ~
-          "http://vocab.nerc.ac.uk/collection/S10/current/S104/",
-
-        .data$measurementValue == "not specified" &
-          .data$measurementType == "lifeStage" ~
-          "https://vocab.nerc.ac.uk/collection/S11/current/S1131/",
-        TRUE ~
-          NA_character_
-      ),
-      measurementUnit = dplyr::case_when(
-        .data$measurementType == "individualCount" ~ "Number per cubic metre",
-        TRUE ~ NA_character_
-      ),
-      measurementUnitID = dplyr::case_when(
-        .data$measurementType ==
-          "individualCount" ~ "http://vocab.nerc.ac.uk/collection/P06/current/UPMM/",
-        TRUE ~ NA_character_
-      )
-    ) |>
-    dplyr::relocate(
-      "measurementTypeID",
-      .after = "measurementType"
-    ) |>
-    dplyr::relocate(
-      "measurementValueID",
-      .after = "measurementValue"
-    )
+  emof_occ <- build_emof_occurrence(data = full_table)
+  emof_events <- build_emof_events(data = full_table)
+  emof_table <- dplyr::bind_rows(emof_occ, emof_events)
 
   # Prepare output
   processing_info <- list(
@@ -320,24 +275,234 @@ raw_to_dc <- function(
     event = event_ext,
     occurrence = occurrence_table,
     emof = emof_table,
-    raw_data = legacy_84_13,
+    raw_data = merged_data,
     processing_info = processing_info,
     metadata = metadata_df
   )
 
-  if (verbose) {
-    message("Processing completed successfully!")
-    message("Total events: ", processing_info$total_events)
-    message("Total occurrences: ", processing_info$total_occurrences)
-    message("Total measurements: ", processing_info$total_measurements)
-    message("Unique taxa: ", processing_info$unique_taxa)
-    message(
-      "Date range: ",
-      processing_info$date_range[1],
-      " to ",
-      processing_info$date_range[2]
-    )
-  }
+  logger::log_info("Events: {processing_info$total_events} | Occurrences: {processing_info$total_occurrences} | Measurements: {processing_info$total_measurements}", namespace = "ZooGoN")
+  logger::log_debug("Unique taxa: {processing_info$unique_taxa} | Date range: {processing_info$date_range[1]} to {processing_info$date_range[2]}", namespace = "ZooGoN")
 
-  return(darwin_core_data)
+  # Upload to SharePoint
+  logger::log_info("Uploading Darwin Core tables to SharePoint...", namespace = "ZooGoN")
+  upload_sharepoint_df(
+    data = darwin_core_data,
+    prefix = conf$ingestion$surveys$darwincore$file_prefix,
+    options = conf$storage$sharepoint$credentials,
+    bucket = conf$storage$sharepoint$buckets$automation_bucket,
+    format = "rds"
+  )
+  logger::log_success("raw_to_dc complete", namespace = "ZooGoN")
+}
+
+
+#' Build occurrence-level eMoF table
+#'
+#' Converts occurrence attributes (abundance, sex, life stage) to
+#' Darwin Core eMoF format. Recodes legacy life stage/sex codes to
+#' controlled vocabularies (NERC P01/S10/S11) and assigns units for
+#' abundance (ind/m³).
+#'
+#' @param data A data frame containing at least `eventID`, `eventDate`,
+#'   `occurrenceID`, `individualCount`, and `lifeStage`.
+#'
+#' @return A tibble in eMoF format with one row per occurrence-level
+#'   measurement and the columns:
+#'   `eventID`, `occurrenceID`, `eventDate`,
+#'   `measurementType`, `measurementTypeID`,
+#'   `measurementValue`, `measurementValueID`,
+#'   `measurementUnit`, `measurementUnitID`.
+#'
+#' @export
+build_emof_occurrence <- function(data = NULL) {
+  sex_map <- tibble::tribble(
+    ~code , ~value        , ~value_id                                              ,
+    "f"   , "female"      , "http://vocab.nerc.ac.uk/collection/S10/current/S102/" ,
+    "m"   , "male"        , "http://vocab.nerc.ac.uk/collection/S10/current/S103/" ,
+    "fm"  , "male+female" , "http://vocab.nerc.ac.uk/collection/S10/current/S108/"
+  )
+
+  stage_map <- tibble::tribble(
+    ~code , ~value           , ~value_id                                               ,
+    "j"   , "juvenile"       , "http://vocab.nerc.ac.uk/collection/S11/current/S1127/" ,
+    "fmj" , "juvenile+adult" , "http://vocab.nerc.ac.uk/collection/S11/current/S1145/" ,
+    "lar" , "larva"          , "http://vocab.nerc.ac.uk/collection/S11/current/S1128/" ,
+    "egg" , "egg"            , "http://vocab.nerc.ac.uk/collection/S11/current/S1122/" ,
+    "nau" , "nauplius"       , "http://vocab.nerc.ac.uk/collection/S11/current/S1130/"
+  )
+
+  type_ids <- c(
+    sex = "http://vocab.nerc.ac.uk/collection/P01/current/ENTSEX01/",
+    lifeStage = "http://vocab.nerc.ac.uk/collection/P01/current/LSTAGE01/",
+    individualCount = "http://vocab.nerc.ac.uk/collection/P01/current/ZU00M00D/"
+  )
+
+  data |>
+    dplyr::select(-"scientificName", -"occurrenceStatus", -"lsid") |>
+    dplyr::distinct() |>
+    dplyr::mutate(dplyr::across(
+      -c("eventID", "eventDate", "occurrenceID"),
+      as.character
+    )) |>
+    tidyr::pivot_longer(
+      cols = -c("eventID", "eventDate", "occurrenceID"),
+      names_to = "measurementType",
+      values_to = "raw"
+    ) |>
+    dplyr::mutate(raw = as.character(.data$raw)) |>
+    dplyr::left_join(sex_map, by = c("raw" = "code")) |>
+    dplyr::left_join(
+      stage_map,
+      by = c("raw" = "code"),
+      suffix = c("_sex", "_stage")
+    ) |>
+    dplyr::mutate(
+      measurementValue = dplyr::coalesce(
+        .data$value_sex,
+        .data$value_stage,
+        .data$raw
+      ),
+      measurementValueID = dplyr::coalesce(
+        .data$value_id_sex,
+        .data$value_id_stage
+      ),
+      measurementType = dplyr::case_when(
+        !is.na(.data$value_sex) ~ "sex",
+        !is.na(.data$value_stage) ~ "lifeStage",
+        TRUE ~ .data$measurementType
+      ),
+      measurementValue = dplyr::case_when(
+        .data$measurementType %in%
+          c("sex", "lifeStage") &
+          is.na(.data$measurementValue) ~ "not specified",
+        TRUE ~ .data$measurementValue
+      ),
+      measurementValueID = dplyr::case_when(
+        !is.na(.data$value_id_sex) ~ .data$value_id_sex,
+        !is.na(.data$value_id_stage) ~ .data$value_id_stage,
+        .data$measurementValue == "not specified" &
+          .data$measurementType == "sex" ~
+          "http://vocab.nerc.ac.uk/collection/S10/current/S104/",
+        .data$measurementValue == "not specified" &
+          .data$measurementType == "lifeStage" ~
+          "https://vocab.nerc.ac.uk/collection/S11/current/S1131/",
+        TRUE ~ NA_character_
+      ),
+      measurementTypeID = unname(type_ids[.data$measurementType]),
+      measurementUnit = dplyr::if_else(
+        .data$measurementType == "individualCount",
+        "Number per cubic metre",
+        NA_character_
+      ),
+      measurementUnitID = dplyr::if_else(
+        .data$measurementType == "individualCount",
+        "http://vocab.nerc.ac.uk/collection/P06/current/UPMM/",
+        NA_character_
+      )
+    ) |>
+    dplyr::select(
+      "eventID",
+      "occurrenceID",
+      "eventDate",
+      "measurementType",
+      "measurementTypeID",
+      "measurementValue",
+      "measurementValueID",
+      "measurementUnit",
+      "measurementUnitID"
+    ) |>
+    dplyr::mutate(eventDate = as.character(.data$eventDate))
+}
+
+#' Build event-level eMoF sampling metadata
+#'
+#' Creates one set of sampling metadata per event, including
+#' sampling protocol, instrument type, net mouth area and diameter.
+#' Instrument and geometry depend on sampling period (pre/post 2016-02-18).
+#'
+#' @param data A data frame containing at least `eventID` and `eventDate`.
+#'
+#' @return A tibble in eMoF format with event-level measurements
+#'   (`occurrenceID = NA`) and controlled NERC vocabulary identifiers
+#'   for protocol (P01/SAMPPROT), instrument (P01/NMSPINST + L22),
+#'   mouth area (P01/MTHAREA1, m²) and mouth diameter (P01/DSAMPA01, m).
+#'
+#' @export
+build_emof_events <- function(data = NULL) {
+  events <- data |>
+    dplyr::distinct(.data$eventID, .data$eventDate) |>
+    dplyr::mutate(
+      period = ifelse(.data$eventDate < as.Date("2016-02-18"), "old", "new"),
+      eventDate = as.character(.data$eventDate)
+    )
+
+  dplyr::bind_rows(
+    # protocol
+    events |>
+      dplyr::transmute(
+        .data$eventID,
+        .data$eventDate,
+        occurrenceID = NA_character_,
+        measurementType = "samplingProtocol",
+        measurementTypeID = "http://vocab.nerc.ac.uk/collection/P01/current/SAMPPROT/",
+        measurementValue = "Vertical zooplankton net tow from 50 m depth to surface",
+        measurementValueID = NA_character_,
+        measurementUnit = NA_character_,
+        measurementUnitID = NA_character_
+      ),
+
+    # instrument
+    events |>
+      dplyr::transmute(
+        .data$eventID,
+        .data$eventDate,
+        occurrenceID = NA_character_,
+        measurementType = "samplingInstrument",
+        measurementTypeID = "https://vocab.nerc.ac.uk/collection/P01/current/NMSPINST/",
+        measurementValue = dplyr::if_else(
+          .data$period == "old",
+          "Indian Ocean net",
+          "WP2 plankton net"
+        ),
+        measurementValueID = dplyr::if_else(
+          .data$period == "old",
+          "https://vocab.nerc.ac.uk/collection/L22/current/TOOL0979/",
+          "https://vocab.nerc.ac.uk/collection/L22/current/NETT0075/"
+        ),
+        measurementUnit = NA_character_,
+        measurementUnitID = NA_character_
+      ),
+
+    # mouth area
+    events |>
+      dplyr::transmute(
+        .data$eventID,
+        .data$eventDate,
+        occurrenceID = NA_character_,
+        measurementType = "mouthArea",
+        measurementTypeID = "https://vocab.nerc.ac.uk/collection/P01/current/MTHAREA1/",
+        measurementValue = dplyr::if_else(.data$period == "old", "1", "0.25"),
+        measurementValueID = NA_character_,
+        measurementUnit = "m2",
+        measurementUnitID = "https://vocab.nerc.ac.uk/collection/P06/current/UMSQ/"
+      ),
+
+    # mouth diameter
+    events |>
+      dplyr::transmute(
+        .data$eventID,
+        .data$eventDate,
+        occurrenceID = NA_character_,
+        measurementType = "mouthDiameter",
+        measurementTypeID = "https://vocab.nerc.ac.uk/collection/P01/current/DSAMPA01/",
+        measurementValue = dplyr::if_else(
+          .data$period == "old",
+          "1.13",
+          "0.57"
+        ),
+        measurementValueID = NA_character_,
+        measurementUnit = "m",
+        measurementUnitID = "https://vocab.nerc.ac.uk/collection/P06/current/ULAA/"
+      )
+  )
 }
