@@ -18,6 +18,7 @@ clean_21_24 <-
     "sampling_id",
     "sampling_date",
     "taxon",
+    "is_copepod",
     dplyr::starts_with("n_")
   ) |>
   dplyr::mutate(eventID = paste0(site_name, sampling_id)) |>
@@ -26,7 +27,8 @@ clean_21_24 <-
   dplyr::arrange(sampling_date) |>
   dplyr::rename(
     eventDate = "sampling_date",
-    aphiaID = "taxon"
+    aphiaID = "taxon",
+    isCopepod = "is_copepod"
   ) |>
   janitor::clean_names() |>
   dplyr::mutate(dplyr::across(dplyr::starts_with("n_"), as.numeric)) |>
@@ -85,7 +87,8 @@ tidy_data <-
     eventID = "event_id",
     eventDate = "event_date",
     lifeStage = "life_stage",
-    individualCount = "individual_count"
+    individualCount = "individual_count",
+    isCopepod = "is_copepod"
   ) |>
   dplyr::distinct() |>
   # remove NA counts & IDs
@@ -95,7 +98,7 @@ tidy_data <-
     !is.na(.data$eventID)
   ) |>
   # remove duplicates
-  dplyr::group_by(eventID, eventDate, scientificName, lsid, lifeStage) |>
+  dplyr::group_by(eventID, eventDate, scientificName, lsid, isCopepod, lifeStage) |>
   dplyr::summarise(
     individualCount = sum(individualCount, na.rm = TRUE),
     .groups = "drop"
