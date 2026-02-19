@@ -1,3 +1,64 @@
+#' Merge all zooplankton datasets into an analysis-ready tidy table
+#'
+#' Combines legacy data (1984-2020) with ongoing Kobo survey landings
+#' (2021-present) into a single long-format dataset ready for analysis.
+#' The output contains one row per taxon-life stage-event combination with
+#' WoRMS-validated taxonomy and abundance in ind/m³.
+#'
+#' @return Invisible NULL. The tidy dataset is uploaded as versioned CSV and
+#'   Parquet files to SharePoint.
+#'
+#' @examples
+#' \dontrun{
+#' raw_to_tidy()
+#' }
+#'
+#' @keywords workflow processing
+#' @export
+raw_to_tidy <- function() {
+  conf <- read_config()
+
+  logger::log_info("Downloading legacy datasets from hot storage...", namespace = "ZooGoN")
+  legacy_84_20 <-
+    c("McZoo_84-15.parquet", "McZoo_16-20.parquet") |>
+    purrr::map(
+      download_sharepoint_file,
+      options = conf$storage$sharepoint$credentials,
+      bucket = conf$storage$sharepoint$buckets$hot_bucket,
+      filename = TRUE
+    ) |>
+    dplyr::bind_rows()
+  logger::log_debug("Legacy data loaded: {nrow(legacy_84_20)} rows", namespace = "ZooGoN")
+
+  logger::log_info("Downloading preprocessed ongoing surveys...", namespace = "ZooGoN")
+  ongoing_landings <-
+    download_sharepoint_file(
+      prefix = conf$ingestion$surveys$preprocessed$file_prefix,
+      options = conf$storage$sharepoint$credentials,
+      bucket = conf$storage$sharepoint$buckets$automation_bucket,
+      format = "parquet"
+    )
+  logger::log_debug("Ongoing surveys loaded: {nrow(ongoing_landings)} rows", namespace = "ZooGoN")
+
+  tidy_data <-
+    legacy_84_20 |>
+    dplyr::bind_rows(ongoing_landings)
+  logger::log_info("Merged tidy dataset: {nrow(tidy_data)} rows", namespace = "ZooGoN")
+
+  logger::log_info("Uploading tidy data (CSV + Parquet)...", namespace = "ZooGoN")
+  c("csv", "parquet") |>
+    purrr::walk(
+      ~ upload_sharepoint_df(
+        data = tidy_data,
+        prefix = conf$ingestion$tidy_data$file_prefix,
+        options = conf$storage$sharepoint$credentials,
+        bucket = conf$storage$sharepoint$buckets$automation_bucket,
+        format = .
+      )
+    )
+  logger::log_success("raw_to_tidy complete", namespace = "ZooGoN")
+}
+
 #' Convert legacy LTER-MareChiara zooplankton data to Darwin Core format
 #'
 #' This function converts preprocessed legacy zooplankton datasets from the
@@ -8,22 +69,9 @@
 #'
 #' @param verbose Logical. Whether to print processing messages. Default is TRUE.
 #'
-#' @return A list containing Darwin Core formatted tables and metadata:
-#' \describe{
-#'   \item{event}{Event extension table with sampling event information (eventID,
-#'     eventDate, geographic coordinates, sampling protocol)}
-#'   \item{occurrence}{Occurrence extension table with species occurrence data
-#'     (eventID, occurrenceID, scientificName, scientificNameID, occurrenceStatus)}
-#'   \item{emof}{Extended Measurement or Fact (eMoF) table with measurements
-#'     (occurrenceID, measurementType, measurementValue, measurementTypeID,
-#'     measurementValueID, measurementUnitID) including individual counts, sex,
-#'     and life stage information}
-#'   \item{raw_data}{Original preprocessed data before Darwin Core conversion}
-#'   \item{processing_info}{List with processing metadata (processing_date,
-#'     total_events, total_occurrences, total_measurements, date_range, unique_taxa)}
-#'   \item{metadata}{Tibble with dataset-level metadata (title, contact,
-#'     institution, license, project information)}
-#' }
+#' @return Invisible NULL. The Darwin Core data (event, occurrence, emof tables
+#'   plus raw data, processing info, and metadata) is uploaded as a versioned
+#'   RDS file to SharePoint.
 #'
 #' @details
 #' **Input Data Format:**
@@ -43,9 +91,9 @@
 #'
 #' **Current Implementation:**
 #'
-#' Currently processes the file \code{McZoo_84-13.parquet} (1984-2013 data).
-#' Future versions will support additional legacy files (\code{McZoo_16.parquet},
-#' \code{McZoo_17.parquet}, etc.) following the same standardized format.
+#' Merges legacy data (1984-2020 from hot storage) with ongoing survey landings
+#' (2021-present from the automation bucket) and converts the combined dataset
+#' to Darwin Core format. Output is uploaded as a versioned RDS to SharePoint.
 #'
 #' **Darwin Core Conversion:**
 #'
@@ -91,22 +139,11 @@
 #'
 #' @examples
 #' \dontrun{
-#' # Process legacy data to Darwin Core format
-#' dc_data <- raw_to_dc()
-#'
-#' # Access individual Darwin Core extension tables
-#' events <- dc_data$event
-#' occurrences <- dc_data$occurrence
-#' measurements <- dc_data$emof
-#'
-#' # View processing summary
-#' dc_data$processing_info
-#'
-#' # Access metadata
-#' dc_data$metadata
+#' # Process legacy data and upload Darwin Core output to SharePoint
+#' raw_to_dc()
 #'
 #' # Silent processing (no console messages)
-#' dc_data <- raw_to_dc(verbose = FALSE)
+#' raw_to_dc(verbose = FALSE)
 #' }
 #'
 #' @seealso
@@ -124,43 +161,39 @@ raw_to_dc <- function(
   verbose = TRUE
 ) {
   conf <- read_config()
-  if (verbose) {
-    message("Starting LTER-MareChiara data processing...")
-  }
+  logger::log_info("Starting Darwin Core conversion...", namespace = "ZooGoN")
 
-  legacy_84_15 <-
-    download_sharepoint_file(
-      prefix = "McZoo_84-15.parquet",
+  logger::log_info("Downloading legacy datasets from hot storage...", namespace = "ZooGoN")
+  legacy_84_20 <-
+    c("McZoo_84-15.parquet", "McZoo_16-20.parquet") |>
+    purrr::map(
+      download_sharepoint_file,
       options = conf$storage$sharepoint$credentials,
       bucket = conf$storage$sharepoint$buckets$hot_bucket,
       filename = TRUE
-    )
+    ) |>
+    dplyr::bind_rows()
+  logger::log_debug("Legacy data loaded: {nrow(legacy_84_20)} rows", namespace = "ZooGoN")
 
-  legacy_16_20 <-
+  logger::log_info("Downloading preprocessed ongoing surveys...", namespace = "ZooGoN")
+  ongoing_landings <-
     download_sharepoint_file(
-      prefix = "McZoo_16-20.parquet",
+      prefix = conf$ingestion$surveys$preprocessed$file_prefix,
       options = conf$storage$sharepoint$credentials,
-      bucket = conf$storage$sharepoint$buckets$hot_bucket,
-      filename = TRUE
+      bucket = conf$storage$sharepoint$buckets$automation_bucket,
+      format = "parquet"
     )
+  logger::log_debug("Ongoing surveys loaded: {nrow(ongoing_landings)} rows", namespace = "ZooGoN")
 
-  legacy_21_24 <-
-    download_sharepoint_file(
-      prefix = "McZoo_21-24.parquet",
-      options = conf$storage$sharepoint$credentials,
-      bucket = conf$storage$sharepoint$buckets$hot_bucket,
-      filename = TRUE
-    )
-
-  legacy_84_24 <-
-    dplyr::bind_rows(legacy_84_15, legacy_16_20, legacy_21_24)
+  merged_data <-
+    legacy_84_20 |>
+    dplyr::bind_rows(ongoing_landings)
+  logger::log_info("Merged data: {nrow(merged_data)} rows", namespace = "ZooGoN")
 
   # Create Darwin Core Event extension
-  if (verbose) {
-    message("Creating Event extension table...")
-  }
+  logger::log_info("Creating Event extension table...", namespace = "ZooGoN")
 
-  event_ext <- legacy_84_24 |>
+  event_ext <- merged_data |>
     dplyr::select(dplyr::all_of(c("eventID", "eventDate"))) |>
     dplyr::arrange(.data$eventDate) |>
     dplyr::distinct() |>
@@ -183,11 +216,9 @@ raw_to_dc <- function(
     )
 
   # Create Darwin Core Occurrence extension
-  if (verbose) {
-    message("Creating Occurrence extension table...")
-  }
+  logger::log_info("Creating Occurrence extension table...", namespace = "ZooGoN")
 
-  full_table <- legacy_84_24 |>
+  full_table <- merged_data |>
     dplyr::mutate(
       occurrenceStatus = dplyr::if_else(
         .data$individualCount > 0,
@@ -211,9 +242,7 @@ raw_to_dc <- function(
     )
 
   # Create Darwin Core eMoF extension
-  if (verbose) {
-    message("Creating eMoF extension table...")
-  }
+  logger::log_info("Creating eMoF extension table...", namespace = "ZooGoN")
 
   emof_occ <- build_emof_occurrence(data = full_table)
   emof_events <- build_emof_events(data = full_table)
@@ -246,26 +275,24 @@ raw_to_dc <- function(
     event = event_ext,
     occurrence = occurrence_table,
     emof = emof_table,
-    raw_data = legacy_84_24,
+    raw_data = merged_data,
     processing_info = processing_info,
     metadata = metadata_df
   )
 
-  if (verbose) {
-    message("Processing completed successfully!")
-    message("Total events: ", processing_info$total_events)
-    message("Total occurrences: ", processing_info$total_occurrences)
-    message("Total measurements: ", processing_info$total_measurements)
-    message("Unique taxa: ", processing_info$unique_taxa)
-    message(
-      "Date range: ",
-      processing_info$date_range[1],
-      " to ",
-      processing_info$date_range[2]
-    )
-  }
+  logger::log_info("Events: {processing_info$total_events} | Occurrences: {processing_info$total_occurrences} | Measurements: {processing_info$total_measurements}", namespace = "ZooGoN")
+  logger::log_debug("Unique taxa: {processing_info$unique_taxa} | Date range: {processing_info$date_range[1]} to {processing_info$date_range[2]}", namespace = "ZooGoN")
 
-  return(darwin_core_data)
+  # Upload to SharePoint
+  logger::log_info("Uploading Darwin Core tables to SharePoint...", namespace = "ZooGoN")
+  upload_sharepoint_df(
+    data = darwin_core_data,
+    prefix = conf$ingestion$surveys$darwincore$file_prefix,
+    options = conf$storage$sharepoint$credentials,
+    bucket = conf$storage$sharepoint$buckets$automation_bucket,
+    format = "rds"
+  )
+  logger::log_success("raw_to_dc complete", namespace = "ZooGoN")
 }
 
 

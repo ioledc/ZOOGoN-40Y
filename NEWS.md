@@ -1,3 +1,36 @@
+# ZooGoN 3.1.0
+
+## Full Automated Pipeline
+
+This release completes the end-to-end data pipeline from field survey collection to Darwin Core Archive publication.
+
+### New Functions
+
+* **`raw_to_tidy()`**: Merges legacy datasets (1984-2020) with preprocessed ongoing surveys into a single analysis-ready dataset. Uploads the merged data in both CSV and Parquet formats to SharePoint.
+
+### Pipeline & Automation
+
+* Complete 6-step GitHub Actions pipeline: build container → ingest surveys → preprocess → merge tidy data → Darwin Core conversion → build archive.
+* `raw_to_dc()` now reads from the tidy data output (produced by `raw_to_tidy()`) instead of merging legacy files internally. Results are uploaded to SharePoint as versioned RDS.
+* `dc_to_archive()` no longer takes arguments — it downloads Darwin Core tables from SharePoint automatically.
+
+### Storage Improvements
+
+* **Large file upload support**: Files larger than 4 MB are uploaded via Microsoft Graph API resumable upload sessions with chunked transfer (10 MB chunks).
+* **RDS format support** in `upload_sharepoint_df()`, `download_sharepoint_file()`, and related helpers.
+
+### Production Hardening
+
+* Fixed Dockerfile.prod syntax (`install2.r` does not accept version specs) and added a library validation step.
+* Bumped minimum R version to `R (>= 4.1)` (required for the native pipe `|>`).
+* Fixed scalar logical operators (`||` instead of `|`) in KoboToolbox validation.
+* Internal helpers (`flatten_row`, `flatten_field`, `rename_child`) are no longer exported.
+
+### Documentation
+
+* Updated README, data-processing vignette, and darwin-core vignette to reflect the full pipeline workflow.
+* Reorganised pkgdown reference index with a "Data Processing" section.
+
 # ZooGoN 3.0.0
 
 - Added automated GBIF publishing helpers: `register_gbif_dataset()` for production use and `register_gbif_dataset_test()` for the GBIF-Test demo flow; both take a public DwC-A URL and handle dataset registration.

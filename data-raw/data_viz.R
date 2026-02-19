@@ -108,7 +108,7 @@ zoo_heatmap <-
   ) |> # Sum abundances
   dplyr::mutate(log_abundance = log(abundance + 1)) # Log-transformation (+1 to avoid log(0))
 
-# heatmap function
+### heatmap function
 plot_heatmap_complex <- function(
   species_name = NULL,
   rank_class = NULL,
@@ -377,7 +377,7 @@ plot_heatmap_complex(rank_class = "Sagittoidea", log = F)
 plot_heatmap_complex(rank_class = "Copepoda", log = F)
 plot_heatmap_complex(rank_order = "Onychopoda", log = F)
 
-# trend function
+### trend function
 plot_temporal_trend <- function(species_name = NULL, rank_class = NULL, rank_order = NULL) {
 
   # apply taxonomic filters first (if provided)
@@ -548,74 +548,6 @@ zoo_data <-
   dplyr::filter(scientificName %in% c("Acartia clausi", "Temora stylifera")) |>
   dplyr::select(eventDate, scientificName, individualCount, lifeStage)
 
-# heatmap
-# Prepare data
-zoo_heatmap <-
-  zoo_data |>
-  dplyr::mutate(
-    week = lubridate::week(eventDate), # Extract week (1-52)
-    year = lubridate::year(eventDate) # Extract year
-  ) |>
-  dplyr::group_by(year, week, scientificName, lifeStage) |> # Group by year, week, species and life stage
-  dplyr::summarise(
-    abundance = sum(individualCount, na.rm = TRUE),
-    .groups = "drop"
-  ) |> # Sum abundances
-  dplyr::mutate(log_abundance = log(abundance + 1)) # Log-transformation (+1 to avoid log(0))
-
-
-# Function to create heatmap for a single species
-plot_species_heatmap <- function(species_name) {
-  data <-
-    zoo_heatmap |>
-    dplyr::filter(scientificName == species_name) # Filter by selected species
-
-  ggplot2::ggplot(
-    data,
-    ggplot2::aes(x = week, y = year, fill = log_abundance)
-  ) +
-    ggplot2::geom_tile(color = "grey90") + # Tiles with grey border
-    ggplot2::facet_wrap(~lifeStage, ncol = 3) + # Split by life stage (f, m, j)
-    ggplot2::scale_fill_gradientn(
-      # Custom color gradient
-      colours = c("blue", "cyan", "green", "yellow", "orange", "red"),
-      na.value = "grey90",
-      name = expression(ind ~ m^-3)
-    ) +
-    ggplot2::scale_x_continuous(breaks = seq(1, 52, by = 4)) + # Week labels
-    ggplot2::scale_y_continuous(breaks = seq(1984, 2024, by = 1)) + # All years from 1984 to 2024
-    ggplot2::coord_cartesian(expand = FALSE) + # Remove empty space
-    ggplot2::theme_minimal() +
-    ggplot2::labs(
-      title = bquote(italic(.(species_name))), # Title in italic
-      x = "Weeks",
-      y = "Years"
-    ) +
-    ggplot2::theme(
-      legend.position = "right", # Legend on the right
-      panel.grid.major = ggplot2::element_line(
-        color = "grey80",
-        linewidth = 0.3
-      ), # Major grid lines
-      panel.grid.minor = ggplot2::element_blank(), # Remove minor grid lines
-      strip.text = ggplot2::element_text(face = "bold", size = 18), # Life stage labels bold and larger
-      axis.text.x = ggplot2::element_text(size = 16), # X axis text larger
-      axis.text.y = ggplot2::element_text(size = 16), # Y axis text larger
-      axis.title.x = ggplot2::element_text(size = 18, face = "bold"), # X axis title larger and bold
-      axis.title.y = ggplot2::element_text(size = 18, face = "bold"), # Y axis title larger and bold
-      plot.title = ggplot2::element_text(size = 18, face = "bold.italic"), # Plot title larger, bold and italic
-      legend.title = ggplot2::element_text(size = 18, face = "bold"), # Legend title larger and bold
-      legend.text = ggplot2::element_text(size = 16) # Legend text larger
-    )
-}
-
-# create heatmaps for both species
-heatmap_acartia <- plot_species_heatmap("Acartia clausi")
-heatmap_temora <- plot_species_heatmap("Temora stylifera")
-# display
-heatmap_acartia
-heatmap_temora
-
 
 # seasonality
 # Function to create annual boxplot
@@ -742,11 +674,11 @@ plot_weekly_boxplot <- function(species_name) {
 
 # time series - trend Ab
 # Function to create temporal trend plot
-plot_temporal_trend <- function(species_name = NULL) {
+plot_trend_Ab <- function(species_name = NULL) {
   # if species_name is NULL or "All" aggregate all species
   if (is.null(species_name) || species_name == "All") {
     data <-
-      zoo_cop |>
+      zoo_84_24 |>
       dplyr::mutate(year = lubridate::year(eventDate)) |>
       dplyr::group_by(eventDate, year) |>
       dplyr::summarise(
@@ -759,7 +691,7 @@ plot_temporal_trend <- function(species_name = NULL) {
   } else {
     # Filter data by specific species
     data <-
-      zoo_cop |>
+      zoo_84_24 |>
       dplyr::filter(scientificName == species_name) |>
       dplyr::mutate(year = lubridate::year(eventDate)) |>
       dplyr::group_by(eventDate, year) |>
@@ -886,4 +818,3 @@ plot_temporal_trend <- function(species_name = NULL) {
 # display
 plot_temporal_trend(species_name = "All") # it's same for every species
 plot_temporal_trend(species_name = "Pleuromamma gracilis")
-unique(zoo_cop$scientificName)

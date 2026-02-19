@@ -17,6 +17,7 @@
 preprocess_surveys <- function(raw_data = NULL) {
   conf <- read_config()
 
+  logger::log_info("Downloading raw survey data...", namespace = "ZooGoN")
   raw_surveys <-
     download_sharepoint_file(
       prefix = conf$ingestion$surveys$raw$file_prefix,
@@ -31,6 +32,9 @@ preprocess_surveys <- function(raw_data = NULL) {
       -dplyr::all_of(c("formhub/uuid", "start", "end", "today"))
     )
 
+  logger::log_info("[preprocess_surveys] Raw surveys: {nrow(raw_surveys)} rows")
+
+  logger::log_info("[preprocess_surveys] Extracting cruise info...")
   cruise_info <-
     raw_surveys |>
     dplyr::select("submission_id", !dplyr::starts_with("group_taxa")) |>
@@ -44,11 +48,12 @@ preprocess_surveys <- function(raw_data = NULL) {
     #janitor::clean_names() |>
     dplyr::relocate(
       "filtered_volume_m3",
-      .before = .data$water_column_sampled
+      .before = "water_column_sampled"
     ) |>
     # remove legacy columns
     dplyr::select(-"sampling_name")
 
+  logger::log_info("[preprocess_surveys] Extracting taxa info...")
   taxa_info <-
     raw_surveys |>
     dplyr::select("submission_id", dplyr::starts_with("group_taxa")) |>
@@ -96,17 +101,126 @@ preprocess_surveys <- function(raw_data = NULL) {
       )
     )
 
-  upload_sharepoint_df(
-    data = preprocessed_complete,
-    prefix = conf$ingestion$survey$preprocessed$file_prefix,
-    options = conf$storage$sharepoint$credentials,
-    bucket = conf$storage$sharepoint$buckets$automation_bucket,
-    format = "csv"
-  )
+  clean_21_24 <-
+    preprocessed_complete |>
+    dplyr::select(
+      "site_name",
+      "sampling_id",
+      "sampling_date",
+      "taxon",
+      dplyr::starts_with("n_")
+    ) |>
+    dplyr::mutate(eventID = paste0(.data$site_name, .data$sampling_id)) |>
+    dplyr::relocate("eventID", .before = "site_name") |>
+    dplyr::select(-c("site_name", "sampling_id")) |>
+    dplyr::arrange(.data$sampling_date) |>
+    dplyr::rename(
+      eventDate = "sampling_date",
+      aphiaID = "taxon"
+    ) |>
+    janitor::clean_names() |>
+    dplyr::mutate(dplyr::across(dplyr::starts_with("n_"), as.numeric)) |>
+    # TO DO: Ideally there should be no NAs unless the net was empty(!), to clarify. Meanwhile we drop all NAs
+    dplyr::filter(!is.na(.data$aphia_id))
 
-  # to see the final results
-  # after run the fuction create and execute the object "results <- preprocess_surveys()" in the console
-  return(preprocessed_complete)
+  logger::log_info("[preprocess_surveys] Cleaned data: {nrow(clean_21_24)} rows")
+
+  # Get unique AphiaID
+  unique_aphia_ids <- as.numeric(unique(clean_21_24$aphia_id))
+  logger::log_info("[preprocess_surveys] Querying WoRMS for {length(unique_aphia_ids)} unique AphiaIDs...")
+
+  worms_records <-
+    unique_aphia_ids |>
+    purrr::map_dfr(worrms::wm_record) |>
+    dplyr::select(aphia_id = "AphiaID", "scientificname", "lsid") |>
+    dplyr::mutate(aphia_id = as.character(.data$aphia_id))
+
+  # Data harmonization as other matrices
+  tidy_data <-
+    clean_21_24 |>
+    dplyr::left_join(worms_records, by = "aphia_id") |>
+    dplyr::relocate("scientificname", "lsid", .after = "aphia_id") |>
+    # Pivot abundance columns to long format
+    tidyr::pivot_longer(
+      cols = c(
+        "n_male",
+        "n_female",
+        "n_copepodite",
+        "n_undetermined",
+        "n_larvae",
+        "n_eggs",
+        "n_nauplius"
+      ),
+      names_to = "life_stage_temp",
+      values_to = "individual_count"
+    ) |>
+    # Convert abundance to numeric and map life stages
+    dplyr::mutate(
+      life_stage = dplyr::case_when(
+        life_stage_temp == "n_male" ~ "m",
+        life_stage_temp == "n_female" ~ "f",
+        life_stage_temp == "n_copepodite" ~ "j",
+        life_stage_temp == "n_undetermined" ~ "fmj",
+        life_stage_temp == "n_larvae" ~ "lar",
+        life_stage_temp == "n_eggs" ~ "egg",
+        # TO DO: do we have nauplii only in 21-24 data?
+        life_stage_temp == "n_nauplius" ~ "nau",
+        TRUE ~ NA_character_
+      )
+    ) |>
+    # Clean and organize columns
+    dplyr::select(
+      -c("life_stage_temp", "aphia_id", "n_individuals", "n_sample")
+    ) |>
+    dplyr::filter(!is.na(.data$individual_count)) |>
+    dplyr::rename(
+      scientificName = "scientificname",
+      eventID = "event_id",
+      eventDate = "event_date",
+      lifeStage = "life_stage",
+      individualCount = "individual_count"
+    ) |>
+    dplyr::distinct() |>
+    # remove NA counts & IDs
+    dplyr::filter(
+      !is.na(.data$individualCount),
+      !is.na(.data$eventDate),
+      !is.na(.data$eventID)
+    ) |>
+    # remove duplicates
+    dplyr::group_by(
+      .data$eventID,
+      .data$eventDate,
+      .data$scientificName,
+      .data$lsid,
+      .data$lifeStage
+    ) |>
+    dplyr::summarise(
+      individualCount = sum(.data$individualCount, na.rm = TRUE),
+      .groups = "drop"
+    ) |>
+    dplyr::relocate("individualCount", .before = "lifeStage")
+
+  logger::log_info("[preprocess_surveys] Preprocessed data: {nrow(tidy_data)} rows, {length(unique(tidy_data$scientificName))} unique taxa")
+  logger::log_info("[preprocess_surveys] Uploading preprocessed data (CSV + Parquet)...")
+  c("csv", "parquet") |>
+    purrr::walk(
+      ~ upload_sharepoint_df(
+        data = tidy_data,
+        prefix = conf$ingestion$surveys$preprocessed$file_prefix,
+        options = conf$storage$sharepoint$credentials,
+        bucket = conf$storage$sharepoint$buckets$automation_bucket,
+        format = .
+      )
+    )
+  logger::log_info("[preprocess_surveys] Done.")
+  # upload_sharepoint_df(
+  #   data = preprocessed_complete,
+  #   prefix = conf$ingestion$survey$preprocessed$file_prefix,
+  #   options = conf$storage$sharepoint$credentials,
+  #   bucket = conf$storage$sharepoint$buckets$automation_bucket,
+  #   format = "csv"
+  # )
 }
 
 # TO DO:
