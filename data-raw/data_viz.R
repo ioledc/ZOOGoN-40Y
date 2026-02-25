@@ -12,7 +12,13 @@ pacman::p_load(
   tidyverse,
   viridis,
   cowplot,
-  worrms
+  worrms,
+  stringr,
+  vegan,
+  reader,
+  readr,
+  readxl,
+  stringr
 )
 
 # TO DO: automate load from sharepoint, zoogon_mc-dev folder contain "ranks" files with complete taxonomy for each taxon
@@ -538,6 +544,14 @@ plot_temporal_trend(species_name = "Temora stylifera")
 plot_temporal_trend(rank_class = "Copepoda")
 plot_temporal_trend(rank_order = "Onychopoda")
 plot_temporal_trend(rank_order = "Cyclopoida")
+
+#####################################################################################
+
+
+
+
+
+
 
 
 #####################################################################################
