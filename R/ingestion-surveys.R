@@ -48,15 +48,24 @@ ingest_surveys <- function() {
     stop("Number of submission ids not the same as number of records")
   }
 
-  logger::log_info("Converting MC Survey Kobo data to tabular format...", namespace = "ZooGoN")
+  logger::log_info(
+    "Converting MC Survey Kobo data to tabular format...",
+    namespace = "ZooGoN"
+  )
   raw_survey <-
     purrr::map(data_raw, flatten_row) %>%
     dplyr::bind_rows() %>%
     dplyr::rename(submission_id = "_id")
 
-  logger::log_debug("Flattened survey: {nrow(raw_survey)} rows, {ncol(raw_survey)} columns", namespace = "ZooGoN")
+  logger::log_debug(
+    "Flattened survey: {nrow(raw_survey)} rows, {ncol(raw_survey)} columns",
+    namespace = "ZooGoN"
+  )
 
-  logger::log_info("Uploading raw survey data (CSV + Parquet)...", namespace = "ZooGoN")
+  logger::log_info(
+    "Uploading raw survey data (CSV + Parquet)...",
+    namespace = "ZooGoN"
+  )
   c("csv", "parquet") |>
     purrr::walk(
       ~ upload_sharepoint_df(
@@ -82,21 +91,43 @@ ingest_surveys <- function() {
 #' @param pwd Password for Kobotoolbox account.
 #' @param encoding Encoding to be used for data retrieval (default is "UTF-8").
 #' @param format Format of the data to retrieve, either "json" or "xml" (default is "json").
+#' @param limit Number of records per page (default 1000). Maximum allowed is 1000.
+#' @param since_id Optional. If provided, only fetch submissions with `_id`
+#'   greater than or equal to this value. Useful for incremental data retrieval.
+#' @param retry_times Number of retry attempts for failed requests (default is 3).
+#' @param progress Logical. Whether to show a progress message (default is TRUE).
 #'
 #' @return A list containing all retrieved survey results.
 #' @keywords ingestion
 #' @details
-#' The function uses pagination to retrieve large datasets, with a limit of 30,000 records per request.
-#' It continues to fetch data until all records are retrieved or an error occurs.
+#' As of March 2026, the Kobotoolbox API enforces a maximum page size of 1,000
+#' records per request (previously 30,000). The default page size if not specified
+#' is 100. This function uses pagination via the `next` field in the API response
+#' to iterate through all available records.
+#'
+#' For incremental data retrieval (e.g., syncing only new submissions), use the
+#' `since_id` parameter with the last known `_id` value.
+#'
+#' Note: This change does NOT affect synchronous export endpoints
+#' (`/api/v2/assets/{uid}/export-settings/{uid_export}/data.xlsx|csv`).
 #'
 #' @export
 #'
 #' @examples
 #' \dontrun{
+#' # Full retrieval
 #' kobo_data <- get_kobo_data(
 #'   assetid = "your_asset_id",
 #'   uname = "your_username",
 #'   pwd = "your_password"
+#' )
+#'
+#' # Incremental retrieval (only new records since last sync)
+#' new_data <- get_kobo_data(
+#'   assetid = "your_asset_id",
+#'   uname = "your_username",
+#'   pwd = "your_password",
+#'   since_id = 52149
 #' )
 #' }
 get_kobo_data <- function(
@@ -105,35 +136,32 @@ get_kobo_data <- function(
   uname = NULL,
   pwd = NULL,
   encoding = "UTF-8",
-  format = "json"
+  format = "json",
+  limit = 1000,
+  since_id = NULL,
+  retry_times = 3,
+  progress = TRUE
 ) {
-  if (!is.character(url)) {
-    stop("URL entered is not a string")
+  # --- Input validation ---
+  if (is.null(uname) || !is.character(uname) || uname == "") {
+    stop("`uname` (username) must be a non-empty string.")
   }
-  if (!is.character(uname)) {
-    stop("uname (username) entered is not a string")
+  if (is.null(pwd) || !is.character(pwd) || pwd == "") {
+    stop("`pwd` (password) must be a non-empty string.")
   }
-  if (!is.character(pwd)) {
-    stop("pwd (password) entered is not a string")
+  if (is.null(assetid) || !is.character(assetid) || assetid == "") {
+    stop("`assetid` must be a non-empty string.")
   }
-  if (!is.character(assetid)) {
-    stop("assetid entered is not a string")
-  }
-  if (is.null(url) || url == "") {
-    stop("URL empty")
-  }
-  if (is.null(uname) || uname == "") {
-    stop("uname (username) empty")
-  }
-  if (is.null(pwd) || pwd == "") {
-    stop("pwd (password) empty")
-  }
-  if (is.null(assetid) || assetid == "") {
-    stop("assetid empty")
+  if (is.null(url) || !is.character(url) || url == "") {
+    stop("`url` must be a non-empty string.")
   }
   if (!format %in% c("json", "xml")) {
-    stop("format must be either 'json' or 'xml'")
+    stop("`format` must be either 'json' or 'xml'.")
   }
+  if (!is.numeric(limit) || limit < 1 || limit > 1000) {
+    stop("`limit` must be a number between 1 and 1000.")
+  }
+  limit <- as.integer(limit)
 
   base_url <- paste0(
     "https://",
@@ -144,94 +172,150 @@ get_kobo_data <- function(
     format
   )
 
-  logger::log_info("Starting data retrieval from {base_url}", namespace = "ZooGoN")
+  if (progress) {
+    message("Starting data retrieval from ", base_url)
+  }
 
-  get_page <- function(url, limit = 30000, start = 0) {
-    full_url <- paste0(url, "?limit=", limit, "&start=", start)
-
-    logger::log_debug("Retrieving page starting at record {start}", namespace = "ZooGoN")
-
-    respon.kpi <- tryCatch(
+  # --- Page fetcher ---
+  get_page <- function(page_url) {
+    response <- tryCatch(
       expr = {
-        httr2::request(full_url) |>
+        httr2::request(page_url) |>
           httr2::req_auth_basic(uname, pwd) |>
+          httr2::req_retry(max_tries = retry_times) |>
+          httr2::req_error(is_error = \(resp) FALSE) |>
           httr2::req_perform()
       },
-      error = function(x) {
-        logger::log_error("Error on page starting at record {start}. Please try again or check the input parameters.", namespace = "ZooGoN")
+      error = function(e) {
+        warning("Request failed: ", conditionMessage(e))
         return(NULL)
       }
     )
 
-    if (!is.null(respon.kpi)) {
-      content_type <- httr2::resp_content_type(respon.kpi)
+    if (is.null(response)) {
+      return(NULL)
+    }
 
-      if (grepl("json", content_type)) {
-        logger::log_debug("Successfully retrieved JSON data starting at record {start}", namespace = "ZooGoN")
-        return(httr2::resp_body_json(respon.kpi, encoding = encoding))
-      } else if (grepl("xml", content_type)) {
-        logger::log_debug("Successfully retrieved XML data starting at record {start}", namespace = "ZooGoN")
-        return(httr2::resp_body_string(respon.kpi, encoding = encoding))
-      } else if (grepl("html", content_type)) {
-        warning(
-          "Unexpected HTML response for start ",
-          start,
-          ". Unable to parse."
+    status <- httr2::resp_status(response)
+    if (status >= 400) {
+      warning(
+        "HTTP error ",
+        status,
+        " when fetching: ",
+        page_url,
+        "\nBody: ",
+        tryCatch(
+          httr2::resp_body_string(response),
+          error = function(e) "(unable to read body)"
         )
-        return(NULL)
-      } else {
-        warning(
-          "Unexpected content type: ",
-          content_type,
-          " for start ",
-          start,
-          ". Unable to parse."
-        )
-        return(NULL)
-      }
+      )
+      return(NULL)
+    }
+
+    content_type <- httr2::resp_content_type(response)
+
+    if (grepl("json", content_type)) {
+      return(httr2::resp_body_json(response, encoding = encoding))
+    } else if (grepl("xml", content_type)) {
+      return(httr2::resp_body_string(response, encoding = encoding))
     } else {
+      warning("Unexpected content type: ", content_type)
       return(NULL)
     }
   }
 
-  all_results <- list()
-  start <- 0
-  limit <- 30000
-  get_next <- TRUE
+  # --- Build initial URL with query params ---
+  initial_url <- paste0(base_url, "?limit=", limit, "&start=0")
 
-  while (get_next) {
-    page_results <- get_page(base_url, limit, start)
-
-    if (is.null(page_results)) {
-      logger::log_error("Error occurred. Stopping data retrieval.", namespace = "ZooGoN")
-      break
-    }
-
-    new_results <- page_results$results
-    all_results <- c(all_results, new_results)
-
-    logger::log_debug("Total records retrieved so far: {length(all_results)}", namespace = "ZooGoN")
-
-    if (length(new_results) < limit) {
-      logger::log_info("Retrieved all available records.", namespace = "ZooGoN")
-      get_next <- FALSE
-    } else {
-      start <- start + limit
-    }
-  }
-
-  logger::log_info("Data retrieval complete. Total records: {length(all_results)}", namespace = "ZooGoN")
-
-  # Check for unique submission IDs
-  submission_ids <- sapply(all_results, function(x) x$`_id`)
-  if (length(unique(submission_ids)) != length(all_results)) {
-    warning(
-      "Number of unique submission IDs does not match the number of records. There may be duplicates."
+  if (!is.null(since_id)) {
+    query_json <- paste0('{"_id":{"$gte":', since_id, '}}')
+    initial_url <- paste0(
+      initial_url,
+      "&query=",
+      utils::URLencode(query_json, reserved = TRUE)
     )
   }
 
-  return(all_results)
+  # --- Pagination loop using `next` field ---
+  all_results <- list()
+  current_url <- initial_url
+  page_num <- 1L
+
+  repeat {
+    if (progress) {
+      message("Fetching page ", page_num, "...")
+    }
+
+    page_data <- get_page(current_url)
+
+    if (is.null(page_data)) {
+      warning("Failed to retrieve page ", page_num, ". Stopping.")
+      break
+    }
+
+    new_results <- page_data$results
+    if (is.null(new_results) || length(new_results) == 0) {
+      if (progress) {
+        message("No results on page ", page_num, ". Done.")
+      }
+      break
+    }
+
+    all_results <- c(all_results, new_results)
+
+    if (progress) {
+      message(
+        "Page ",
+        page_num,
+        ": retrieved ",
+        length(new_results),
+        " records (total: ",
+        length(all_results),
+        " / ",
+        if (!is.null(page_data$count)) page_data$count else "unknown",
+        ")"
+      )
+    }
+
+    # Use the `next` URL provided by the API for pagination
+    next_url <- page_data$`next`
+    if (is.null(next_url) || identical(next_url, "")) {
+      if (progress) {
+        message("No more pages. Retrieval complete.")
+      }
+      break
+    }
+
+    current_url <- next_url
+    page_num <- page_num + 1L
+  }
+
+  if (progress) {
+    message("Data retrieval complete. Total records: ", length(all_results))
+  }
+
+  # --- Check for duplicate submission IDs ---
+  if (length(all_results) > 0) {
+    submission_ids <- vapply(
+      all_results,
+      function(x) if (!is.null(x$`_id`)) x$`_id` else NA_integer_,
+      integer(1)
+    )
+    n_unique <- length(unique(submission_ids[!is.na(submission_ids)]))
+    if (n_unique != length(all_results)) {
+      warning(
+        "Found ",
+        length(all_results) - n_unique,
+        " duplicate submission IDs out of ",
+        length(all_results),
+        " records."
+      )
+    }
+  }
+
+  all_results
 }
+
 
 #' Flatten Survey Data Rows
 #'
