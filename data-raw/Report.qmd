@@ -11,7 +11,7 @@ format:
 ---
 
 # Aim
-This report presents a spatio-temporal analysis of copepod abundance patterns at the MareChiara Long-Term Ecological Research (LTER) station in the Gulf of Naples, Mediterranean Sea, covering data recorded between 1984 and 2024.
+This report presents a spatio-temporal analysis of zooplankton abundance patterns at the MareChiara Long-Term Ecological Research (LTER) station in the Gulf of Naples, Mediterranean Sea, covering data recorded between 1984 and 2024. MareChiara is one of the longest-running marine monitoring stations in the Mediterranean, providing a rare 40-year window into plankton community dynamics.
 
 The analysis employs two complementary visualization approaches to characterize temporal patterns and detect long-term trends:
 
@@ -24,7 +24,7 @@ These methods enable the detection of phenological shifts, regime changes, and s
 # Methods
 # Data Import and manipulation 
 
-Data for this analysis were obtained from the "Gulf of Naples - 40 Years of Zooplankton Biodiversity Assessment" project, funded by Flanders Marine Institute (VLIZ) and  Stazione Zoologica Anton Dohrn (SZN). Three temporal datasets were developd from four decades of sampling: McZoo_84-15.parquet, McZoo_16-20.parquet, and McZoo_21-24.parquet, covering the periods 1984-2015, 2016-2020, and 2021-2024, respectively.
+Data were obtained from the "Gulf of Naples - 40 Years of Zooplankton Biodiversity Assessment" project, funded by Flanders Marine Institute (VLIZ) and  Stazione Zoologica Anton Dohrn (SZN). Three temporal datasets were developd from four decades of sampling: McZoo_84-15.parquet, McZoo_16-20.parquet, and McZoo_21-24.parquet, covering the periods 1984-2015, 2016-2020, and 2021-2024, respectively.
 
 Each dataset contains taxonomic identification, life stage classification, and abundance values (ind m⁻³) for zooplankton taxa. The three datasets were merged into a single time series, and copepod records were filtered for analysis. 
 
@@ -570,7 +570,8 @@ The heatmap plots illustrates the abundance across different weeks and years. Th
 # Temporal trend
 The temporal trend plot illustrates the mean deviation in abundance over time, featuring a linear regression line and the p-value of the regression for each quarter of the year. The x-axis represents the date, and the y-axis shows the monthly mean deviation in abundance. This deviation is calculated by subtracting the overall mean for each specific month from the corresponding monthly values in the series. For example, each January value is subtracted from the overall January mean, each February value from the overall February mean, and so on.
 
-Below you can see some examples of heatmap for different taxonomic levels: 
+# Data Visualization Examples 
+The following code illustrates how to call the two main visualization functions at different taxonomic levels: 
 ```{r}
 #| echo: true
 #| code-fold: true
@@ -580,7 +581,7 @@ plot_heatmap_complex(rank_order = "Onychopoda", log = F) # to show a single orde
 plot_heatmap_complex(species_name = "Acartia clausi", log = F) # to show single sepcies 
 ```
 
-Here you can see some examples for temporal trend: 
+
 ```{r}
 #| echo: true
 #| code-fold: true 
