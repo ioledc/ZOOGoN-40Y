@@ -8,6 +8,9 @@ format:
     number-sections: true
     code-fold: true
     code-tools: true
+  pdf:
+    toc: true
+    number-sections: true
 ---
 
 # Aim
