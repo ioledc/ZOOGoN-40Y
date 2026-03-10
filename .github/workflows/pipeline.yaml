@@ -148,5 +148,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ZooGoN-report-${{ github.run_id }}
-          path: ZooGoN-report-*.html
+          path: /home/ZooGoN-report-*.html
           retention-days: 90

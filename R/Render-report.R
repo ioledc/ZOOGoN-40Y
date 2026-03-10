@@ -31,7 +31,7 @@ render_report <- function(output_dir = ".") {
     stop("Report.qmd not found in inst/report/. Make sure the package is installed.")
   }
 
-  output_file <- paste0("ZooGoN-report-", Sys.Date(), ".html")
+  output_file <- file.path("/home", paste0("ZooGoN-report-", Sys.Date(), ".html"))
 
   logger::log_info("Rendering Quarto report...", namespace = "ZooGoN")
   quarto::quarto_render(
