@@ -25,7 +25,7 @@
 render_report <- function(output_dir = ".") {
   conf <- read_config()
 
-  report_path <- system.file("report/Report.qmd", package = "ZooGoN")
+  report_path <- system.file("report/REPORT.qmd", package = "ZooGoN")
 
   if (report_path == "") {
     stop("Report.qmd not found in inst/report/. Make sure the package is installed.")
