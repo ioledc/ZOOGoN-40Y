@@ -4,10 +4,12 @@ author: "Iole di Capua (iole.dicapua@szn.it), Andrea Marcucci (andrea.marcucci@s
 date: today
 format:
   html:
+    theme: cosmo
     toc: true
     number-sections: true
     code-fold: true
     code-tools: true
+    self-contained: true
   pdf:
     toc: true
     number-sections: true

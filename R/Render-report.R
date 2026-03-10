@@ -31,13 +31,10 @@ render_report <- function(output_dir = "/home") {
     stop("Report.qmd not found in inst/report/. Make sure the package is installed.")
   }
 
-  output_file <- paste0("ZooGoN-report-", Sys.Date(), ".html")
-
   logger::log_info("Rendering Quarto report...", namespace = "ZooGoN")
   quarto::quarto_render(
     input         = report_path,
-    output_format = "html",
-    output_file   = output_file,
+    output_format = c("html", "pdf"),
     execute_params = list(
       sharepoint_site_url = conf$storage$sharepoint$credentials$site_url,
       data_prefix         = conf$ingestion$surveys$preprocessed$file_prefix,
@@ -45,15 +42,25 @@ render_report <- function(output_dir = "/home") {
     )
   )
 
-  # Quarto saves the file next to the .qmd — move it to output_dir
-  rendered_path <- file.path(dirname(report_path), output_file)
-  dest_path <- file.path(output_dir, output_file)
-  file.copy(rendered_path, dest_path, overwrite = TRUE)
+  # Quarto saves files next to the .qmd — copy both to output_dir
+  for (ext in c("html", "pdf")) {
+    out_file <- paste0("ZooGoN-report-", Sys.Date(), ".", ext)
+    rendered_path <- file.path(dirname(report_path), out_file)
+    dest_path <- file.path(output_dir, out_file)
+    if (file.exists(rendered_path)) {
+      file.copy(rendered_path, dest_path, overwrite = TRUE)
+      logger::log_success(
+        "Report saved as: {dest_path}",
+        namespace = "ZooGoN"
+      )
+    } else {
+      logger::log_warn(
+        "Expected file not found: {rendered_path}",
+        namespace = "ZooGoN"
+      )
+    }
+  }
 
-  logger::log_success(
-    "render_report complete. Report saved as: {dest_path}",
-    namespace = "ZooGoN"
-  )
   invisible(NULL)
 }
 

@@ -12,6 +12,10 @@ RUN curl -LO https://quarto.org/download/latest/quarto-linux-amd64.deb && \
     dpkg -i quarto-linux-amd64.deb && \
     rm quarto-linux-amd64.deb
 
+# Install TinyTeX for PDF rendering
+RUN Rscript -e 'install.packages("tinytex"); tinytex::install_tinytex()'
+ENV PATH="/root/.TinyTeX/bin/x86_64-linux:${PATH}"
+
 RUN install2.r --error --skipinstalled \
     readr \
     stringr \
@@ -32,7 +36,7 @@ RUN install2.r --error --skipinstalled \
     remotes
 
 RUN install2.r --error --skipinstalled \
-     testthat \
+    testthat \
     knitr \
     rmarkdown \
     quarto \
