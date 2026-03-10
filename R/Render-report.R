@@ -38,7 +38,6 @@ render_report <- function(output_dir = "/home") {
     input         = report_path,
     output_format = "html",
     output_file   = output_file,
-    output_dir    = output_dir,
     execute_params = list(
       sharepoint_site_url = conf$storage$sharepoint$credentials$site_url,
       data_prefix         = conf$ingestion$surveys$preprocessed$file_prefix,
@@ -46,8 +45,13 @@ render_report <- function(output_dir = "/home") {
     )
   )
 
+  # Quarto saves the file next to the .qmd — move it to output_dir
+  rendered_path <- file.path(dirname(report_path), output_file)
+  dest_path <- file.path(output_dir, output_file)
+  file.copy(rendered_path, dest_path, overwrite = TRUE)
+
   logger::log_success(
-    "render_report complete. Report saved as: {output_file}",
+    "render_report complete. Report saved as: {dest_path}",
     namespace = "ZooGoN"
   )
   invisible(NULL)
