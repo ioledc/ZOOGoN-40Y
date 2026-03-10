@@ -22,7 +22,7 @@
 #' \dontrun{
 #' render_report()
 #' }
-render_report <- function(output_dir = ".") {
+render_report <- function(output_dir = "/home") {
   conf <- read_config()
 
   report_path <- system.file("report/REPORT.qmd", package = "ZooGoN")
@@ -31,13 +31,14 @@ render_report <- function(output_dir = ".") {
     stop("Report.qmd not found in inst/report/. Make sure the package is installed.")
   }
 
-  output_file <- file.path("/home", paste0("ZooGoN-report-", Sys.Date(), ".html"))
+  output_file <- paste0("ZooGoN-report-", Sys.Date(), ".html")
 
   logger::log_info("Rendering Quarto report...", namespace = "ZooGoN")
   quarto::quarto_render(
     input         = report_path,
     output_format = "html",
     output_file   = output_file,
+    output_dir    = output_dir,
     execute_params = list(
       sharepoint_site_url = conf$storage$sharepoint$credentials$site_url,
       data_prefix         = conf$ingestion$surveys$preprocessed$file_prefix,
