@@ -44,9 +44,9 @@ render_report <- function(output_dir = "/home") {
 
   # Quarto saves files next to the .qmd — copy both to output_dir
   for (ext in c("html", "pdf")) {
-    out_file <- paste0("ZooGoN-report-", Sys.Date(), ".", ext)
+    out_file <- paste0("REPORT.", ext)
     rendered_path <- file.path(dirname(report_path), out_file)
-    dest_path <- file.path(output_dir, out_file)
+    dest_path <- file.path(output_dir, paste0("ZooGoN-report-", Sys.Date(), ".", ext))
     if (file.exists(rendered_path)) {
       file.copy(rendered_path, dest_path, overwrite = TRUE)
       logger::log_success(
