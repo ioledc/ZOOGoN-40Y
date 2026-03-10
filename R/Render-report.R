@@ -76,3 +76,4 @@ run_pipeline <- function() {
   logger::log_success("ZooGoN pipeline complete", namespace = "ZooGoN")
   invisible(NULL)
 }
+
