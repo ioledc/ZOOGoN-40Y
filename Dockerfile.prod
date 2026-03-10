@@ -1,13 +1,17 @@
 FROM rocker/tidyverse:4
 
-# System deps (needed for R package jqr -> libjq.so.1)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     jq \
     libjq1 \
     libjq-dev \
+    curl \
   && rm -rf /var/lib/apt/lists/*
 
-# Install imports
+# Install Quarto
+RUN curl -LO https://quarto.org/download/latest/quarto-linux-amd64.deb && \
+    dpkg -i quarto-linux-amd64.deb && \
+    rm quarto-linux-amd64.deb
+
 RUN install2.r --error --skipinstalled \
     readr \
     stringr \
@@ -27,27 +31,19 @@ RUN install2.r --error --skipinstalled \
     openxlsx \
     remotes
 
-
-# Install suggests
 RUN install2.r --error --skipinstalled \
     testthat \
     knitr \
     rmarkdown \
+    quarto \
     pkgdown \
     worrms \
     lubridate
 
-# Install from github
 RUN Rscript -e 'remotes::install_github("LivingNorway/LivingNorwayR")'
 
-
-
-# Install local package
 COPY . /home
 WORKDIR /home
 RUN Rscript -e 'remotes::install_local(dependencies = TRUE, upgrade = "never")'
-
-# Validate installation
 RUN Rscript -e 'library(ZooGoN); cat("ZooGoN loaded successfully\n")'
-
 ENTRYPOINT ["Rscript"]

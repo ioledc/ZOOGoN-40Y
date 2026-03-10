@@ -126,3 +126,27 @@ jobs:
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call dc_to_archive()
         run: Rscript -e 'ZooGoN::dc_to_archive()'
+    
+    render-report:
+    name: Render MC survey report
+    needs: process-kobo-surveys
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/ioledc/zoogon-40y/r-runner-zoogon-mc:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set env to production
+        if: endsWith(github.ref, '/main')
+        run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
+      - name: Call render_report()
+        run: Rscript -e 'ZooGoN::render_report()'
+      - name: Upload report as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZooGoN-report-${{ github.run_id }}
+          path: ZooGoN-report-*.html
+          retention-days: 90
