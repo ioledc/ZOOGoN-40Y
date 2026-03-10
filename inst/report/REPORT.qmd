@@ -53,9 +53,9 @@ pacman::p_load(
   arrow
 )
 
-# load all packages and configurations
-devtools::load_all()
-conf <- read_config()
+# load package and configurations
+library(ZooGoN)
+conf <- ZooGoN::read_config()
 
 # load legacy data from SharePoint
 legacy_84_15 <- ZooGoN::download_sharepoint_file(

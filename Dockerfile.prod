@@ -32,14 +32,19 @@ RUN install2.r --error --skipinstalled \
     remotes
 
 RUN install2.r --error --skipinstalled \
-    testthat \
+     testthat \
     knitr \
     rmarkdown \
     quarto \
     pacman \
     pkgdown \
     worrms \
-    lubridate
+    lubridate \
+    ggsci \
+    viridis \
+    cowplot \
+    vegan \
+    gridExtra
 
 RUN Rscript -e 'remotes::install_github("LivingNorway/LivingNorwayR")'
 
