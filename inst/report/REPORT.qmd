@@ -53,10 +53,32 @@ pacman::p_load(
   arrow
 )
 
-# load all developed database 
-legacy_84_15 <- arrow::read_parquet("McZoo_84-15.parquet")
-legacy_16_20 <- arrow::read_parquet("McZoo_16-20.parquet")
-legacy_21_24 <- arrow::read_parquet("McZoo_21-24.parquet")
+# load all packages and configurations
+devtools::load_all()
+conf <- read_config()
+
+# load legacy data from SharePoint
+legacy_84_15 <- ZooGoN::download_sharepoint_file(
+  prefix  = "McZoo_84-15.parquet",
+  options = conf$storage$sharepoint$credentials,
+  bucket  = conf$storage$sharepoint$buckets$hot_bucket,
+  filename = TRUE
+)
+
+legacy_16_20 <- ZooGoN::download_sharepoint_file(
+  prefix  = "McZoo_16-20.parquet",
+  options = conf$storage$sharepoint$credentials,
+  bucket  = conf$storage$sharepoint$buckets$hot_bucket,
+  filename = TRUE
+)
+
+# load processed survey data from pipeline (2021-24 + futuri)
+legacy_21_24 <- ZooGoN::download_sharepoint_file(
+  prefix  = conf$ingestion$surveys$preprocessed$file_prefix,
+  options = conf$storage$sharepoint$credentials,
+  bucket  = conf$storage$sharepoint$buckets$automation_bucket,
+  format  = "parquet"
+)
 
 # merge into a single databse
 legacy_84_24 <-
