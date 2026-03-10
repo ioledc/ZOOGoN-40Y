@@ -149,4 +149,5 @@ jobs:
         with:
           name: ZooGoN-report-${{ github.run_id }}
           path: /home/ZooGoN-report-*.html
+                /home/ZooGoN-report-*.pdf
           retention-days: 90
