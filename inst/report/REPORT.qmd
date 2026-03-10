@@ -127,7 +127,7 @@ ranks_df <- bind_rows(lapply(ids, get_class_order))
 zoo_84_24 <-
   aphiaid |>
   dplyr::left_join(ranks_df, by = "aphiaID") |>
-  dplyr::select(-c(isCopepod, aphiaID)) |>
+  dplyr::select(-aphiaID) |>
   dplyr::relocate(class, order, .before = scientificName) |>
   dplyr::rename(rankCalss = class, rankOrder = order)
 
