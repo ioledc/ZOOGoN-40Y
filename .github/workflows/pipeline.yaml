@@ -127,7 +127,7 @@ jobs:
       - name: Call dc_to_archive()
         run: Rscript -e 'ZooGoN::dc_to_archive()'
     
-    render-report:
+  render-report:
     name: Render MC survey report
     needs: process-kobo-surveys
     runs-on: ubuntu-latest
