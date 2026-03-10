@@ -1,0 +1,597 @@
+---
+title: "Gulf of Naples - 40 Years of Zooplankton Biodiversity Assessment (ZOOGoN-40Y)"
+author: "Iole di Capua (iole.dicapua@szn.it), Andrea Marcucci (andrea.marcucci@szn.it), Lorenzo Petrella (lorenzo.petrella@szn.it), Lorenzo Longobardi (lorenzo.longobardi@szn.it)"
+date: today
+format:
+  html:
+    toc: true
+    number-sections: true
+    code-fold: true
+    code-tools: true
+  pdf:
+    toc: true
+    number-sections: true
+---
+
+# Aim
+This report presents a spatio-temporal analysis of zooplankton abundance patterns at the MareChiara Long-Term Ecological Research (LTER) station in the Gulf of Naples, Mediterranean Sea, covering data recorded between 1984 and 2024. MareChiara is one of the longest-running marine monitoring stations in the Mediterranean, providing a rare 40-year window into plankton community dynamics.
+
+The analysis employs two complementary visualization approaches to characterize temporal patterns and detect long-term trends:
+
+1. Heatmap visualization: a multi-panel display showing weekly abundance patterns across years, integrated with seasonal profiles and annual anomalies to identify recurrent cycles and interannual variability
+
+2. Trend analysis: a quarterly-stratified approach using anomaly-based regression models to isolate and quantify long-term trends while accounting for natural seasonal variability.
+
+These methods enable the detection of phenological shifts, regime changes, and seasonal-specific trends in copepod abundance over the 40-year monitoring period.
+
+# Methods
+# Data Import and manipulation 
+
+Data were obtained from the "Gulf of Naples - 40 Years of Zooplankton Biodiversity Assessment" project, funded by Flanders Marine Institute (VLIZ) and  Stazione Zoologica Anton Dohrn (SZN). Three temporal datasets were developd from four decades of sampling: McZoo_84-15.parquet, McZoo_16-20.parquet, and McZoo_21-24.parquet, covering the periods 1984-2015, 2016-2020, and 2021-2024, respectively.
+
+Each dataset contains taxonomic identification, life stage classification, and abundance values (ind m⁻³) for zooplankton taxa. The three datasets were merged into a single time series, and copepod records were filtered for analysis. 
+
+A methodological change occurred in 2021 with the adoption of KoBoToolbox as the data collection platform. This transition introduced the `isCopepod` variable (yes/no) in the 2021-2024 dataset to facilitate taxonomic filtering. To ensure consistency across the entire time series, the variables defining the taxonomic classification have also been included in previous datasets (1984-2020) using the `worrms` package. Data manipulation and summarization were performed using the `dplyr` package, while visualizations were created with `ggplot2`, `cowplot`, and `viridis` packages.
+
+The code below demonstrates the data loading process and displays the first 10 rows of the final dataset after merge with WoRMS taxonomic data:
+
+```{r}
+#| echo: true
+#| code-fold: true
+# require needed packages
+pacman::p_load(
+  magrittr,
+  scales,
+  ggsci,
+  lubridate,
+  tidyverse,
+  viridis,
+  cowplot,
+  worrms,
+  stringr,
+  vegan,
+  arrow
+)
+
+# load all developed database 
+legacy_84_15 <- arrow::read_parquet("McZoo_84-15.parquet")
+legacy_16_20 <- arrow::read_parquet("McZoo_16-20.parquet")
+legacy_21_24 <- arrow::read_parquet("McZoo_21-24.parquet")
+
+# merge into a single databse
+legacy_84_24 <-
+  dplyr::bind_rows(legacy_84_15, legacy_16_20, legacy_21_24)
+
+# add Class and Order from Worms
+# extrac AphiaID to lsid
+aphiaid <- 
+  legacy_84_24 |>
+  dplyr::mutate(
+    aphiaID = as.integer(stringr::str_extract(lsid, "[0-9]+"))
+  )
+
+# Extract unique AphiaIDs to avoid duplicate WoRMS API calls
+ids <- unique(aphiaid$aphiaID)
+
+# get WORms taxonomy
+get_class_order <- function(id) {
+  tryCatch(
+    {
+      cls <- wm_classification(id)
+      # extract scientificname where rank matches, return NA if not found
+      class_val <- cls$scientificname[cls$rank == "Class"]
+      order_val <- cls$scientificname[cls$rank == "Order"]
+      data.frame(
+        aphiaID  = id,
+        class = if (length(class_val) > 0) class_val[1] else NA_character_,
+        order = if (length(order_val) > 0) order_val[1] else NA_character_,
+        stringsAsFactors = FALSE
+      )
+    },
+    error = function(e) {
+      data.frame(
+        aphiaID  = id,
+        class = NA_character_,
+        order = NA_character_,
+        stringsAsFactors = FALSE
+      )
+    }
+  )
+}
+
+ranks_df <- bind_rows(lapply(ids, get_class_order))
+
+# merge
+zoo_84_24 <-
+  aphiaid |>
+  dplyr::left_join(ranks_df, by = "aphiaID") |>
+  dplyr::select(-c(isCopepod, aphiaID)) |>
+  dplyr::relocate(class, order, .before = scientificName) |>
+  dplyr::rename(rankCalss = class, rankOrder = order)
+
+head(zoo_84_24, 10)
+```
+
+             
+Prior to visualization, the dataset was restructured to optimize plotting performance. The `cop_heatmap` dataset aggregates abundance values by week and year, and includes a pre-computed log-transformed variable for species-specific analyses. 
+
+The code shows the first 10 rows of the final dataset: 
+```{r}
+#| echo: true
+#| code-fold: true
+zoo_heatmap <-
+  zoo_84_24 |>
+  dplyr::mutate(
+    week = lubridate::week(eventDate), # Extract week (1-52)
+    year = lubridate::year(eventDate) # Extract year
+  ) |>
+  dplyr::group_by(year, week, rankCalss, rankOrder, scientificName) |> # Group by year, week, species and life stage
+  dplyr::summarise(
+    abundance = sum(individualCount, na.rm = TRUE),
+    .groups = "drop"
+  ) |> # Sum abundances
+  dplyr::mutate(log_abundance = log(abundance + 1)) # Log-transformation (+1 to avoid log(0))
+
+head(zoo_heatmap, 10)
+```
+
+In `plot_cop_heatmap_complex()` abundance values are log-transformed by default (log = TRUE) in order to reduce skewness and improve the visualization of low and high abundance values.The log-transformation can be disabled by setting log = FALSE. The function function generates a three-panel display showing weekly abundance patterns across years, seasonal profiles, and annual anomalies.
+
+See the code comments below:
+
+```{r}
+#| echo: true
+#| code-fold: true
+# heatmap function
+plot_heatmap_complex <- function(
+  species_name = NULL,
+  rank_class = NULL,
+  rank_order = NULL,
+  log = TRUE
+) {
+  # apply taxonomic filters first (if provided), then aggregate or filter by species
+  data <-
+    zoo_heatmap |>
+    dplyr::filter(
+      if (!is.null(rank_class)) rankCalss == rank_class else TRUE, # filter by class if provided
+      if (!is.null(rank_order)) rankOrder == rank_order else TRUE, # filter by order if provided
+      if (!is.null(species_name) && species_name != "All") {
+        scientificName == species_name
+      } else {
+        TRUE
+      } # filter by species if provided
+    )
+
+  # aggregate all species if species_name is NULL or "All"
+  if (is.null(species_name) || species_name == "All") {
+    data <-
+      data |>
+      dplyr::group_by(year, week) |>
+      dplyr::summarise(
+        abundance = sum(abundance, na.rm = TRUE),
+        .groups = "drop"
+      ) |>
+      dplyr::mutate(
+        abundance_plot = if (log) log(abundance + 1) else abundance
+      )
+  } else {
+    # filter by specific species
+    data <-
+      data |>
+      dplyr::mutate(
+        abundance_plot = if (log) log_abundance else abundance
+      )
+  }
+
+  # build dynamic title based on what is being plotted
+  plot_title <- if (!is.null(species_name) && species_name != "All") {
+    species_name
+  } else if (!is.null(rank_order)) {
+    rank_order
+  } else if (!is.null(rank_class)) {
+    rank_class
+  } else {
+    "All Zooplankton"
+  }
+
+  # legend text and theme
+  legend_text <- expression(bold(ind ~ m^-3))
+
+  legend_theme <- ggplot2::theme(
+    legend.position = "bottom",
+    legend.key.width = unit(0.5, "cm"),
+    legend.direction = "horizontal",
+    legend.key.size = unit(0.2, "cm"),
+    legend.title = ggplot2::element_text(size = 10, face = "bold"),
+    legend.text = ggplot2::element_text(size = 10, face = "bold")
+  )
+
+  # dynamic breaks: visually centered on pseudo-log scale regardless of data range
+  min_val <- min(data$abundance_plot[data$abundance_plot > 0], na.rm = TRUE)
+  max_val <- max(data$abundance_plot, na.rm = TRUE)
+
+  # compute midpoint on the transformed scale, then back-transform
+  sigma <- 5
+  mid_transformed <- (asinh(min_val / sigma) + asinh(max_val / sigma)) / 2
+  mid_val <- round(sinh(mid_transformed) * sigma) # back-transform to original scale
+
+  breaks_vals <- c(0, mid_val, round(max_val))
+
+  # main heatmap: weeks (x) vs years (y), colored by abundance
+  heatmap_plot <-
+    data |>
+    ggplot2::ggplot(ggplot2::aes(x = week, y = year, fill = abundance_plot)) +
+    ggplot2::geom_tile(color = "grey90") +
+    ggplot2::theme_bw() +
+    ggplot2::scale_fill_gradientn(
+      colours = c("blue", "cyan", "green", "yellow", "orange", "red"),
+      trans = scales::pseudo_log_trans(sigma = 5),
+      breaks = breaks_vals, # dynamic breaks adapted to the plotted data
+      labels = scales::label_number(),
+      na.value = "grey90"
+    ) +
+    ggplot2::coord_cartesian(expand = FALSE) +
+    ggplot2::scale_x_continuous(breaks = seq(1, 52, by = 5)) +
+    ggplot2::scale_y_continuous(breaks = seq(1984, 2024, by = 4)) +
+    ggplot2::theme(
+      panel.background = ggplot2::element_blank(),
+      panel.grid = ggplot2::element_blank(),
+      legend.box.just = "left",
+      legend.box.margin = margin(t = 0, r = 300, b = 0, l = 0),
+      axis.text.x = ggplot2::element_text(size = 12, face = "bold"),
+      axis.text.y = ggplot2::element_text(size = 12, face = "bold"),
+      axis.title.x = ggplot2::element_text(size = 16, face = "bold"),
+      axis.title.y = ggplot2::element_text(size = 16, face = "bold"),
+      plot.title = ggplot2::element_text(size = 16, face = "bold")
+    ) +
+    legend_theme +
+    ggplot2::labs(
+      x = "Weeks",
+      y = "Years",
+      fill = legend_text
+    ) +
+    guides(alpha = "none")
+
+  # top marginal plot: mean abundance by week across all years
+  line <-
+    data |>
+    dplyr::group_by(week) |>
+    dplyr::summarise(abundance_plot = mean(abundance_plot, na.rm = TRUE))
+
+  # identify min and max values for annotation
+  minmax <-
+    line |>
+    dplyr::mutate(
+      label_row = dplyr::case_when(
+        abundance_plot == min(abundance_plot, na.rm = TRUE) ~ "min",
+        abundance_plot == max(abundance_plot, na.rm = TRUE) ~ "max",
+        TRUE ~ NA_character_
+      )
+    ) |>
+    dplyr::filter(!is.na(label_row)) |>
+    dplyr::arrange(abundance_plot)
+
+  line_plot <- ggplot2::ggplot() +
+    ggplot2::theme_void() +
+    ggplot2::stat_smooth(
+      data = line,
+      ggplot2::aes(week, abundance_plot),
+      method = "loess",
+      color = "#d64d4d",
+      se = FALSE,
+      span = 0.25,
+      linewidth = 0.5
+    ) +
+    ggplot2::geom_area(
+      data = line,
+      ggplot2::aes(week, abundance_plot),
+      fill = "grey95",
+      color = "grey70"
+    ) +
+    ggplot2::geom_point(
+      data = line,
+      ggplot2::aes(week, abundance_plot, color = abundance_plot)
+    ) +
+    ggplot2::geom_text(
+      data = minmax,
+      ggplot2::aes(
+        x = week,
+        y = abundance_plot,
+        label = round(abundance_plot, 1),
+        vjust = ifelse(label_row == "max", 1.5, -0.5)
+      ),
+      color = "firebrick",
+      size = 6
+    ) +
+    ggplot2::geom_point(
+      data = minmax,
+      ggplot2::aes(x = week, y = abundance_plot),
+      color = "firebrick"
+    ) +
+    ggplot2::scale_color_gradientn(
+      colours = c("blue", "cyan", "green", "yellow", "orange", "red")
+    ) +
+    ggplot2::scale_x_continuous(limits = c(1, 52), expand = c(0, 0)) +
+    ggplot2::coord_cartesian(xlim = c(1, 52), expand = FALSE, clip = "off") +
+    ggplot2::theme(
+      legend.position = "none",
+      plot.margin = margin(t = 15, b = 5, l = 70, r = 69)
+    )
+
+  # right side panel: annual anomalies as % deviation from mean
+  side_tile <-
+    data |>
+    dplyr::group_by(year) |>
+    dplyr::summarise(abundance_plot = mean(abundance_plot, na.rm = TRUE)) |>
+    dplyr::mutate(
+      mean_abundance = mean(abundance_plot, na.rm = TRUE),
+      mean_anomaly = (abundance_plot - mean_abundance) / mean_abundance * 100,
+      mean_anomaly_scale = pmax(pmin(mean_anomaly, 100), -100)
+    )
+
+  side_plot <-
+    side_tile |>
+    ggplot2::ggplot() +
+    ggplot2::geom_tile(
+      ggplot2::aes(x = "group", y = year, fill = mean_anomaly_scale),
+      alpha = 0.6,
+      color = "grey90"
+    ) +
+    ggplot2::geom_text(
+      ggplot2::aes(
+        x = "group",
+        y = year,
+        label = ifelse(
+          !is.na(mean_anomaly),
+          paste0(round(mean_anomaly, 0), "%"),
+          "-"
+        )
+      ),
+      size = 2,
+      color = "grey30"
+    ) +
+    ggplot2::theme_void() +
+    ggplot2::scale_fill_gradient2(
+      low = "#56a8a9",
+      mid = "white",
+      high = "#a95756",
+      midpoint = 0,
+      na.value = "white"
+    ) +
+    ggplot2::scale_y_continuous(breaks = seq(1984, 2024, by = 4)) +
+    ggplot2::coord_cartesian(expand = FALSE) +
+    ggplot2::labs(fill = "Mean difference (%)") +
+    ggplot2::theme(
+      plot.margin = margin(t = 0, r = 12, b = 0, l = -3.5),
+      panel.background = ggplot2::element_blank(),
+      panel.grid = ggplot2::element_blank(),
+      legend.box.just = "right",
+      legend.box.margin = margin(t = 0, r = 0, b = 0, l = -250)
+    ) +
+    legend_theme +
+    guides(alpha = "none")
+
+  # combine panels
+  p1 <- cowplot::plot_grid(
+    heatmap_plot,
+    side_plot,
+    ncol = 2,
+    rel_widths = c(12, 1),
+    align = "h"
+  )
+
+  combined <- cowplot::plot_grid(line_plot, p1, nrow = 2, rel_heights = c(1, 5))
+
+  # add title
+  title <- cowplot::ggdraw() +
+    cowplot::draw_label(
+      bquote(italic(.(plot_title))), # dynamic title based on what is being plotted
+      fontface = 'bold',
+      size = 20,
+      x = 0,
+      hjust = 0
+    ) +
+    ggplot2::theme(
+      plot.margin = margin(0, 0, 0, 7)
+    )
+
+  # return final plot
+  cowplot::plot_grid(
+    title,
+    combined,
+    ncol = 1,
+    rel_heights = c(0.05, 1)
+  )
+}
+```
+
+The `plot_temporal_trend()` function performs deseasonalized anomaly analysis with quarterly stratification to detect long-term trends.
+
+See the code and comments below:
+```{r}
+#| echo: true
+#| code-fold: true
+# trend function
+plot_temporal_trend <- function(species_name = NULL, rank_class = NULL, rank_order = NULL) {
+
+  # apply taxonomic filters first (if provided)
+  zoo_filtered <-
+    zoo_84_24 |>
+    dplyr::filter(
+      if (!is.null(rank_class)) rankCalss == rank_class else TRUE,   # filter by class if provided
+      if (!is.null(rank_order)) rankOrder == rank_order else TRUE,   # filter by order if provided
+      if (!is.null(species_name) && species_name != "All") scientificName == species_name else TRUE  # filter by species if provided
+    )
+
+  # aggregate all species if species_name is NULL or "All"
+  if (is.null(species_name) || species_name == "All") {
+    filtered_data <-
+      zoo_filtered |>
+      dplyr::group_by(eventDate) |>
+      dplyr::summarise(
+        abundance = sum(individualCount, na.rm = TRUE),
+        .groups = "drop"
+      )
+  } else {
+    filtered_data <-
+      zoo_filtered |>
+      dplyr::filter(scientificName == species_name) |>
+      dplyr::group_by(eventDate) |>
+      dplyr::summarise(
+        abundance = sum(individualCount, na.rm = TRUE),
+        .groups = "drop"
+      )
+  }
+
+  # build dynamic title based on what is being plotted
+  plot_title <- if (!is.null(species_name) && species_name != "All") {
+    species_name
+  } else if (!is.null(rank_order)) {
+    rank_order
+  } else if (!is.null(rank_class)) {
+    rank_class
+  } else {
+    "All Zooplankton"
+  }
+
+  # calculate deseasonalized anomalies with quarterly stratification
+  data_df <-
+    filtered_data |>
+    dplyr::mutate(
+      month = lubridate::month(eventDate),
+      quarter = lubridate::quarter(eventDate), # Q1-Q4 for seasonal analysis
+      year = lubridate::year(eventDate),
+      month_date = lubridate::floor_date(eventDate, "month"),
+      series = ifelse(year < 1993, "before", "after") # temporal split
+    ) |>
+    dplyr::group_by(series, month) |>
+    dplyr::mutate(
+      mean_abundance = mean(abundance),
+      anomaly = abundance - mean_abundance # remove seasonal cycle
+    ) |>
+    dplyr::group_by(series, month_date) |>
+    dplyr::summarise(
+      quarter = dplyr::first(quarter),
+      month = dplyr::first(month),
+      anomaly = mean(anomaly),
+      .groups = "drop"
+    ) |>
+    dplyr::mutate(
+      quarter = as.character(quarter)
+    ) |>
+    dplyr::ungroup()
+
+  # split into before/after periods
+  data_df <- split(data_df, data_df$series)
+
+  # linear regression by quarter (post-1993 only)
+  trend_res <-
+    data_df$after |>
+    dplyr::group_by(quarter) |>
+    dplyr::do(broom::tidy(lm(anomaly ~ month_date, data = .))) |>
+    dplyr::filter(term == "month_date") |>
+    dplyr::select(quarter, estimate, p.value)
+
+  # format statistical results as text annotations
+  annotations_text <-
+    trend_res |>
+    dplyr::arrange(quarter) |>
+    dplyr::mutate(
+      label = sprintf("Q%s: %.4f, p=%.4f", quarter, estimate, p.value)
+    ) |>
+    dplyr::pull(label) |>
+    paste(collapse = "\n")
+
+  # time series plot with quarterly color coding
+  ggplot2::ggplot() +
+    ggplot2::theme_minimal() +
+    # points for "before" period (pre-1993)
+    ggplot2::geom_point(
+      data = data_df$before,
+      ggplot2::aes(month_date, anomaly, color = quarter, alpha = abs(anomaly))
+    ) +
+    # points for "after" period (post-1993)
+    ggplot2::geom_point(
+      data = data_df$after,
+      ggplot2::aes(month_date, anomaly, color = quarter, alpha = abs(anomaly))
+    ) +
+    # connecting lines
+    ggplot2::geom_line(
+      data = data_df$before,
+      ggplot2::aes(month_date, anomaly),
+      alpha = 0.3,
+      linewidth = 0.1
+    ) +
+    ggplot2::geom_line(
+      data = data_df$after,
+      ggplot2::aes(month_date, anomaly),
+      alpha = 0.3,
+      linewidth = 0.1
+    ) +
+    # zero reference line (climatological mean)
+    ggplot2::geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
+    # linear trend lines by quarter (post-1993 only)
+    ggplot2::stat_smooth(
+      data = data_df$after,
+      ggplot2::aes(month_date, anomaly, group = quarter, color = quarter),
+      method = "lm",
+      se = FALSE,
+      linewidth = 0.8
+    ) +
+    # JAMA color palette for quarterly distinction
+    ggsci::scale_color_jama() +
+    ggplot2::scale_x_date(
+      date_breaks = "4 years",
+      labels = scales::label_date(format = "%b\n%Y", locale = "en_US.UTF-8")
+    ) +
+    ggplot2::coord_cartesian(expand = FALSE) +
+    # statistical results annotation
+    ggplot2::annotate(
+      "text",
+      x = as.Date("1985-12-01"),
+      y = max(data_df$after$anomaly, na.rm = TRUE),
+      label = annotations_text,
+      hjust = 0,
+      vjust = 1,
+      color = "grey40"
+    ) +
+    ggplot2::theme(legend.position = "bottom") +
+    ggplot2::guides(alpha = "none") +
+    ggplot2::labs(
+      title = bquote(italic(.(plot_title))),  # dynamic title based on what is being plotted
+      x = "Date",
+      y = "Monthly mean deviation\n(Abundance)",
+      color = "Annual quarter"
+    )
+}
+```
+
+# Results
+# Heatmap
+The heatmap plots illustrates the abundance across different weeks and years. The x-axis represents the weeks of the year, ranging from 1 to 52, while the y-axis spans several years. Each cell in the heatmap indicates the abundance in individuals per cubic metre, with a color gradient from blue (low abundance) to red (high abundance), as indicated by the legend at the bottom. At the top of the heatmap, a line plot displays the average weekly abundance over the entire period, highlighting the seasonality of abundance. A red point marks the mean maximum abundance, while another red point indicates the first non-zero mean value, providing insight into the average abundance range of the species. On the right side of the heatmap, a side plot displays the mean annual deviation in percentage from the overall annual mean.
+
+# Temporal trend
+The temporal trend plot illustrates the mean deviation in abundance over time, featuring a linear regression line and the p-value of the regression for each quarter of the year. The x-axis represents the date, and the y-axis shows the monthly mean deviation in abundance. This deviation is calculated by subtracting the overall mean for each specific month from the corresponding monthly values in the series. For example, each January value is subtracted from the overall January mean, each February value from the overall February mean, and so on.
+
+# Data Visualization Examples 
+The following code illustrates how to call the two main visualization functions at different taxonomic levels: 
+```{r}
+#| echo: true
+#| code-fold: true
+plot_heatmap_complex(species_name = "All", log = F) # to show all zooplankton 
+plot_heatmap_complex(rank_class = "Copepoda", log = F) # to show a single class
+plot_heatmap_complex(rank_order = "Onychopoda", log = F) # to show a single order 
+plot_heatmap_complex(species_name = "Acartia clausi", log = F) # to show single sepcies 
+```
+
+
+```{r}
+#| echo: true
+#| code-fold: true 
+plot_temporal_trend(species_name = "All") # to show all zooplankton
+plot_temporal_trend(rank_class = "Thecostraca") # to show single class
+plot_temporal_trend(rank_order = "Euphausiacea") # to show single order
+plot_temporal_trend(species_name = "Acartia clausi") # to show single species
+```
+
+
