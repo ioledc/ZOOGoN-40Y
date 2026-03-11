@@ -70,6 +70,9 @@ The full source code of the ZooGoN pipeline is available on [GitHub](https://git
 ### Example of Darwin Core Output 
 ```{r}
 #| echo: false
+library(ZooGoN)
+conf <- ZooGoN::read_config()
+
 dc_list <- ZooGoN::download_sharepoint_file(
   prefix = conf$ingestion$surveys$darwincore$file_prefix,
   options = conf$storage$sharepoint$credentials,
