@@ -147,10 +147,8 @@ jobs:
       - name: List files in /home
         run: ls -la /home/ZooGoN-report-*
       - name: Upload report as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ZooGoN-report-${{ github.run_id }}
-          path: |
-            /home/ZooGoN-report-*.html
-            /home/ZooGoN-report-*.pdf
-          retention-days: 90
+  uses: actions/upload-artifact@v4
+  with:
+    name: ZooGoN-report-${{ github.run_id }}
+    path: /home/ZooGoN-report-*.html
+    retention-days: 90

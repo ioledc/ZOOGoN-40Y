@@ -6,13 +6,11 @@ format:
   html:
     theme: Darkly
     toc: true
+    toc-float: true
     number-sections: true
     code-fold: true
     code-tools: true
     self-contained: true
-  pdf:
-    toc: true
-    number-sections: true
 ---
 
 # Aim
@@ -648,6 +646,9 @@ grViz('
   }
 ')
 ```
+
+The full source code of the ZooGoN pipeline is available on 
+[**GitHub**](https://github.com/ioledc/ZOOGoN-40Y/tree/main).
 
 # Analysis & Report
 - `ingest_surveys()` connects to the KoBoToolbox API, downloads new survey submissions with pagination support, flattens nested JSON data into tabular format, and archives the raw data on SharePoint as CSV and Parquet files. 

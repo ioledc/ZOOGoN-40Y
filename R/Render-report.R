@@ -33,36 +33,34 @@ render_report <- function(output_dir = "/home") {
 
   logger::log_info("Rendering Quarto report...", namespace = "ZooGoN")
   quarto::quarto_render(
-    input         = report_path,
-    output_format = c("html", "pdf"),
-    execute_params = list(
-      sharepoint_site_url = conf$storage$sharepoint$credentials$site_url,
-      data_prefix         = conf$ingestion$surveys$preprocessed$file_prefix,
-      automation_bucket   = conf$storage$sharepoint$buckets$automation_bucket
-    )
+  input         = report_path,
+  output_format = "html",
+  execute_params = list(
+    sharepoint_site_url = conf$storage$sharepoint$credentials$site_url,
+    data_prefix         = conf$ingestion$surveys$preprocessed$file_prefix,
+    automation_bucket   = conf$storage$sharepoint$buckets$automation_bucket
   )
+)
 
   # Quarto saves files next to the .qmd — copy both to output_dir
-  for (ext in c("html", "pdf")) {
-    out_file <- paste0("REPORT.", ext)
-    rendered_path <- file.path(dirname(report_path), out_file)
-    dest_path <- file.path(output_dir, paste0("ZooGoN-report-", Sys.Date(), ".", ext))
-    if (file.exists(rendered_path)) {
-      file.copy(rendered_path, dest_path, overwrite = TRUE)
-      logger::log_success(
-        "Report saved as: {dest_path}",
-        namespace = "ZooGoN"
-      )
-    } else {
-      logger::log_warn(
-        "Expected file not found: {rendered_path}",
-        namespace = "ZooGoN"
-      )
-    }
+  out_file <- "REPORT.html"
+rendered_path <- file.path(dirname(report_path), out_file)
+dest_path <- file.path(output_dir, paste0("ZooGoN-report-", Sys.Date(), ".html"))
+if (file.exists(rendered_path)) {
+  file.copy(rendered_path, dest_path, overwrite = TRUE)
+  logger::log_success(
+    "Report saved as: {dest_path}",
+    namespace = "ZooGoN"
+  )
+} else {
+  logger::log_warn(
+    "Expected file not found: {rendered_path}",
+    namespace = "ZooGoN"
+  )
+}
   }
 
-  invisible(NULL)
-}
+invisible(NULL)
 
 
 #' Run the full ZooGoN pipeline
