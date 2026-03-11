@@ -20,71 +20,6 @@ This report presents the harmonized taxonomic zooplankton metadata from Long-Ter
 The three temporal datasets used in this report covering 1984–2015, 2016–2020, and 2021–2024; were obtained from the "Gulf of Naples - 40 Years of Zooplankton Biodiversity Assessment" project, funded by Flanders Marine Institute (VLIZ) and Stazione Zoologica Anton Dohrn (SZN). The legacy dataset (1984–2020), previously maintained on local computers, have been migrated to centralized cloud storage on SharePoint to ensure reproducibility and accessibility. From 2021, data collection relies on [KoBoToolbox](https://www.kobotoolbox.org) digital survey forms, which replaced the previous local workflow.
 
 # Methods
-## Automated Processing Pipeline
-Data are processed through the [ZooGoN](https://github.com/ioledc/ZOOGoN-40Y) R package, which implements a fully automated pipeline structured in two parallel way, both triggered daily via [GitHub Actions](https://github.com/ioledc/ZOOGoN-40Y/actions/runs/22932728351). 
-The complete pipeline workflow below: 
-```{r}
-#| echo: false
-library(DiagrammeR)
-grViz(
-  '
-  digraph pipeline {
-    rankdir=LR
-    node [shape=box, style=filled, fillcolor=black, fontcolor=white, fontname=Helvetica]
-    edge [color=black, minlen=2]
-    
-    A [label="Build R Container"]
-    B [label="Ingest MC Kobo Surveys"]
-    C [label="Process MC Kobo Surveys"]
-    D [label="Merge Tidy Analysis-Ready Dataset"]
-    E [label="Convert to Darwin Core Format"]
-    F [label="Render MC Survey Report"]
-    G [label="Build Darwin Core Archive"]
-    
-    A->B->C->E->G
-    C->D->F
-  }
-'
-)
-```
-
-## Workflow
-- `ingest_surveys()` connects to the KoBoToolbox API, downloads new survey submissions with pagination support, flattens nested JSON data into tabular format, and archives the raw data on SharePoint as CSV and Parquet files. 
-- `preprocess_surveys()` cleans and transforms raw survey data, computes abundance values (ind m⁻³) by sex and life stage, and harmonizes taxonomic identifiers against WoRMS via AphiaID.
-
-### Analysis & Report
-- `raw_to_tidy()` merges the legacy datasets (1984–2020) with the ongoing survey landings (2021–present) into a single long-format analysis-ready dataset, uploaded to SharePoint as CSV and Parquet.
-- `render_report()` downloads the latest processed dataset from SharePoint and renders this report in HTML and PDF formats.
-
-### Darwin Core Archive & GBIF Publication
-- `raw_to_dc()` converts the merged dataset into [Darwin Core](https://dwc.tdwg.org/) format following [OBIS](https://obis.org/) and [EMODnet Biology](https://www.emodnet-biology.eu/) standards, producing three extension tables:
-
-  1. Event: sampling metadata including coordinates (40.81°N, 14.25°E), depth range (0–50 m), and sampling protocol.
-  2. Occurrence: species occurrences linked to WoRMS LSIDs.
-  3. eMoF: quantitative measurements (ind m⁻³) with standardized [BODC NERC](https://vocab.nerc.ac.uk/) vocabulary terms for sex and life stage.
-
-- `dc_to_archive()` packages the Darwin Core tables into a Darwin Core Archive (DwC-A) zip file with EML metadata, and uploads it to SharePoint for subsequent publication to [GBIF](https://www.gbif.org/).
-
-The full source code of the ZooGoN pipeline is available on [GitHub](https://github.com/ioledc/ZOOGoN-40Y/tree/main).
-
-### Example of Darwin Core Output 
-```{r}
-#| echo: false
-library(ZooGoN)
-conf <- ZooGoN::read_config()
-
-dc_list <- ZooGoN::download_sharepoint_file(
-  prefix = conf$ingestion$surveys$darwincore$file_prefix,
-  options = conf$storage$sharepoint$credentials,
-  bucket = conf$storage$sharepoint$buckets$automation_bucket,
-  format = "rds"
-)
-
-knitr::kable(head(dc_list$event, 5), caption = "Event table")
-knitr::kable(head(dc_list$occurrence, 5), caption = "Occurrence table")
-knitr::kable(head(dc_list$emof, 5), caption = "eMoF table")
-```
-
 ## Processing for Data Visualization
 Each dataset contains taxonomic identification, life stage classification, and abundance values (ind m⁻³) for zooplankton taxa. A methodological change occurred in 2021 with the adoption of KoBoToolbox, which introduced the `isCopepod` variable (yes/no) to facilitate taxonomic filtering. To ensure consistency across the entire time series, taxonomic classification variables were harmonized for the 1984–2020 datasets using the `worrms` package. Data manipulation and summarization were performed using `dplyr`, while visualizations were created with `ggplot2`, `cowplot`, and `viridis`. The code below demonstrates the data loading process and displays the first 10 rows of the final dataset after merge with [WoRMS](https://www.marinespecies.org/) taxonomic data:
 
@@ -185,6 +120,71 @@ zoo_84_24 <-
   dplyr::rename(rankCalss = class, rankOrder = order)
 
 head(zoo_84_24, 5)
+```
+
+## Automated Processing Pipeline
+Data are processed through the [ZooGoN](https://github.com/ioledc/ZOOGoN-40Y) R package, which implements a fully automated pipeline structured in two parallel way, both triggered daily via [GitHub Actions](https://github.com/ioledc/ZOOGoN-40Y/actions/runs/22932728351). 
+The complete pipeline workflow below: 
+```{r}
+#| echo: false
+library(DiagrammeR)
+grViz(
+  '
+  digraph pipeline {
+    rankdir=LR
+    node [shape=box, style=filled, fillcolor=black, fontcolor=white, fontname=Helvetica]
+    edge [color=black, minlen=2]
+    
+    A [label="Build R Container"]
+    B [label="Ingest MC Kobo Surveys"]
+    C [label="Process MC Kobo Surveys"]
+    D [label="Merge Tidy Analysis-Ready Dataset"]
+    E [label="Convert to Darwin Core Format"]
+    F [label="Render MC Survey Report"]
+    G [label="Build Darwin Core Archive"]
+    
+    A->B->C->E->G
+    C->D->F
+  }
+'
+)
+```
+
+## Workflow
+- `ingest_surveys()` connects to the KoBoToolbox API, downloads new survey submissions with pagination support, flattens nested JSON data into tabular format, and archives the raw data on SharePoint as CSV and Parquet files. 
+- `preprocess_surveys()` cleans and transforms raw survey data, computes abundance values (ind m⁻³) by sex and life stage, and harmonizes taxonomic identifiers against WoRMS via AphiaID.
+
+### Analysis & Report
+- `raw_to_tidy()` merges the legacy datasets (1984–2020) with the ongoing survey landings (2021–present) into a single long-format analysis-ready dataset, uploaded to SharePoint as CSV and Parquet.
+- `render_report()` downloads the latest processed dataset from SharePoint and renders this report in HTML and PDF formats.
+
+### Darwin Core Archive & GBIF Publication
+- `raw_to_dc()` converts the merged dataset into [Darwin Core](https://dwc.tdwg.org/) format following [OBIS](https://obis.org/) and [EMODnet Biology](https://www.emodnet-biology.eu/) standards, producing three extension tables:
+
+  1. Event: sampling metadata including coordinates (40.81°N, 14.25°E), depth range (0–50 m), and sampling protocol.
+  2. Occurrence: species occurrences linked to WoRMS LSIDs.
+  3. eMoF: quantitative measurements (ind m⁻³) with standardized [BODC NERC](https://vocab.nerc.ac.uk/) vocabulary terms for sex and life stage.
+
+- `dc_to_archive()` packages the Darwin Core tables into a Darwin Core Archive (DwC-A) zip file with EML metadata, and uploads it to SharePoint for subsequent publication to [GBIF](https://www.gbif.org/).
+
+The full source code of the ZooGoN pipeline is available on [GitHub](https://github.com/ioledc/ZOOGoN-40Y/tree/main).
+
+### Example of Darwin Core Output 
+```{r}
+#| echo: false
+library(ZooGoN)
+conf <- ZooGoN::read_config()
+
+dc_list <- ZooGoN::download_sharepoint_file(
+  prefix = conf$ingestion$surveys$darwincore$file_prefix,
+  options = conf$storage$sharepoint$credentials,
+  bucket = conf$storage$sharepoint$buckets$automation_bucket,
+  format = "rds"
+)
+
+knitr::kable(head(dc_list$event, 5), caption = "Event table")
+knitr::kable(head(dc_list$occurrence, 5), caption = "Occurrence table")
+knitr::kable(head(dc_list$emof, 5), caption = "eMoF table")
 ```
 
 # Results
