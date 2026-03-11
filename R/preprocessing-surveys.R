@@ -150,7 +150,7 @@ preprocess_surveys <- function(raw_data = NULL) {
     "n_larvae",
     "n_eggs",
     "n_nauplius"
-  )),,
+  )),
       names_to = "life_stage_temp",
       values_to = "individual_count"
     ) |>
