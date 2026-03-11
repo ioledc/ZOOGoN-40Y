@@ -13,7 +13,10 @@ RUN curl -LO https://quarto.org/download/latest/quarto-linux-amd64.deb && \
     rm quarto-linux-amd64.deb
 
 # Install Chromium for Mermaid rendering
-RUN quarto install chromium --no-prompt
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    chromium \
+  && rm -rf /var/lib/apt/lists/*
+ENV CHROMIUM_PATH=/usr/bin/chromium
 
 # Install TinyTeX for PDF rendering
 RUN Rscript -e 'install.packages("tinytex"); tinytex::install_tinytex()'
