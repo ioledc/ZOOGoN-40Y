@@ -12,6 +12,9 @@ RUN curl -LO https://quarto.org/download/latest/quarto-linux-amd64.deb && \
     dpkg -i quarto-linux-amd64.deb && \
     rm quarto-linux-amd64.deb
 
+# Install Chromium for Mermaid rendering
+RUN quarto install chromium --no-prompt
+
 # Install TinyTeX for PDF rendering
 RUN Rscript -e 'install.packages("tinytex"); tinytex::install_tinytex()'
 ENV PATH="/root/.TinyTeX/bin/x86_64-linux:${PATH}"
