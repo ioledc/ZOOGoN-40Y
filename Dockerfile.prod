@@ -12,12 +12,6 @@ RUN curl -LO https://quarto.org/download/latest/quarto-linux-amd64.deb && \
     dpkg -i quarto-linux-amd64.deb && \
     rm quarto-linux-amd64.deb
 
-# Install Chromium for Mermaid rendering
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    chromium \
-  && rm -rf /var/lib/apt/lists/*
-ENV CHROMIUM_PATH=/usr/bin/chromium
-
 # Install TinyTeX for PDF rendering
 RUN Rscript -e 'install.packages("tinytex"); tinytex::install_tinytex()'
 ENV PATH="/root/.TinyTeX/bin/x86_64-linux:${PATH}"
@@ -54,7 +48,8 @@ RUN install2.r --error --skipinstalled \
     viridis \
     cowplot \
     vegan \
-    gridExtra
+    gridExtra \
+    DiagrammeR
 
 RUN Rscript -e 'remotes::install_github("LivingNorway/LivingNorwayR")'
 
