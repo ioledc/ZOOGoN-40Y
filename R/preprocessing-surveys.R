@@ -142,15 +142,15 @@ preprocess_surveys <- function(raw_data = NULL) {
     dplyr::relocate("scientificname", "lsid", .after = "aphia_id") |>
     # Pivot abundance columns to long format
     tidyr::pivot_longer(
-      cols = c(
-        "n_male",
-        "n_female",
-        "n_copepodite",
-        "n_undetermined",
-        "n_larvae",
-        "n_eggs",
-        "n_nauplius"
-      ),
+  cols = dplyr::any_of(c(
+    "n_male",
+    "n_female",
+    "n_copepodite",
+    "n_undetermined",
+    "n_larvae",
+    "n_eggs",
+    "n_nauplius"
+  )),,
       names_to = "life_stage_temp",
       values_to = "individual_count"
     ) |>
