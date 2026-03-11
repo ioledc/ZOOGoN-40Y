@@ -3,6 +3,13 @@
 devtools::load_all()
 conf <- read_config()
 
+legacy_84_15 <- download_sharepoint_file(
+  prefix  = "McZoo_84-15",
+  options = conf$storage$sharepoint$credentials,
+  bucket  = conf$storage$sharepoint$buckets$hot_bucket,
+  format  = "csv"
+)
+
 # require needed packages
 pacman::p_load(
   magrittr,
