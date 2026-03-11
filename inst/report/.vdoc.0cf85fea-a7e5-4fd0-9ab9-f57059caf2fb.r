@@ -1,29 +1,29 @@
----
-title: "Gulf of Naples - 40 Years of Zooplankton Biodiversity Assessment (ZOOGoN-40Y)"
-author: "Andrea Marcucci (andrea.marcucci@szn.it)"
-date: today
-format:
-  html:
-    theme: Darkly
-    toc: true
-    toc-float: true
-    number-sections: true
-    code-fold: true
-    code-tools: true
-    self-contained: true
----
-
-# Aim
-This report presents the harmonized taxonomic zooplankton metadata from Long-Term Ecological Research (LTER) dataset in accordance Darwin Core and EMODnet Biology standards and a spatio-temporal analysis of zooplankton abundance patterns at the MareChiara station in the Gulf of Naples, Mediterranean Sea, covering data recorded between 1984 and 2024. The MareChiara station is one of the longest-running marine monitoring stations in the Mediterranean, providing a rare 40-year window into Zooplankton community dynamics.
-
-# Data Sources and Manipolation 
-The three temporal datasets used in this report covering 1984–2015, 2016–2020, and 2021–2024; were obtained from the "Gulf of Naples - 40 Years of Zooplankton Biodiversity Assessment" project, funded by Flanders Marine Institute (VLIZ) and Stazione Zoologica Anton Dohrn (SZN). The legacy dataset (1984–2020), previously maintained on local computers, have been migrated to centralized cloud storage on SharePoint to ensure reproducibility and accessibility. From 2021, data collection relies on [KoBoToolbox](https://www.kobotoolbox.org) digital survey forms, which replaced the previous local workflow.
-
-# Methods
-## Automated Processing Pipeline
-Data are processed through the [ZooGoN](https://github.com/ioledc/ZOOGoN-40Y) R package, which implements a fully automated pipeline structured in two parallel way, both triggered daily via [GitHub Actions](https://github.com/ioledc/ZOOGoN-40Y/actions/runs/22932728351). 
-The complete pipeline workflow below: 
-```{r}
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
 #| echo: false
 library(DiagrammeR)
 grViz(
@@ -46,29 +46,29 @@ grViz(
   }
 '
 )
-```
-
-## Workflow
-- `ingest_surveys()` connects to the KoBoToolbox API, downloads new survey submissions with pagination support, flattens nested JSON data into tabular format, and archives the raw data on SharePoint as CSV and Parquet files. 
-- `preprocess_surveys()` cleans and transforms raw survey data, computes abundance values (ind m⁻³) by sex and life stage, and harmonizes taxonomic identifiers against WoRMS via AphiaID.
-
-### Analysis & Report
-- `raw_to_tidy()` merges the legacy datasets (1984–2020) with the ongoing survey landings (2021–present) into a single long-format analysis-ready dataset, uploaded to SharePoint as CSV and Parquet.
-- `render_report()` downloads the latest processed dataset from SharePoint and renders this report in HTML and PDF formats.
-
-### Darwin Core Archive & GBIF Publication
-- `raw_to_dc()` converts the merged dataset into [Darwin Core](https://dwc.tdwg.org/) format following [OBIS](https://obis.org/) and [EMODnet Biology](https://www.emodnet-biology.eu/) standards, producing three extension tables:
-
-  1. Event: sampling metadata including coordinates (40.81°N, 14.25°E), depth range (0–50 m), and sampling protocol.
-  2. Occurrence: species occurrences linked to WoRMS LSIDs.
-  3. eMoF: quantitative measurements (ind m⁻³) with standardized [BODC NERC](https://vocab.nerc.ac.uk/) vocabulary terms for sex and life stage.
-
-- `dc_to_archive()` packages the Darwin Core tables into a Darwin Core Archive (DwC-A) zip file with EML metadata, and uploads it to SharePoint for subsequent publication to [GBIF](https://www.gbif.org/).
-
-The full source code of the ZooGoN pipeline is available on [GitHub](https://github.com/ioledc/ZOOGoN-40Y/tree/main).
-
-### Example of Darwin Core Output 
-```{r}
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
 #| echo: false
 dc_list <- ZooGoN::download_sharepoint_file(
   prefix = conf$ingestion$surveys$darwincore$file_prefix,
@@ -80,12 +80,12 @@ dc_list <- ZooGoN::download_sharepoint_file(
 knitr::kable(head(dc_list$event, 5), caption = "Event table")
 knitr::kable(head(dc_list$occurrence, 5), caption = "Occurrence table")
 knitr::kable(head(dc_list$emof, 5), caption = "eMoF table")
-```
-
-## Processing for Data Visualization
-Each dataset contains taxonomic identification, life stage classification, and abundance values (ind m⁻³) for zooplankton taxa. A methodological change occurred in 2021 with the adoption of KoBoToolbox, which introduced the `isCopepod` variable (yes/no) to facilitate taxonomic filtering. To ensure consistency across the entire time series, taxonomic classification variables were harmonized for the 1984–2020 datasets using the `worrms` package. Data manipulation and summarization were performed using `dplyr`, while visualizations were created with `ggplot2`, `cowplot`, and `viridis`. The code below demonstrates the data loading process and displays the first 10 rows of the final dataset after merge with [WoRMS](https://www.marinespecies.org/) taxonomic data:
-
-```{r}
+#
+#
+#
+#
+#
+#
 #| echo: true
 #| code-fold: true
 # require needed packages
@@ -181,20 +181,20 @@ zoo_84_24 <-
   dplyr::relocate(class, order, .before = scientificName) |>
   dplyr::rename(rankCalss = class, rankOrder = order)
 
-head(zoo_84_24, 5)
-```
-
-# Results
-The analysis employs two complementary visualization approaches to characterize temporal patterns and detect long-term trends in zooplankton abundance at the LTER-MareChiara station:
-
-1. **Heatmap visualization**: a multi-panel display showing weekly abundance patterns across years, integrated with seasonal profiles and annual anomalies to identify recurrent phenological cycles and interannual variability in community composition.
-
-2. **Trend analysis**: a quarterly-stratified approach based on anomaly-derived regression models, designed to isolate and quantify long-term directional trends while accounting for the confounding effects of natural seasonal variability.
-
-Prior to visualization, abundance data were aggregated by week and year to optimize computational performance and reduce noise associated with individual sampling events. Abundance values were log-transformed (log(x + 1)) to reduce positive skewness and improve the dynamic range of visualizations across taxa spanning several orders of magnitude. These analytical approaches enable the detection of phenological shifts, regime changes, and season-specific trends in zooplankton abundance over the 40-year monitoring period.
-
-The first 5 rows of the zoo_heatmap dataset: 
-```{r}
+head(zoo_84_24, 10)
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
 #| echo: true
 #| code-fold: true
 zoo_heatmap <-
@@ -211,11 +211,11 @@ zoo_heatmap <-
   dplyr::mutate(log_abundance = log(abundance + 1)) # Log-transformation (+1 to avoid log(0))
 
 head(zoo_heatmap, 5)
-```
-
-## Heatmap
-The heatmap plots illustrates the abundance across different weeks and years. The x-axis represents the weeks of the year, ranging from 1 to 52, while the y-axis spans several years. Each cell in the heatmap indicates the abundance in individuals per cubic metre, with a color gradient from blue (low abundance) to red (high abundance), as indicated by the legend at the bottom. At the top of the heatmap, a line plot displays the average weekly abundance over the entire period, highlighting the seasonality of abundance. A red point marks the mean maximum abundance, while another red point indicates the first non-zero mean value, providing insight into the average abundance range of the species. On the right side of the heatmap, a side plot displays the mean annual deviation in percentage from the overall annual mean. In `plot_cop_heatmap_complex()` abundance values are log-transformed by default (log = TRUE) in order to reduce skewness and improve the visualization of low and high abundance values.The log-transformation can be disabled by setting log = FALSE. 
-```{r}
+#
+#
+#
+#
+#
 #| echo: true
 #| code-fold: true
 # heatmap function
@@ -479,11 +479,11 @@ plot_heatmap_complex <- function(
     rel_heights = c(0.05, 1)
   )
 }
-```
-
-## Temporal trend
-The temporal trend plot illustrates the mean deviation in abundance over time, featuring a linear regression line and the p-value of the regression for each quarter of the year. The x-axis represents the date, and the y-axis shows the monthly mean deviation in abundance. This deviation is calculated by subtracting the overall mean for each specific month from the corresponding monthly values in the series. For example, each January value is subtracted from the overall January mean, each February value from the overall February mean, and so on. The `plot_temporal_trend()` function performs deseasonalized anomaly analysis with quarterly stratification to detect long-term trends.
-```{r}
+#
+#
+#
+#
+#
 #| echo: true
 #| code-fold: true
 # trend function
@@ -646,28 +646,31 @@ plot_temporal_trend <- function(
       color = "Annual quarter"
     )
 }
-```
-
-## Data Visualization Examples 
-The following code illustrates how to call the two main visualization functions at different taxonomic levels: 
-```{r}
+#
+#
+#
+#
+#
 #| echo: true
 #| code-fold: true
 plot_heatmap_complex(species_name = "All", log = F) # all zooplankton
 plot_heatmap_complex(rank_class = "Copepoda", log = F) # single class
 plot_heatmap_complex(rank_order = "Onychopoda", log = F) # single order
 plot_heatmap_complex(species_name = "Acartia clausi", log = F) # single sepcies
-```
-
-```{r}
+#
+#
+#
 #| echo: true
 #| code-fold: true
 plot_temporal_trend(species_name = "All") # all zooplankton
 plot_temporal_trend(rank_class = "Thecostraca") # single class
 plot_temporal_trend(rank_order = "Euphausiacea") # single order
 plot_temporal_trend(species_name = "Acartia clausi") # single species
-```
-
-# Report Automation
-This report is fully automated and self-regenerating. The pipeline runs every day at 00:00 UTC, ensuring that new field data collected via KoBoToolbox are reflected in the report the following morning. The rendered HTML output are archived as downloadable artifacts on GitHub Actions for 90 days.
-
+#
+#
+#
+#
+#
+#
+#
+#
