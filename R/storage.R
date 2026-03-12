@@ -95,6 +95,65 @@ upload_sharepoint_df <- function(
   invisible(NULL)
 }
 
+#' Upload a local file to SharePoint
+#'
+#' Uploads any local file (not just data frames) to a SharePoint document library.
+#' Unlike [upload_sharepoint_df()], this function accepts an arbitrary file path and
+#' format, making it suitable for HTML reports, ZIP archives, and other file types.
+#'
+#' @param file_path Local path to the file to upload
+#' @param remote_filename Destination filename in SharePoint (versioned automatically
+#'   unless `filename = TRUE`)
+#' @param options SharePoint configuration list from config$storage$sharepoint$credentials
+#' @param bucket Bucket name (optional)
+#' @param format File format/extension (e.g. "html", "zip", "csv")
+#' @param filename Logical. If TRUE, use `remote_filename` as-is without versioning.
+#'   Default is FALSE
+#'
+#' @return Invisible NULL
+#'
+#' @examples
+#' \dontrun{
+#' conf <- read_config()
+#' upload_sharepoint_file(
+#'   file_path       = "report.html",
+#'   remote_filename = "Report",
+#'   options         = conf$storage$sharepoint$credentials,
+#'   bucket          = conf$storage$sharepoint$buckets$reports_bucket,
+#'   format          = "html"
+#' )
+#' }
+#'
+#' @keywords storage
+#' @export
+upload_sharepoint_file <- function(
+  file_path,
+  remote_filename,
+  options,
+  bucket = NULL,
+  format,
+  filename = FALSE
+) {
+  if (!is.null(bucket)) {
+    options$bucket <- bucket
+  }
+
+  dest_name <- if (filename) remote_filename else add_version(remote_filename, format)
+  remote_path <- file.path(options$bucket, dest_name)
+
+  sharepoint_conn <- connect_to_sharepoint(options)
+  upload_file_to_sharepoint(
+    file_path   = file_path,
+    remote_path = remote_path,
+    drive_id    = sharepoint_conn$drive_id,
+    token       = sharepoint_conn$token,
+    format      = format
+  )
+
+  logger::log_debug("Uploaded to: {remote_path}", namespace = "ZooGoN")
+  invisible(NULL)
+}
+
 #' Download a file from SharePoint
 #'
 #' @param prefix File prefix path (e.g., "raw", "preprocessed"), or exact filename if filename = TRUE
@@ -494,15 +553,21 @@ find_latest_version <- function(prefix, bucket, format, options) {
     folder_path
   )
 
-  # List files in the folder
-  list_resp <- httr2::request(list_endpoint) |>
-    httr2::req_headers(
-      Authorization = paste("Bearer", sharepoint_conn$token)
-    ) |>
-    httr2::req_perform() |>
-    httr2::resp_check_status()
+  # List files in the folder (handle pagination via @odata.nextLink)
+  files <- list()
+  next_url <- list_endpoint
+  while (!is.null(next_url)) {
+    list_resp <- httr2::request(next_url) |>
+      httr2::req_headers(
+        Authorization = paste("Bearer", sharepoint_conn$token)
+      ) |>
+      httr2::req_perform() |>
+      httr2::resp_check_status()
 
-  files <- httr2::resp_body_json(list_resp)$value
+    body <- httr2::resp_body_json(list_resp)
+    files <- c(files, body$value)
+    next_url <- body$`@odata.nextLink`
+  }
 
   # Filter files matching the pattern: prefix__*.*format
   pattern <- sprintf("^%s__.*\\.%s$", prefix, format)
@@ -568,11 +633,12 @@ write_df_to_temp <- function(df, format) {
 get_content_type <- function(format) {
   switch(
     format,
-    csv = "text/csv",
-    tsv = "text/tab-separated-values",
+    csv     = "text/csv",
+    tsv     = "text/tab-separated-values",
     parquet = "application/vnd.apache.parquet",
-    rds = "application/octet-stream",
-    zip = "application/zip",
+    rds     = "application/octet-stream",
+    zip     = "application/zip",
+    html    = "text/html",
     stop(sprintf("Unsupported format: %s", format), call. = FALSE)
   )
 }

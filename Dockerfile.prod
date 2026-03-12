@@ -1,4 +1,4 @@
-FROM rocker/tidyverse:4
+FROM rocker/verse:4
 
 # System deps (needed for R package jqr -> libjq.so.1)
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -28,14 +28,14 @@ RUN install2.r --error --skipinstalled \
     remotes
 
 
-# Install suggests
+# Install suggests + report visualization packages
 RUN install2.r --error --skipinstalled \
     testthat \
     knitr \
     rmarkdown \
     pkgdown \
     worrms \
-    lubridate
+    lubridate 
 
 # Install from github
 RUN Rscript -e 'remotes::install_github("LivingNorway/LivingNorwayR")'

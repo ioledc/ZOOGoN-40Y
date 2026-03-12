@@ -22,6 +22,7 @@ default:
         hot_bucket: hot_storage
         unmatched_bucket: worms_unmatched
         darwin_core_bucket: darwincore_archives
+        reports_bucket: reports
       credentials:
         site_url: "https://sznit.sharepoint.com/sites/BioFlow-ZOOGoN-40Y"
         client_id: !expr Sys.getenv('SHAREPOINT_CLIENT_ID')
