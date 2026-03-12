@@ -34,7 +34,7 @@ preprocess_surveys <- function(raw_data = NULL) {
 
   logger::log_debug("Raw surveys: {nrow(raw_surveys)} rows", namespace = "ZooGoN")
 
-  logger::log_info("Extracting cruise info...", namespace = "ZooGoN")
+logger::log_info("Extracting cruise info...", namespace = "ZooGoN")
   cruise_info <-
     raw_surveys |>
     dplyr::select("submission_id", !dplyr::starts_with("group_taxa")) |>
@@ -43,15 +43,16 @@ preprocess_surveys <- function(raw_data = NULL) {
     dplyr::rename_with(~ stringr::str_remove(., "group_cruise/")) |>
     dplyr::rename_with(~ stringr::str_remove(., "group_abundance/")) |>
     dplyr::rename_with(~ stringr::str_remove(., "group_sample/")) |>
-    dplyr::rename(dplyr::any_of(c(filtered_volume_m3 = "Filtered_Volume_m"))) |> #
+    dplyr::rename(filtered_volume_m3 = "Filtered_Volume_m") |>
     dplyr::mutate(sampling_id = as.integer(.data$sampling_id)) |>
     #janitor::clean_names() |>
     dplyr::relocate(
-  dplyr::any_of("filtered_volume_m3"), #
-  .before = "water_column_sampled"
-) |>
+      "filtered_volume_m3",
+      .before = "water_column_sampled"
+    ) |>
     # remove legacy columns
     dplyr::select(-"sampling_name")
+
 
   logger::log_info("Extracting taxa info...", namespace = "ZooGoN")
   taxa_info <-
