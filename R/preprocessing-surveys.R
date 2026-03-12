@@ -47,9 +47,9 @@ preprocess_surveys <- function(raw_data = NULL) {
     dplyr::mutate(sampling_id = as.integer(.data$sampling_id)) |>
     #janitor::clean_names() |>
     dplyr::relocate(
-      "filtered_volume_m3",
-      .before = "water_column_sampled"
-    ) |>
+  dplyr::any_of("filtered_volume_m3"), #
+  .before = "water_column_sampled"
+) |>
     # remove legacy columns
     dplyr::select(-"sampling_name")
 
