@@ -44,9 +44,10 @@ preprocess_surveys <- function(raw_data = NULL) {
     dplyr::rename_with(~ stringr::str_remove(., "group_abundance/")) |>
     dplyr::rename_with(~ stringr::str_remove(., "group_sample/")) |>
     dplyr::rename(filtered_volume_m3 = "Filtered_Volume_m") |>
+    dplyr::mutate(sampling_id = as.integer(.data$sampling_id)) |>
     #janitor::clean_names() |>
     dplyr::relocate(
-      "filtered_volume_m",
+      "filtered_volume_m3",
       .before = "water_column_sampled"
     ) |>
     # remove legacy columns
@@ -141,15 +142,15 @@ preprocess_surveys <- function(raw_data = NULL) {
     dplyr::relocate("scientificname", "lsid", .after = "aphia_id") |>
     # Pivot abundance columns to long format
     tidyr::pivot_longer(
-  cols = dplyr::any_of(c(  # add to debug
-    "n_male",
-    "n_female",
-    "n_copepodite",
-    "n_undetermined",
-    "n_larvae",
-    "n_eggs",
-    "n_nauplius"
-  )),
+      cols = c(
+        "n_male",
+        "n_female",
+        "n_copepodite",
+        "n_undetermined",
+        "n_larvae",
+        "n_eggs",
+        "n_nauplius"
+      ),
       names_to = "life_stage_temp",
       values_to = "individual_count"
     ) |>
