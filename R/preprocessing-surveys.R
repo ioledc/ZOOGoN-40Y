@@ -43,7 +43,7 @@ preprocess_surveys <- function(raw_data = NULL) {
     dplyr::rename_with(~ stringr::str_remove(., "group_cruise/")) |>
     dplyr::rename_with(~ stringr::str_remove(., "group_abundance/")) |>
     dplyr::rename_with(~ stringr::str_remove(., "group_sample/")) |>
-    dplyr::rename(filtered_volume_m3 = "Filtered_Volume_m") |>
+    dplyr::rename(dplyr::any_of(c(filtered_volume_m3 = "Filtered_Volume_m"))) |> #
     dplyr::mutate(sampling_id = as.integer(.data$sampling_id)) |>
     #janitor::clean_names() |>
     dplyr::relocate(
