@@ -208,7 +208,14 @@ tidy_data <-
     individualCount = sum(individualCount, na.rm = TRUE),
     .groups = "drop"
   ) |>
-  dplyr::relocate("individualCount", .before = "lifeStage")
+  dplyr::relocate("individualCount", .before = "lifeStage") |>
+  # fix wrong sample date
+  dplyr::mutate(
+    eventDate = dplyr::case_when(
+      .data$eventID == "mc994" ~ as.Date("2012-01-31"),
+      TRUE ~ .data$eventDate
+    )
+  )
 
 
 # export csv and parquet tidy files to hot storage bucket

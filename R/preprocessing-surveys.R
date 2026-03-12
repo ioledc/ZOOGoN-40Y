@@ -32,7 +32,10 @@ preprocess_surveys <- function(raw_data = NULL) {
       -dplyr::all_of(c("formhub/uuid", "start", "end", "today"))
     )
 
-  logger::log_debug("Raw surveys: {nrow(raw_surveys)} rows", namespace = "ZooGoN")
+  logger::log_debug(
+    "Raw surveys: {nrow(raw_surveys)} rows",
+    namespace = "ZooGoN"
+  )
 
   logger::log_info("Extracting cruise info...", namespace = "ZooGoN")
   cruise_info <-
@@ -77,6 +80,19 @@ preprocess_surveys <- function(raw_data = NULL) {
     dplyr::relocate("taxon", .after = "n_sample") |>
     # remove old duplicated labels
     dplyr::mutate(taxon = stringr::str_replace(.data$taxon, "_1", ""))
+
+  ### TO TESTTHAT:
+  # ids <- as.integer(unique(taxa_info$taxon))
+  # any(is.na(ids))
+
+  # ids_clean <- na.omit(ids)
+
+  # results <-
+  #   c(1244) |>
+  #   purrr::set_names() |>
+  #   purrr::map_dfr(worrms::wm_record)
+
+  ###
 
   preprocessed_survey <-
     dplyr::full_join(cruise_info, taxa_info, by = "submission_id") |>
@@ -123,11 +139,17 @@ preprocess_surveys <- function(raw_data = NULL) {
     # TO DO: Ideally there should be no NAs unless the net was empty(!), to clarify. Meanwhile we drop all NAs
     dplyr::filter(!is.na(.data$aphia_id))
 
-  logger::log_debug("Cleaned data: {nrow(clean_21_24)} rows", namespace = "ZooGoN")
+  logger::log_debug(
+    "Cleaned data: {nrow(clean_21_24)} rows",
+    namespace = "ZooGoN"
+  )
 
   # Get unique AphiaID
   unique_aphia_ids <- as.numeric(unique(clean_21_24$aphia_id))
-  logger::log_info("Querying WoRMS for {length(unique_aphia_ids)} unique AphiaIDs...", namespace = "ZooGoN")
+  logger::log_info(
+    "Querying WoRMS for {length(unique_aphia_ids)} unique AphiaIDs...",
+    namespace = "ZooGoN"
+  )
 
   worms_records <-
     unique_aphia_ids |>
@@ -201,8 +223,14 @@ preprocess_surveys <- function(raw_data = NULL) {
     ) |>
     dplyr::relocate("individualCount", .before = "lifeStage")
 
-  logger::log_info("Preprocessed data: {nrow(tidy_data)} rows, {length(unique(tidy_data$scientificName))} unique taxa", namespace = "ZooGoN")
-  logger::log_info("Uploading preprocessed data (CSV + Parquet)...", namespace = "ZooGoN")
+  logger::log_info(
+    "Preprocessed data: {nrow(tidy_data)} rows, {length(unique(tidy_data$scientificName))} unique taxa",
+    namespace = "ZooGoN"
+  )
+  logger::log_info(
+    "Uploading preprocessed data (CSV + Parquet)...",
+    namespace = "ZooGoN"
+  )
   c("csv", "parquet") |>
     purrr::walk(
       ~ upload_sharepoint_df(
