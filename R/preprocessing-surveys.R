@@ -43,10 +43,10 @@ preprocess_surveys <- function(raw_data = NULL) {
     dplyr::rename_with(~ stringr::str_remove(., "group_cruise/")) |>
     dplyr::rename_with(~ stringr::str_remove(., "group_abundance/")) |>
     dplyr::rename_with(~ stringr::str_remove(., "group_sample/")) |>
-    dplyr::rename(dplyr::any_of(c(filtered_volume_m3 = "Filtered_Volume_m"))) |>
+    dplyr::rename(filtered_volume_m3 = "Filtered_Volume_m") |>
     #janitor::clean_names() |>
     dplyr::relocate(
-      "filtered_volume_m3",
+      "filtered_volume_m",
       .before = "water_column_sampled"
     ) |>
     # remove legacy columns
