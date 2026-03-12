@@ -43,7 +43,10 @@ preprocess_surveys <- function(raw_data = NULL) {
     dplyr::rename_with(~ stringr::str_remove(., "group_cruise/")) |>
     dplyr::rename_with(~ stringr::str_remove(., "group_abundance/")) |>
     dplyr::rename_with(~ stringr::str_remove(., "group_sample/")) |>
-    dplyr::rename(filtered_volume_m3 = "Filtered_Volume_m") |>
+    plyr::rename_with(
+  ~ ifelse(stringr::str_detect(., stringr::fixed("Filtered_Volume")), "filtered_volume_m3", .)
+) |>
+    #dplyr::rename(filtered_volume_m3 = "Filtered_Volume_m") |>
     dplyr::mutate(sampling_id = as.integer(.data$sampling_id)) |>
     #janitor::clean_names() |>
     dplyr::relocate(
@@ -142,7 +145,7 @@ preprocess_surveys <- function(raw_data = NULL) {
     dplyr::relocate("scientificname", "lsid", .after = "aphia_id") |>
     # Pivot abundance columns to long format
     tidyr::pivot_longer(
-  cols = dplyr::any_of(c(
+  cols = dplyr::any_of(c(  # add to debug
     "n_male",
     "n_female",
     "n_copepodite",
