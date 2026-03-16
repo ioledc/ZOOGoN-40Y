@@ -616,29 +616,18 @@ plot_temporal_trend(species_name = "Acartia clausi") # single species
 
 ## Automated Processing Pipeline
 Data are processed through the [ZooGoN](https://github.com/ioledc/ZOOGoN-40Y) R package, which implements a fully automated pipeline structured in two parallel way. Bleow, the complete pipeline workflow, the full source code of the ZooGoN pipeline is available on [GitHub](https://github.com/ioledc/ZOOGoN-40Y/tree/main). 
-```{r}
-#| echo: false
-library(DiagrammeR)
-grViz(
-  '
-  digraph pipeline {
-    rankdir=LR
-    node [shape=box, style=filled, fillcolor=black, fontcolor=white, fontname=Helvetica]
-    edge [color=black, minlen=2]
-    
-    A [label="Build R Container"]
-    B [label="Ingest MC Kobo Surveys"]
-    C [label="Process MC Kobo Surveys"]
-    D [label="Merge Tidy Analysis-Ready Dataset"]
-    E [label="Convert to Darwin Core Format"]
-    F [label="Render MC Survey Report"]
-    G [label="Build Darwin Core Archive"]
-    
-    A->B->C->E->G
-    C->D->F
-  }
-'
-)
+
+```{mermaid}
+flowchart LR
+A[Build R container] --- B[Ingest MC kobo surveys]
+B --- C[Process MC kobo surveys]
+C --- E[Convert to Darwin Core format]
+E --- G[Build Darwin Core archive]
+C --- D[Merge tidy analysis-ready dataset]
+D --- F[Render MC survey report]
+
+classDef step fill:#24292f,color:#fff,stroke:#24292f
+class A,B,C,D,E,F,G step
 ```
 
 ### Example of Darwin Core Output 
