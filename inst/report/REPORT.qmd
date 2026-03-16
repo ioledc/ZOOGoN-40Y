@@ -633,15 +633,16 @@ class A,B,C,D,E,F,G step
 ### Example of Darwin Core Output 
 ```{r}
 #| echo: false
-ZooGoN:::read_config()
-
+#| results: hide
 dc_list <- ZooGoN::download_sharepoint_file(
   prefix = conf$ingestion$surveys$darwincore$file_prefix,
   options = conf$storage$sharepoint$credentials,
   bucket = conf$storage$sharepoint$buckets$automation_bucket,
   format = "rds"
 )
-
+```
+```{r}
+#| echo: false
 knitr::kable(head(dc_list$event, 5), caption = "Event table")
 knitr::kable(head(dc_list$occurrence, 5), caption = "Occurrence table")
 knitr::kable(head(dc_list$emof, 5), caption = "eMoF table")
