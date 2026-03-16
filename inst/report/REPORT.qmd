@@ -22,12 +22,12 @@ The three temporal datasets used in this report covering 1984–2015, 2016–202
 #| echo: true
 #| code-fold: true
 
-# load package and configurations
-devtools::load_all()
+# load package
 library(ZooGoN)
-conf <- ZooGoN::read_config()
+# load configuration
+conf <- ZooGoN:::read_config()
 
-# require needed packages
+# require packages
 pacman::p_load(
   magrittr,
   scales,
@@ -633,9 +633,7 @@ class A,B,C,D,E,F,G step
 ### Example of Darwin Core Output 
 ```{r}
 #| echo: false
-devtools::load_all()
-library(ZooGoN)
-conf <- ZooGoN::read_config()
+ZooGoN:::read_config()
 
 dc_list <- ZooGoN::download_sharepoint_file(
   prefix = conf$ingestion$surveys$darwincore$file_prefix,
