@@ -28,37 +28,42 @@ render_report <- function(output_dir = "/home") {
   report_path <- system.file("report/REPORT.qmd", package = "ZooGoN")
 
   if (report_path == "") {
-    stop("Report.qmd not found in inst/report/. Make sure the package is installed.")
+    stop(
+      "Report.qmd not found in inst/report/. Make sure the package is installed."
+    )
   }
 
   logger::log_info("Rendering Quarto report...", namespace = "ZooGoN")
   quarto::quarto_render(
-  input         = report_path,
-  output_format = "html",
-  execute_params = list(
-    sharepoint_site_url = conf$storage$sharepoint$credentials$site_url,
-    data_prefix         = conf$ingestion$surveys$preprocessed$file_prefix,
-    automation_bucket   = conf$storage$sharepoint$buckets$automation_bucket
+    input = report_path,
+    output_format = "html",
+    execute_params = list(
+      sharepoint_site_url = conf$storage$sharepoint$credentials$site_url,
+      data_prefix = conf$ingestion$surveys$preprocessed$file_prefix,
+      automation_bucket = conf$storage$sharepoint$buckets$automation_bucket
+    )
   )
-)
 
   # Quarto saves files next to the .qmd — copy both to output_dir
   out_file <- "REPORT.html"
-rendered_path <- file.path(dirname(report_path), out_file)
-dest_path <- file.path(output_dir, paste0("ZooGoN-report-", Sys.Date(), ".html"))
-if (file.exists(rendered_path)) {
-  file.copy(rendered_path, dest_path, overwrite = TRUE)
-  logger::log_success(
-    "Report saved as: {dest_path}",
-    namespace = "ZooGoN"
+  rendered_path <- file.path(dirname(report_path), out_file)
+  dest_path <- file.path(
+    output_dir,
+    paste0("ZooGoN-report-", Sys.Date(), ".html")
   )
-} else {
-  logger::log_warn(
-    "Expected file not found: {rendered_path}",
-    namespace = "ZooGoN"
-  )
-}
+  if (file.exists(rendered_path)) {
+    file.copy(rendered_path, dest_path, overwrite = TRUE)
+    logger::log_success(
+      "Report saved as: {dest_path}",
+      namespace = "ZooGoN"
+    )
+  } else {
+    logger::log_warn(
+      "Expected file not found: {rendered_path}",
+      namespace = "ZooGoN"
+    )
   }
+}
 
 invisible(NULL)
 
@@ -86,4 +91,3 @@ run_pipeline <- function() {
   logger::log_success("ZooGoN pipeline complete", namespace = "ZooGoN")
   invisible(NULL)
 }
-
