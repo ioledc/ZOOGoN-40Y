@@ -47,13 +47,20 @@ Imports:
     quarto
 Remotes:
     LivingNorway/LivingNorwayR
-Suggests: 
+Suggests:
     testthat (>= 3.0.0),
     knitr,
     rmarkdown,
     pkgdown,
     worrms,
-    lubridate
+    lubridate,
+    ggsci,
+    viridis,
+    cowplot,
+    vegan,
+    broom,
+    scales,
+    DT
 Config/testthat/edition: 3
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
