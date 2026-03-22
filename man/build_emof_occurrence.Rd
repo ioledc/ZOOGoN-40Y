@@ -8,7 +8,7 @@ build_emof_occurrence(data = NULL)
 }
 \arguments{
 \item{data}{A data frame containing at least \code{eventID}, \code{eventDate},
-\code{occurrenceID}, \code{individualCount}, and \code{lifeStage}.}
+\code{occurrenceID}, \code{Abundance}, and \code{lifeStage}.}
 }
 \value{
 A tibble in eMoF format with one row per occurrence-level

@@ -1,13 +1,21 @@
-FROM rocker/verse:4
-
-# System deps (needed for R package jqr -> libjq.so.1)
+FROM rocker/tidyverse:4
+# cache bust: render-report added
 RUN apt-get update && apt-get install -y --no-install-recommends \
     jq \
     libjq1 \
     libjq-dev \
+    curl \
   && rm -rf /var/lib/apt/lists/*
 
-# Install imports
+# Install Quarto
+RUN curl -LO https://quarto.org/download/latest/quarto-linux-amd64.deb && \
+    dpkg -i quarto-linux-amd64.deb && \
+    rm quarto-linux-amd64.deb
+
+# Install TinyTeX for PDF rendering
+RUN Rscript -e 'install.packages("tinytex"); tinytex::install_tinytex()'
+ENV PATH="/root/.TinyTeX/bin/x86_64-linux:${PATH}"
+
 RUN install2.r --error --skipinstalled \
     readr \
     stringr \
@@ -27,27 +35,26 @@ RUN install2.r --error --skipinstalled \
     openxlsx \
     remotes
 
-
-# Install suggests + report visualization packages
 RUN install2.r --error --skipinstalled \
     testthat \
     knitr \
     rmarkdown \
+    quarto \
+    pacman \
     pkgdown \
     worrms \
-    lubridate 
+    lubridate \
+    ggsci \
+    viridis \
+    cowplot \
+    vegan \
+    gridExtra \
+    DiagrammeR
 
-# Install from github
 RUN Rscript -e 'remotes::install_github("LivingNorway/LivingNorwayR")'
 
-
-
-# Install local package
 COPY . /home
 WORKDIR /home
 RUN Rscript -e 'remotes::install_local(dependencies = TRUE, upgrade = "never")'
-
-# Validate installation
 RUN Rscript -e 'library(ZooGoN); cat("ZooGoN loaded successfully\n")'
-
 ENTRYPOINT ["Rscript"]

@@ -10,15 +10,18 @@
 #'
 #' @examples
 #' \dontrun{
-#' raw_to_tidy()
+#' format_to_tidy()
 #' }
 #'
 #' @keywords workflow processing
 #' @export
-raw_to_tidy <- function() {
+format_to_tidy <- function() {
   conf <- read_config()
 
-  logger::log_info("Downloading legacy datasets from hot storage...", namespace = "ZooGoN")
+  logger::log_info(
+    "Downloading legacy datasets from hot storage...",
+    namespace = "ZooGoN"
+  )
   legacy_84_20 <-
     c("McZoo_84-15.parquet", "McZoo_16-20.parquet") |>
     purrr::map(
@@ -28,9 +31,15 @@ raw_to_tidy <- function() {
       filename = TRUE
     ) |>
     dplyr::bind_rows()
-  logger::log_debug("Legacy data loaded: {nrow(legacy_84_20)} rows", namespace = "ZooGoN")
+  logger::log_debug(
+    "Legacy data loaded: {nrow(legacy_84_20)} rows",
+    namespace = "ZooGoN"
+  )
 
-  logger::log_info("Downloading preprocessed ongoing surveys...", namespace = "ZooGoN")
+  logger::log_info(
+    "Downloading preprocessed ongoing surveys...",
+    namespace = "ZooGoN"
+  )
   ongoing_landings <-
     download_sharepoint_file(
       prefix = conf$ingestion$surveys$preprocessed$file_prefix,
@@ -38,14 +47,23 @@ raw_to_tidy <- function() {
       bucket = conf$storage$sharepoint$buckets$automation_bucket,
       format = "parquet"
     )
-  logger::log_debug("Ongoing surveys loaded: {nrow(ongoing_landings)} rows", namespace = "ZooGoN")
+  logger::log_debug(
+    "Ongoing surveys loaded: {nrow(ongoing_landings)} rows",
+    namespace = "ZooGoN"
+  )
 
   tidy_data <-
     legacy_84_20 |>
     dplyr::bind_rows(ongoing_landings)
-  logger::log_info("Merged tidy dataset: {nrow(tidy_data)} rows", namespace = "ZooGoN")
+  logger::log_info(
+    "Merged tidy dataset: {nrow(tidy_data)} rows",
+    namespace = "ZooGoN"
+  )
 
-  logger::log_info("Uploading tidy data (CSV + Parquet)...", namespace = "ZooGoN")
+  logger::log_info(
+    "Uploading tidy data (CSV + Parquet)...",
+    namespace = "ZooGoN"
+  )
   c("csv", "parquet") |>
     purrr::walk(
       ~ upload_sharepoint_df(
@@ -69,9 +87,8 @@ raw_to_tidy <- function() {
 #'
 #' @param verbose Logical. Whether to print processing messages. Default is TRUE.
 #'
-#' @return Invisible NULL. The Darwin Core data (event, occurrence, emof tables
-#'   plus raw data, processing info, and metadata) is uploaded as a versioned
-#'   RDS file to SharePoint.
+#' @return The Darwin Core data as a list (event, occurrence, emof tables
+#'   plus raw data, processing info, and metadata).
 #'
 #' @details
 #' **Input Data Format:**
@@ -84,7 +101,7 @@ raw_to_tidy <- function() {
 #'   \item \code{scientificName}: Full scientific name with WoRMS validation
 #'   \item \code{lsid}: WoRMS Life Science Identifier URN (e.g.,
 #'     "urn:lsid:marinespecies.org:taxname:104251")
-#'   \item \code{individualCount}: Abundance measurement (ind/m³)
+#'   \item \code{Abundance}: Abundance measurement (ind/m³)
 #'   \item \code{lifeStage}: Life stage code ("f" = female, "m" = male, "j" = juvenile,
 #'     "fm" = both sexes, "fmj" = all stages)
 #' }
@@ -106,7 +123,7 @@ raw_to_tidy <- function() {
 #'     decimalLongitude, locality, waterBody, depth ranges, samplingProtocol)
 #'   \item **Occurrence Extension**: Links to Event via eventID, contains species
 #'     occurrences with scientificName, scientificNameID (WoRMS LSID), and
-#'     occurrenceStatus (present/absent based on individualCount > 0)
+#'     occurrenceStatus (present/absent based on Abundance > 0)
 #'   \item **eMoF Extension**: Extended Measurement or Fact table linked via
 #'     occurrenceID, containing quantitative measurements with standardized
 #'     vocabulary terms from BODC NERC Vocabulary Server (NVS):
@@ -140,10 +157,10 @@ raw_to_tidy <- function() {
 #' @examples
 #' \dontrun{
 #' # Process legacy data and upload Darwin Core output to SharePoint
-#' raw_to_dc()
+#' format_to_dc()
 #'
 #' # Silent processing (no console messages)
-#' raw_to_dc(verbose = FALSE)
+#' format_to_dc(verbose = FALSE)
 #' }
 #'
 #' @seealso
@@ -157,38 +174,23 @@ raw_to_tidy <- function() {
 #' }
 #'
 #' @export
-raw_to_dc <- function(
+format_to_dc <- function(
   verbose = TRUE
 ) {
   conf <- read_config()
   logger::log_info("Starting Darwin Core conversion...", namespace = "ZooGoN")
 
-  logger::log_info("Downloading legacy datasets from hot storage...", namespace = "ZooGoN")
-  legacy_84_20 <-
-    c("McZoo_84-15.parquet", "McZoo_16-20.parquet") |>
-    purrr::map(
-      download_sharepoint_file,
-      options = conf$storage$sharepoint$credentials,
-      bucket = conf$storage$sharepoint$buckets$hot_bucket,
-      filename = TRUE
-    ) |>
-    dplyr::bind_rows()
-  logger::log_debug("Legacy data loaded: {nrow(legacy_84_20)} rows", namespace = "ZooGoN")
-
-  logger::log_info("Downloading preprocessed ongoing surveys...", namespace = "ZooGoN")
-  ongoing_landings <-
+  logger::log_info(
+    "Downloading tidy data...",
+    namespace = "ZooGoN"
+  )
+  merged_data <-
     download_sharepoint_file(
-      prefix = conf$ingestion$surveys$preprocessed$file_prefix,
+      prefix = conf$ingestion$tidy_data$file_prefix,
       options = conf$storage$sharepoint$credentials,
       bucket = conf$storage$sharepoint$buckets$automation_bucket,
       format = "parquet"
     )
-  logger::log_debug("Ongoing surveys loaded: {nrow(ongoing_landings)} rows", namespace = "ZooGoN")
-
-  merged_data <-
-    legacy_84_20 |>
-    dplyr::bind_rows(ongoing_landings)
-  logger::log_info("Merged data: {nrow(merged_data)} rows", namespace = "ZooGoN")
 
   # Create Darwin Core Event extension
   logger::log_info("Creating Event extension table...", namespace = "ZooGoN")
@@ -206,8 +208,11 @@ raw_to_dc <- function(
       continent = "Europe",
       countryCode = "IT",
       institutionCode = "SZN",
-      datasetName = "ZooGoN", # to do: verify dataset name
-      locality = "Gulf of Naples",
+      datasetName = paste0(
+        "Zooplankton data at LTER MareChiara site in the Gulf of Naples from 1984-",
+        max(lubridate::year(.data$eventDate))
+      ),
+      locality = "MareChiara station, Gulf of Naples",
       stateProvince = "Campania",
       waterBody = "Tyrrhenian Sea",
       maximumDepthInMeters = 50,
@@ -216,12 +221,15 @@ raw_to_dc <- function(
     )
 
   # Create Darwin Core Occurrence extension
-  logger::log_info("Creating Occurrence extension table...", namespace = "ZooGoN")
+  logger::log_info(
+    "Creating Occurrence extension table...",
+    namespace = "ZooGoN"
+  )
 
   full_table <- merged_data |>
     dplyr::mutate(
       occurrenceStatus = dplyr::if_else(
-        .data$individualCount > 0,
+        .data$Abundance > 0,
         "present",
         "absent"
       ),
@@ -231,7 +239,7 @@ raw_to_dc <- function(
     dplyr::distinct()
 
   occurrence_table <- full_table |>
-    dplyr::mutate(basisOfRecord = "MachineObservation") |>
+    dplyr::mutate(basisOfRecord = "PreservedSpecimen") |>
     dplyr::select(
       "eventID",
       "occurrenceID",
@@ -246,7 +254,9 @@ raw_to_dc <- function(
 
   emof_occ <- build_emof_occurrence(data = full_table)
   emof_events <- build_emof_events(data = full_table)
-  emof_table <- dplyr::bind_rows(emof_occ, emof_events)
+  emof_table <-
+    dplyr::bind_rows(emof_occ, emof_events) |>
+    dplyr::select(-"eventDate")
 
   # Prepare output
   processing_info <- list(
@@ -259,7 +269,10 @@ raw_to_dc <- function(
   )
 
   metadata_df <- tibble::tibble(
-    dataset_title = "40 years of Zooplankton data at LTER MareChiara site (Gulf of Naples, Mediterranean Sea) 1984-2024", # to do: depends on the data we are going to publish
+    dataset_title = paste0(
+      "Zooplankton data at LTER MareChiara site in the Gulf of Naples from 1984-",
+      max(lubridate::year(merged_data$eventDate))
+    ),
     contact = "Dr. Iole Di Capua (iole.dicapua@szn.it)",
     institution = "Stazione Zoologica Anton Dohrn",
     license = "CC-BY-NC",
@@ -280,19 +293,7 @@ raw_to_dc <- function(
     metadata = metadata_df
   )
 
-  logger::log_info("Events: {processing_info$total_events} | Occurrences: {processing_info$total_occurrences} | Measurements: {processing_info$total_measurements}", namespace = "ZooGoN")
-  logger::log_debug("Unique taxa: {processing_info$unique_taxa} | Date range: {processing_info$date_range[1]} to {processing_info$date_range[2]}", namespace = "ZooGoN")
-
-  # Upload to SharePoint
-  logger::log_info("Uploading Darwin Core tables to SharePoint...", namespace = "ZooGoN")
-  upload_sharepoint_df(
-    data = darwin_core_data,
-    prefix = conf$ingestion$surveys$darwincore$file_prefix,
-    options = conf$storage$sharepoint$credentials,
-    bucket = conf$storage$sharepoint$buckets$automation_bucket,
-    format = "rds"
-  )
-  logger::log_success("raw_to_dc complete", namespace = "ZooGoN")
+  return(darwin_core_data)
 }
 
 
@@ -304,7 +305,7 @@ raw_to_dc <- function(
 #' abundance (ind/m³).
 #'
 #' @param data A data frame containing at least `eventID`, `eventDate`,
-#'   `occurrenceID`, `individualCount`, and `lifeStage`.
+#'   `occurrenceID`, `Abundance`, and `lifeStage`.
 #'
 #' @return A tibble in eMoF format with one row per occurrence-level
 #'   measurement and the columns:
@@ -334,8 +335,9 @@ build_emof_occurrence <- function(data = NULL) {
   type_ids <- c(
     sex = "http://vocab.nerc.ac.uk/collection/P01/current/ENTSEX01/",
     lifeStage = "http://vocab.nerc.ac.uk/collection/P01/current/LSTAGE01/",
-    individualCount = "http://vocab.nerc.ac.uk/collection/P01/current/ZU00M00D/"
+    Abundance = "http://vocab.nerc.ac.uk/collection/P01/current/ZU00M00D/"
   )
+  #TODO: is http://vocab.nerc.ac.uk/collection/P01/current/ZU00M00D/ ok?
 
   data |>
     dplyr::select(-"scientificName", -"occurrenceStatus", -"lsid") |>
@@ -390,12 +392,12 @@ build_emof_occurrence <- function(data = NULL) {
       ),
       measurementTypeID = unname(type_ids[.data$measurementType]),
       measurementUnit = dplyr::if_else(
-        .data$measurementType == "individualCount",
+        .data$measurementType == "Abundance",
         "Number per cubic metre",
         NA_character_
       ),
       measurementUnitID = dplyr::if_else(
-        .data$measurementType == "individualCount",
+        .data$measurementType == "Abundance",
         "http://vocab.nerc.ac.uk/collection/P06/current/UPMM/",
         NA_character_
       )

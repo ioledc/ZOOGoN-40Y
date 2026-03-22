@@ -1,0 +1,662 @@
+---
+title: "Gulf of Naples – 40 Years of Zooplankton Biodiversity Assessment (ZOOGoN-40Y) | LTER MareChiara"
+author: "Andrea Marcucci (andrea.marcucci@szn.it)"
+date: today
+format:
+  html:
+    theme: Darkly
+    toc: true
+    toc-float: true
+    number-sections: true
+    code-fold: true
+    code-tools: true
+    self-contained: true
+---
+# Aim
+The MareChiara station represents one of the longest-running marine monitoring sites in the Mediterranean Sea, providing a unique 40-year time series that enables the investigation of long-term zooplankton community dynamics and variability. This report presents the harmonized taxonomic zooplankton metadata derived from the Long-Term Ecological Research (LTER) dataset, structured in accordance with Darwin Core and EMODnet Biology standards. In addition, it provides a spatio-temporal analysis of zooplankton abundance patterns at the MareChiara station in the Gulf of Naples (Mediterranean Sea), based on observations collected between 1984 and 2024.
+
+# Methods
+## Data Sources
+The three temporal datasets used in this report, covering the periods 1984–2015, 2016–2020, and 2021–2024, were obtained from the “Gulf of Naples – 40 Years of Zooplankton Biodiversity Assessment” project, funded by the Flanders Marine Institute (VLIZ) and the Stazione Zoologica Anton Dohrn (SZN). The legacy dataset (1984–2020), previously maintained on local computers, has been migrated to centralized cloud storage on SharePoint in order to improve data accessibility, long-term preservation, and reproducibility. Since 2021, data collection has relied on digital survey forms implemented through [KoBoToolbox](https://www.kobotoolbox.org), which replaced the previous locally managed workflow.
+```{r}
+#| echo: true
+#| code-fold: true
+
+# load package
+library(ZooGoN)
+# load configuration
+conf <- ZooGoN::read_config()
+
+# require packages
+pacman::p_load(
+  magrittr,
+  scales,
+  ggsci,
+  lubridate,
+  tidyverse,
+  viridis,
+  cowplot,
+  worrms,
+  stringr,
+  vegan,
+  arrow,
+  httr2
+)
+
+# load legacy data from SharePoint
+legacy_84_15 <- ZooGoN::download_sharepoint_file(
+  prefix = "McZoo_84-15.parquet",
+  options = conf$storage$sharepoint$credentials,
+  bucket = conf$storage$sharepoint$buckets$hot_bucket,
+  filename = TRUE
+)
+
+legacy_16_20 <- ZooGoN::download_sharepoint_file(
+  prefix = "McZoo_16-20.parquet",
+  options = conf$storage$sharepoint$credentials,
+  bucket = conf$storage$sharepoint$buckets$hot_bucket,
+  filename = TRUE
+)
+
+# load processed survey data from pipeline (2021-2024)
+legacy_21_24 <- ZooGoN::download_sharepoint_file(
+  prefix = conf$ingestion$surveys$preprocessed$file_prefix,
+  options = conf$storage$sharepoint$credentials,
+  bucket = conf$storage$sharepoint$buckets$automation_bucket,
+  format = "parquet"
+)
+```
+
+## Automated Processing Pipeline
+Data are processed through the [ZooGoN](https://github.com/ioledc/ZOOGoN-40Y) R package, which implements a fully automated pipeline structured in two parallel way. Bleow, the complete pipeline workflow, the full source code of the ZooGoN pipeline is available on [GitHub](https://github.com/ioledc/ZOOGoN-40Y/tree/main). 
+```{mermaid}
+flowchart LR
+A[Build R container] --> B[Ingest MC kobo surveys]
+B --> C[Preprocess surveys]
+C --> D[Merge legacy and ongoing data]
+D --> E[Build Darwin Core Archive]
+D --> F[Render MC survey report]
+
+classDef step fill:#24292f,color:#fff,stroke:#24292f
+class A,B,C,D,E,F step
+```
+
+# Results
+## Example of Darwin Core Output 
+```{r}
+#| echo: false
+#| results: hide
+
+dc_list <- ZooGoN::download_sharepoint_file(
+  prefix = conf$ingestion$surveys$darwincore$file_prefix,
+  options = conf$storage$sharepoint$credentials,
+  bucket = conf$storage$sharepoint$buckets$automation_bucket,
+  format = "rds"
+)
+```
+```{r}
+#| echo: false
+knitr::kable(head(dc_list$event, 10), caption = "Event table")
+knitr::kable(head(dc_list$occurrence, 10), caption = "Occurrence table")
+knitr::kable(head(dc_list$emof, 10), caption = "eMoF table")
+```
+
+## LTER MareChiara Temporal Trends
+### Data manipolation 
+Each dataset includes taxonomic identification, life-stage classification, and zooplankton abundance values expressed as individuals per cubic meter (ind m⁻³). To facilitate subsequent analyses, the three temporal datasets were merged into a single consolidated database.
+```{r}
+#| echo: true
+# merge into a single databse
+legacy_84_24 <-
+  dplyr::bind_rows(legacy_84_15, legacy_16_20, legacy_21_24)
+
+knitr::kable(head(legacy_84_24, 10), caption = "legacy_84_24")
+```
+
+The resulting dataset (legacy_84_24) represents the complete zooplankton time series for the MareChiara station (1984–2024).
+ 
+To ensure consistency across the entire time series, particularly in light of the changes introduced in the data collection workflow in 2021, taxonomic classification variables for the 1984–2020 datasets were harmonized using the worrms package, which retrieves standardized taxonomic information from the World Register of Marine Species ([WoRMS](https://www.marinespecies.org/)). 
+The code below displays the first 10 rows of the merged dataset after integration with WoRMS taxonomic information.
+```{r}
+#| echo: true
+#| code-fold: true
+
+# add Class and Order from Worms
+# extrac AphiaID to lsid
+aphiaid <-
+  legacy_84_24 |>
+  dplyr::mutate(
+    aphiaID = as.integer(stringr::str_extract(lsid, "[0-9]+"))
+  )
+
+# Extract unique AphiaIDs to avoid duplicate WoRMS API calls
+ids <- unique(aphiaid$aphiaID)
+
+# get WORms taxonomy
+get_class_order <- function(id) {
+  tryCatch(
+    {
+      cls <- wm_classification(id)
+      # extract scientificname where rank matches, return NA if not found
+      class_val <- cls$scientificname[cls$rank == "Class"]
+      order_val <- cls$scientificname[cls$rank == "Order"]
+      data.frame(
+        aphiaID = id,
+        class = if (length(class_val) > 0) class_val[1] else NA_character_,
+        order = if (length(order_val) > 0) order_val[1] else NA_character_,
+        stringsAsFactors = FALSE
+      )
+    },
+    error = function(e) {
+      data.frame(
+        aphiaID = id,
+        class = NA_character_,
+        order = NA_character_,
+        stringsAsFactors = FALSE
+      )
+    }
+  )
+}
+
+ranks_df <- bind_rows(lapply(ids, get_class_order))
+
+# merge
+zoo_84_24 <-
+  aphiaid |>
+  dplyr::left_join(ranks_df, by = "aphiaID") |>
+  dplyr::select(-aphiaID) |>
+  dplyr::relocate(class, order, .before = scientificName) |>
+  dplyr::rename(rankCalss = class, rankOrder = order)
+
+knitr::kable(head(zoo_84_24, 10), caption = "zoo_84_24")
+```
+
+All data manipulation and summarization steps were performed using the `dplyr` package, while visualizations were produced with `ggplot2`, `cowplot`, and `viridis`.
+
+### Data Visualization
+The analysis employs two complementary visualization approaches to characterize temporal patterns and detect long-term trends in zooplankton abundance at the LTER-MareChiara station:
+
+1. **Heatmap**
+2. **Trend analysis**
+
+Prior to visualization, abundance data were aggregated by week and year to optimize computational performance and reduce noise associated with individual sampling events. Abundance values were log-transformed (log(x + 1)) to reduce positive skewness and improve the dynamic range of visualizations across taxa spanning several orders of magnitude. These analytical approaches enable the detection of phenological shifts, regime changes, and season-specific trends in zooplankton abundance over the 40-year monitoring period.
+
+```{r}
+#| echo: false
+#| code-fold: true
+zoo_heatmap <-
+  zoo_84_24 |>
+  dplyr::mutate(
+    week = lubridate::week(eventDate), # Extract week (1-52)
+    year = lubridate::year(eventDate) # Extract year
+  ) |>
+  dplyr::group_by(year, week, rankCalss, rankOrder, scientificName) |> # Group by year, week, species and life stage
+  dplyr::summarise(
+    abundance = sum(Abundance, na.rm = TRUE),
+    .groups = "drop"
+  ) |> # Sum abundances
+  dplyr::mutate(log_abundance = log(abundance + 1)) # Log-transformation (+1 to avoid log(0))
+
+knitr::kable(head(zoo_heatmap, 10), caption = "zoo_plot")
+```
+
+#### Weekly and annual abundance heatmaps
+In the `plot_heatmap_complex()` function, abundance values are log-transformed by default (log = TRUE) to reduce skewness and improve visualization of both low and high abundance values. This log transformation can be disabled by setting log = FALSE. The transformation helps to highlight patterns in abundance across weeks and years, making seasonal and interannual variations more apparent in the heatmap.
+```{r}
+#| echo: true
+#| code-fold: true
+# heatmap function
+plot_heatmap_complex <- function(
+  species_name = NULL,
+  rank_class = NULL,
+  rank_order = NULL,
+  log = TRUE
+) {
+  # apply taxonomic filters first (if provided), then aggregate or filter by species
+  data <-
+    zoo_heatmap |>
+    dplyr::filter(
+      if (!is.null(rank_class)) rankCalss == rank_class else TRUE, # filter by class if provided
+      if (!is.null(rank_order)) rankOrder == rank_order else TRUE, # filter by order if provided
+      if (!is.null(species_name) && species_name != "All") {
+        scientificName == species_name
+      } else {
+        TRUE
+      } # filter by species if provided
+    )
+
+  # aggregate all species if species_name is NULL or "All"
+  if (is.null(species_name) || species_name == "All") {
+    data <-
+      data |>
+      dplyr::group_by(year, week) |>
+      dplyr::summarise(
+        abundance = sum(abundance, na.rm = TRUE),
+        .groups = "drop"
+      ) |>
+      dplyr::mutate(
+        abundance_plot = if (log) log(abundance + 1) else abundance
+      )
+  } else {
+    # filter by specific species
+    data <-
+      data |>
+      dplyr::mutate(
+        abundance_plot = if (log) log_abundance else abundance
+      )
+  }
+
+  # build dynamic title based on what is being plotted
+  plot_title <- if (!is.null(species_name) && species_name != "All") {
+    species_name
+  } else if (!is.null(rank_order)) {
+    rank_order
+  } else if (!is.null(rank_class)) {
+    rank_class
+  } else {
+    "All Zooplankton"
+  }
+
+  # legend text and theme
+  legend_text <- expression(bold(ind ~ m^-3))
+
+  legend_theme <- ggplot2::theme(
+    legend.position = "bottom",
+    legend.key.width = unit(0.5, "cm"),
+    legend.direction = "horizontal",
+    legend.key.size = unit(0.2, "cm"),
+    legend.title = ggplot2::element_text(size = 10, face = "bold"),
+    legend.text = ggplot2::element_text(size = 10, face = "bold")
+  )
+
+  # dynamic breaks: visually centered on pseudo-log scale regardless of data range
+  min_val <- min(data$abundance_plot[data$abundance_plot > 0], na.rm = TRUE)
+  max_val <- max(data$abundance_plot, na.rm = TRUE)
+
+  # compute midpoint on the transformed scale, then back-transform
+  sigma <- 5
+  mid_transformed <- (asinh(min_val / sigma) + asinh(max_val / sigma)) / 2
+  mid_val <- round(sinh(mid_transformed) * sigma) # back-transform to original scale
+
+  breaks_vals <- c(0, mid_val, round(max_val))
+
+  # main heatmap: weeks (x) vs years (y), colored by abundance
+  heatmap_plot <-
+    data |>
+    ggplot2::ggplot(ggplot2::aes(x = week, y = year, fill = abundance_plot)) +
+    ggplot2::geom_tile(color = "grey90") +
+    ggplot2::theme_bw() +
+    ggplot2::scale_fill_gradientn(
+      colours = c("blue", "cyan", "green", "yellow", "orange", "red"),
+      trans = scales::pseudo_log_trans(sigma = 5),
+      breaks = breaks_vals, # dynamic breaks adapted to the plotted data
+      labels = scales::label_number(),
+      na.value = "grey90"
+    ) +
+    ggplot2::coord_cartesian(expand = FALSE) +
+    ggplot2::scale_x_continuous(breaks = seq(1, 52, by = 5)) +
+    ggplot2::scale_y_continuous(breaks = seq(1984, 2024, by = 4)) +
+    ggplot2::theme(
+      panel.background = ggplot2::element_blank(),
+      panel.grid = ggplot2::element_blank(),
+      legend.box.just = "left",
+      legend.box.margin = margin(t = 0, r = 300, b = 0, l = 0),
+      axis.text.x = ggplot2::element_text(size = 12, face = "bold"),
+      axis.text.y = ggplot2::element_text(size = 12, face = "bold"),
+      axis.title.x = ggplot2::element_text(size = 16, face = "bold"),
+      axis.title.y = ggplot2::element_text(size = 16, face = "bold"),
+      plot.title = ggplot2::element_text(size = 16, face = "bold")
+    ) +
+    legend_theme +
+    ggplot2::labs(
+      x = "Weeks",
+      y = "Years",
+      fill = legend_text
+    ) +
+    guides(alpha = "none")
+
+  # top marginal plot: mean abundance by week across all years
+  line <-
+    data |>
+    dplyr::group_by(week) |>
+    dplyr::summarise(abundance_plot = mean(abundance_plot, na.rm = TRUE))
+
+  # identify min and max values for annotation
+  minmax <-
+    line |>
+    dplyr::mutate(
+      label_row = dplyr::case_when(
+        abundance_plot == min(abundance_plot, na.rm = TRUE) ~ "min",
+        abundance_plot == max(abundance_plot, na.rm = TRUE) ~ "max",
+        TRUE ~ NA_character_
+      )
+    ) |>
+    dplyr::filter(!is.na(label_row)) |>
+    dplyr::arrange(abundance_plot)
+
+  line_plot <- ggplot2::ggplot() +
+    ggplot2::theme_void() +
+    ggplot2::stat_smooth(
+      data = line,
+      ggplot2::aes(week, abundance_plot),
+      method = "loess",
+      color = "#d64d4d",
+      se = FALSE,
+      span = 0.25,
+      linewidth = 0.5
+    ) +
+    ggplot2::geom_area(
+      data = line,
+      ggplot2::aes(week, abundance_plot),
+      fill = "grey95",
+      color = "grey70"
+    ) +
+    ggplot2::geom_point(
+      data = line,
+      ggplot2::aes(week, abundance_plot, color = abundance_plot)
+    ) +
+    ggplot2::geom_text(
+      data = minmax,
+      ggplot2::aes(
+        x = week,
+        y = abundance_plot,
+        label = round(abundance_plot, 1),
+        vjust = ifelse(label_row == "max", 1.5, -0.5)
+      ),
+      color = "firebrick",
+      size = 6
+    ) +
+    ggplot2::geom_point(
+      data = minmax,
+      ggplot2::aes(x = week, y = abundance_plot),
+      color = "firebrick"
+    ) +
+    ggplot2::scale_color_gradientn(
+      colours = c("blue", "cyan", "green", "yellow", "orange", "red")
+    ) +
+    ggplot2::scale_x_continuous(limits = c(1, 52), expand = c(0, 0)) +
+    ggplot2::coord_cartesian(xlim = c(1, 52), expand = FALSE, clip = "off") +
+    ggplot2::theme(
+      legend.position = "none",
+      plot.margin = margin(t = 15, b = 5, l = 70, r = 69)
+    )
+
+  # right side panel: annual anomalies as % deviation from mean
+  side_tile <-
+    data |>
+    dplyr::group_by(year) |>
+    dplyr::summarise(abundance_plot = mean(abundance_plot, na.rm = TRUE)) |>
+    dplyr::mutate(
+      mean_abundance = mean(abundance_plot, na.rm = TRUE),
+      mean_anomaly = (abundance_plot - mean_abundance) / mean_abundance * 100,
+      mean_anomaly_scale = pmax(pmin(mean_anomaly, 100), -100)
+    )
+
+  side_plot <-
+    side_tile |>
+    ggplot2::ggplot() +
+    ggplot2::geom_tile(
+      ggplot2::aes(x = "group", y = year, fill = mean_anomaly_scale),
+      alpha = 0.6,
+      color = "grey90"
+    ) +
+    ggplot2::geom_text(
+      ggplot2::aes(
+        x = "group",
+        y = year,
+        label = ifelse(
+          !is.na(mean_anomaly),
+          paste0(round(mean_anomaly, 0), "%"),
+          "-"
+        )
+      ),
+      size = 2,
+      color = "grey30"
+    ) +
+    ggplot2::theme_void() +
+    ggplot2::scale_fill_gradient2(
+      low = "#56a8a9",
+      mid = "white",
+      high = "#a95756",
+      midpoint = 0,
+      na.value = "white"
+    ) +
+    ggplot2::scale_y_continuous(breaks = seq(1984, 2024, by = 4)) +
+    ggplot2::coord_cartesian(expand = FALSE) +
+    ggplot2::labs(fill = "Mean difference (%)") +
+    ggplot2::theme(
+      plot.margin = margin(t = 0, r = 12, b = 0, l = -3.5),
+      panel.background = ggplot2::element_blank(),
+      panel.grid = ggplot2::element_blank(),
+      legend.box.just = "right",
+      legend.box.margin = margin(t = 0, r = 0, b = 0, l = -250)
+    ) +
+    legend_theme +
+    guides(alpha = "none")
+
+  # combine panels
+  p1 <- cowplot::plot_grid(
+    heatmap_plot,
+    side_plot,
+    ncol = 2,
+    rel_widths = c(12, 1),
+    align = "h"
+  )
+
+  combined <- cowplot::plot_grid(line_plot, p1, nrow = 2, rel_heights = c(1, 5))
+
+  # add title
+  title <- cowplot::ggdraw() +
+    cowplot::draw_label(
+      bquote(italic(.(plot_title))), # dynamic title based on what is being plotted
+      fontface = 'bold',
+      size = 20,
+      x = 0,
+      hjust = 0
+    ) +
+    ggplot2::theme(
+      plot.margin = margin(0, 0, 0, 7)
+    )
+
+  # return final plot
+  cowplot::plot_grid(
+    title,
+    combined,
+    ncol = 1,
+    rel_heights = c(0.05, 1)
+  )
+}
+```
+
+**Examples of heatmaps**
+The heatmaps illustrate zooplankton abundance across different weeks and years, highlighting both seasonal patterns and interannual variability. The x-axis represents the weeks of the year (1–52), while the y-axis spans multiple years. Each cell in the heatmap shows abundance in individuals per cubic metre, with a color gradient from blue (low abundance) to red (high abundance), as indicated by the legend. Above the heatmap, a line plot displays the average weekly abundance across the entire observation period, highlighting the seasonality of the species. Two red points indicate key values: one marks the mean maximum abundance, and the other represents the first non-zero mean value, providing insight into the typical abundance range. On the right, a side plot shows the mean annual deviation (%) from the overall annual mean, highlighting interannual fluctuations. To illustrate how these patterns vary across taxonomic levels, four example plots are provided: all zooplankton, a single class (Copepoda), a single order (Onychopoda), and a single species (*Centropages typicus*). 
+```{r}
+#| echo: true
+#| code-fold: true
+plot_heatmap_complex(species_name = "All", log = F) # all zooplankton
+plot_heatmap_complex(rank_class = "Copepoda", log = F) # single class
+plot_heatmap_complex(rank_order = "Onychopoda", log = F) # single order
+plot_heatmap_complex(species_name = "Centropages typicus", log = F) # single sepcies
+```
+
+#### Temporal trend analysis of zooplankton abundance
+The `plot_temporal_trend()` function performs deseasonalized anomaly analysis with quarterly stratification to identify long-term trends in the data. This approach allows for the detection of subtle temporal patterns while accounting for seasonal variability.
+```{r}
+#| echo: true
+#| code-fold: true
+# trend function
+plot_temporal_trend <- function(
+  species_name = NULL,
+  rank_class = NULL,
+  rank_order = NULL
+) {
+  # apply taxonomic filters first (if provided)
+  zoo_filtered <-
+    zoo_84_24 |>
+    dplyr::filter(
+      if (!is.null(rank_class)) rankCalss == rank_class else TRUE, # filter by class if provided
+      if (!is.null(rank_order)) rankOrder == rank_order else TRUE, # filter by order if provided
+      if (!is.null(species_name) && species_name != "All") {
+        scientificName == species_name
+      } else {
+        TRUE
+      } # filter by species if provided
+    )
+
+  # aggregate all species if species_name is NULL or "All"
+  if (is.null(species_name) || species_name == "All") {
+    filtered_data <-
+      zoo_filtered |>
+      dplyr::group_by(eventDate) |>
+      dplyr::summarise(
+        abundance = sum(Abundance, na.rm = TRUE),
+        .groups = "drop"
+      )
+  } else {
+    filtered_data <-
+      zoo_filtered |>
+      dplyr::filter(scientificName == species_name) |>
+      dplyr::group_by(eventDate) |>
+      dplyr::summarise(
+        abundance = sum(Abundance, na.rm = TRUE),
+        .groups = "drop"
+      )
+  }
+
+  # build dynamic title based on what is being plotted
+  plot_title <- if (!is.null(species_name) && species_name != "All") {
+    species_name
+  } else if (!is.null(rank_order)) {
+    rank_order
+  } else if (!is.null(rank_class)) {
+    rank_class
+  } else {
+    "All Zooplankton"
+  }
+
+  # calculate deseasonalized anomalies with quarterly stratification
+  data_df <-
+    filtered_data |>
+    dplyr::mutate(
+      month = lubridate::month(eventDate),
+      quarter = lubridate::quarter(eventDate), # Q1-Q4 for seasonal analysis
+      year = lubridate::year(eventDate),
+      month_date = lubridate::floor_date(eventDate, "month"),
+      series = ifelse(year < 1993, "before", "after") # temporal split
+    ) |>
+    dplyr::group_by(series, month) |>
+    dplyr::mutate(
+      mean_abundance = mean(abundance),
+      anomaly = abundance - mean_abundance # remove seasonal cycle
+    ) |>
+    dplyr::group_by(series, month_date) |>
+    dplyr::summarise(
+      quarter = dplyr::first(quarter),
+      month = dplyr::first(month),
+      anomaly = mean(anomaly),
+      .groups = "drop"
+    ) |>
+    dplyr::mutate(
+      quarter = as.character(quarter)
+    ) |>
+    dplyr::ungroup()
+
+  # split into before/after periods
+  data_df <- split(data_df, data_df$series)
+
+  # linear regression by quarter (post-1993 only)
+  trend_res <-
+    data_df$after |>
+    dplyr::group_by(quarter) |>
+    dplyr::do(broom::tidy(lm(anomaly ~ month_date, data = .))) |>
+    dplyr::filter(term == "month_date") |>
+    dplyr::select(quarter, estimate, p.value)
+
+  # format statistical results as text annotations
+  annotations_text <-
+    trend_res |>
+    dplyr::arrange(quarter) |>
+    dplyr::mutate(
+      label = sprintf("Q%s: %.4f, p=%.4f", quarter, estimate, p.value)
+    ) |>
+    dplyr::pull(label) |>
+    paste(collapse = "\n")
+
+  # time series plot with quarterly color coding
+  ggplot2::ggplot() +
+    ggplot2::theme_minimal() +
+    # points for "before" period (pre-1993)
+    ggplot2::geom_point(
+      data = data_df$before,
+      ggplot2::aes(month_date, anomaly, color = quarter, alpha = abs(anomaly))
+    ) +
+    # points for "after" period (post-1993)
+    ggplot2::geom_point(
+      data = data_df$after,
+      ggplot2::aes(month_date, anomaly, color = quarter, alpha = abs(anomaly))
+    ) +
+    # connecting lines
+    ggplot2::geom_line(
+      data = data_df$before,
+      ggplot2::aes(month_date, anomaly),
+      alpha = 0.3,
+      linewidth = 0.1
+    ) +
+    ggplot2::geom_line(
+      data = data_df$after,
+      ggplot2::aes(month_date, anomaly),
+      alpha = 0.3,
+      linewidth = 0.1
+    ) +
+    # zero reference line (climatological mean)
+    ggplot2::geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
+    # linear trend lines by quarter (post-1993 only)
+    ggplot2::stat_smooth(
+      data = data_df$after,
+      ggplot2::aes(month_date, anomaly, group = quarter, color = quarter),
+      method = "lm",
+      se = FALSE,
+      linewidth = 0.8
+    ) +
+    # JAMA color palette for quarterly distinction
+    ggsci::scale_color_jama() +
+    ggplot2::scale_x_date(
+      date_breaks = "4 years",
+      labels = scales::label_date(format = "%b\n%Y", locale = "en_US.UTF-8")
+    ) +
+    ggplot2::coord_cartesian(expand = FALSE) +
+    # statistical results annotation
+    ggplot2::annotate(
+      "text",
+      x = as.Date("1985-12-01"),
+      y = max(data_df$after$anomaly, na.rm = TRUE),
+      label = annotations_text,
+      hjust = 0,
+      vjust = 1,
+      color = "grey40"
+    ) +
+    ggplot2::theme(legend.position = "bottom") +
+    ggplot2::guides(alpha = "none") +
+    ggplot2::labs(
+      title = bquote(italic(.(plot_title))), # dynamic title based on what is being plotted
+      x = "Date",
+      y = "Monthly mean deviation\n(Abundance)",
+      color = "Annual quarter"
+    )
+}
+```
+
+**Examples of temporal trends**  
+The temporal trend plots illustrate the mean monthly deviation in abundance over time, highlighting interannual variations while removing the seasonal cycle. Deviations are calculated by subtracting the long-term mean for each month from the corresponding monthly values. Linear regression lines are included for each annual quarter, with associated p-values, to indicate long-term trends. The x-axis represents the date, and the y-axis shows the monthly mean deviation in abundance. To demonstrate the applicability of this analysis across taxonomic resolutions, four example plots are provided: all zooplankton, a single class (Thecostraca), a single order (Euphausiacea), and a single species (*Acartia clausi*). These examples illustrate how deseasonalized anomaly analysis can be consistently applied to explore temporal patterns at multiple levels, revealing both seasonal and interannual dynamics in zooplankton communities of the Gulf of Naples.
+```{r}
+#| echo: true
+#| code-fold: true
+plot_temporal_trend(species_name = "All") # all zooplankton
+plot_temporal_trend(rank_class = "Thecostraca") # single class
+plot_temporal_trend(rank_order = "Euphausiacea") # single order
+plot_temporal_trend(species_name = "Acartia clausi") # single species
+```
+
+# Automated Data Pipeline and Data Availability
+This report is generated through a fully automated, self-updating pipeline. The workflow runs daily at 00:00 UTC, ensuring that newly collected field data from KoBoToolbox are incorporated into the report and made available the following morning. The rendered HTML outputs are automatically archived as downloadable artifacts via [GitHub Actions](https://github.com/ioledc/ZOOGoN-40Y/actions/runs/22932728351), where they remain accessible for a 90-day retention period. This setup guarantees transparency, traceability, and reproducibility throughout the reporting process. Importantly, all new data collected via KoBoToolbox are not only included in the daily report but are also converted into Darwin Core–compliant format, ensuring interoperability and facilitating integration with global biodiversity data repositories.
+

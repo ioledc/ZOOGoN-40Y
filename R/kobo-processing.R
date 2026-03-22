@@ -56,6 +56,8 @@ preprocess_surveys <- function(raw_data = NULL) {
     # remove legacy columns
     dplyr::select(-"sampling_name")
 
+  #TODO: add some validation checks, i.e. flowmeter
+
   logger::log_info("Extracting taxa info...", namespace = "ZooGoN")
   taxa_info <-
     raw_surveys |>
@@ -65,34 +67,17 @@ preprocess_surveys <- function(raw_data = NULL) {
       taxon = dplyr::coalesce(
         .data$taxon_cope_sel,
         .data$taxon_noncope_sel
-        # TO DO: fix missing other_taxon
-        #.data$other_taxon
       )
     ) |>
     dplyr::select(
       -dplyr::all_of(c(
         "taxon_cope_sel",
         "taxon_noncope_sel"
-        # TO DO: fix missing other_taxon
-        #"other_taxon"
       ))
     ) |>
     dplyr::relocate("taxon", .after = "n_sample") |>
     # remove old duplicated labels
     dplyr::mutate(taxon = stringr::str_replace(.data$taxon, "_1", ""))
-
-  ### TO TESTTHAT:
-  # ids <- as.integer(unique(taxa_info$taxon))
-  # any(is.na(ids))
-
-  # ids_clean <- na.omit(ids)
-
-  # results <-
-  #   c(1244) |>
-  #   purrr::set_names() |>
-  #   purrr::map_dfr(worrms::wm_record)
-
-  ###
 
   preprocessed_survey <-
     dplyr::full_join(cruise_info, taxa_info, by = "submission_id") |>
@@ -136,7 +121,7 @@ preprocess_surveys <- function(raw_data = NULL) {
     ) |>
     janitor::clean_names() |>
     dplyr::mutate(dplyr::across(dplyr::starts_with("n_"), as.numeric)) |>
-    # TO DO: Ideally there should be no NAs unless the net was empty(!), to clarify. Meanwhile we drop all NAs
+    # TODO: Ideally there should be no NAs unless the net was empty(!), to clarify. Meanwhile we drop all NAs
     dplyr::filter(!is.na(.data$aphia_id))
 
   logger::log_debug(
@@ -200,12 +185,12 @@ preprocess_surveys <- function(raw_data = NULL) {
       eventID = "event_id",
       eventDate = "event_date",
       lifeStage = "life_stage",
-      individualCount = "individual_count"
+      Abundance = "individual_count"
     ) |>
     dplyr::distinct() |>
     # remove NA counts & IDs
     dplyr::filter(
-      !is.na(.data$individualCount),
+      !is.na(.data$Abundance),
       !is.na(.data$eventDate),
       !is.na(.data$eventID)
     ) |>
@@ -218,10 +203,10 @@ preprocess_surveys <- function(raw_data = NULL) {
       .data$lifeStage
     ) |>
     dplyr::summarise(
-      individualCount = sum(.data$individualCount, na.rm = TRUE),
+      Abundance = sum(.data$Abundance, na.rm = TRUE),
       .groups = "drop"
     ) |>
-    dplyr::relocate("individualCount", .before = "lifeStage")
+    dplyr::relocate("Abundance", .before = "lifeStage")
 
   logger::log_info(
     "Preprocessed data: {nrow(tidy_data)} rows, {length(unique(tidy_data$scientificName))} unique taxa",
@@ -242,25 +227,8 @@ preprocess_surveys <- function(raw_data = NULL) {
       )
     )
   logger::log_success("preprocess_surveys complete", namespace = "ZooGoN")
-  # upload_sharepoint_df(
-  #   data = preprocessed_complete,
-  #   prefix = conf$ingestion$survey$preprocessed$file_prefix,
-  #   options = conf$storage$sharepoint$credentials,
-  #   bucket = conf$storage$sharepoint$buckets$automation_bucket,
-  #   format = "csv"
-  # )
 }
 
-# TO DO:
-# belongs to the function reinsert after Lorenzo's check
-# upload_sharepoint_df(
-# data = preprocessed_survey,
-# prefix = conf$ingestion$surveys$preprocessed$file_prefix,
-# options = conf$storage$sharepoint,
-# bucket = conf$storage$sharepoint$aut_bucket,
-# format = "csv"
-# )
-#}
 
 #' Prepare repeat answers from Kobo survey forms
 #'
