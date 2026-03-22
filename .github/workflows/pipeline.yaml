@@ -4,7 +4,8 @@ name: ZooGon Kobo Automation
 on:
   push:
   schedule:
-    - cron: "0 0 * * *"
+    - cron: "0 0 * * SUN"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -79,8 +80,8 @@ jobs:
       - name: Call preprocess_surveys()
         run: Rscript -e 'ZooGoN::preprocess_surveys()'
 
-  merge-tidy-data:
-    name: Merge tidy analysis-ready dataset
+  merge-data:
+    name: Merge legacy and ongoing data
     needs: process-kobo-surveys
     runs-on: ubuntu-latest
     container:
@@ -92,24 +93,8 @@ jobs:
       - name: Set env to production
         if: endsWith(github.ref, '/main')
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
-      - name: Call raw_to_tidy()
-        run: Rscript -e 'ZooGoN::raw_to_tidy()'
-
-  convert-to-darwincore:
-    name: Convert to Darwin Core format
-    needs: process-kobo-surveys
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/ioledc/zoogon-40y/r-runner-zoogon-mc:latest
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-    steps:
-      - name: Set env to production
-        if: endsWith(github.ref, '/main')
-        run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
-      - name: Call raw_to_dc()
-        run: Rscript -e 'ZooGoN::raw_to_dc()'
+      - name: Call format_to_tidy()
+        run: Rscript -e 'ZooGoN::format_to_tidy()'
 
   build-darwincore-archive:
     name: Build Darwin Core Archive
@@ -124,12 +109,12 @@ jobs:
       - name: Set env to production
         if: endsWith(github.ref, '/main')
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
-      - name: Call dc_to_archive()
-        run: Rscript -e 'ZooGoN::dc_to_archive()'
+      - name: Call format_to_DC_archive()
+        run: Rscript -e 'ZooGoN::format_to_DC_archive()'
     
   render-report:
     name: Render MC survey report
-    needs: process-kobo-surveys
+    needs: merge-data
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/ioledc/zoogon-40y/r-runner-zoogon-mc:latest

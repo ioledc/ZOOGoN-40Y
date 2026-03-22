@@ -1,27 +1,22 @@
 #' Build a Darwin Core Archive and upload to SharePoint
 #'
-#' Downloads the Darwin Core tables produced by `raw_to_dc()` from SharePoint,
+#' Downloads the Darwin Core tables produced by `format_to_dc()` from SharePoint,
 #' builds a Darwin Core Archive zip with an EML file, and uploads the archive
 #' back to SharePoint.
 #'
 #' @return Invisible list with paths to the archive and EML.
 #' @export
-dc_to_archive <- function() {
+format_to_DC_archive <- function() {
   conf <- read_config()
 
-  logger::log_info("Downloading Darwin Core tables from SharePoint...", namespace = "ZooGoN")
-  dc_list <-
-    download_sharepoint_file(
-      prefix = conf$ingestion$surveys$darwincore$file_prefix,
-      options = conf$storage$sharepoint$credentials,
-      bucket = conf$storage$sharepoint$buckets$automation_bucket,
-      format = "rds"
-    )
-  logger::log_debug("Tables loaded: {nrow(dc_list$event)} events, {nrow(dc_list$occurrence)} occurrences, {nrow(dc_list$emof)} measurements", namespace = "ZooGoN")
+  dc_list <- format_to_dc(verbose = FALSE)
 
   event_df <- dc_list$event
 
-  logger::log_info("Initializing DwC core and extensions...", namespace = "ZooGoN")
+  logger::log_info(
+    "Initializing DwC core and extensions...",
+    namespace = "ZooGoN"
+  )
   core_event <- LivingNorwayR::initializeGBIFEvent(
     event_df,
     idColumnInfo = "eventID",
@@ -47,6 +42,7 @@ dc_to_archive <- function() {
   EML::write_eml(eml_obj, eml_path)
   add_gbif_license_block(eml_path)
   EML::eml_validate(eml_path)
+  #TODO: Validate EML properly
   logger::log_debug("EML validated successfully", namespace = "ZooGoN")
 
   metadata <- LivingNorwayR::initializeDwCMetadata(
@@ -63,7 +59,10 @@ dc_to_archive <- function() {
 
   zip_file <- add_version("ZooGoN_dwca", extension = "zip")
 
-  logger::log_info("Exporting DwC-A zip: {basename(zip_file)}", namespace = "ZooGoN")
+  logger::log_info(
+    "Exporting DwC-A zip: {basename(zip_file)}",
+    namespace = "ZooGoN"
+  )
   dwc$exportAsDwCArchive(
     fileName = zip_file,
     emlLocation = basename(eml_path)
@@ -84,7 +83,10 @@ dc_to_archive <- function() {
     format = "zip"
   )
 
-  logger::log_success("dc_to_archive complete — uploaded to: {remote_path}", namespace = "ZooGoN")
+  logger::log_success(
+    "dc_to_archive complete -- uploaded to: {remote_path}",
+    namespace = "ZooGoN"
+  )
   invisible(list(archive_path = zip_file, eml_path = eml_path))
 }
 
@@ -120,7 +122,10 @@ get_metadata <- function(event_df = NULL) {
 
   eml_obj <- list(
     dataset = list(
-      title = "40 years of Zooplankton data at LTER MareChiara",
+      title = paste0(
+        "Zooplankton data at LTER MareChiara site in the Gulf of Naples from 1984-",
+        max(lubridate::year(event_df$eventDate))
+      ),
       abstract = list(
         para = "Zooplankton vertical tows 0-50 m at LTER-MareChiara, 1984-2024."
       ),
@@ -216,7 +221,7 @@ add_gbif_license_block <- function(
       # fallback: before <contact>
       xml2::xml_add_sibling(contact_node, ir_node, .where = "before")
     } else {
-      # last resort: append at end (shouldn’t happen in your case)
+      # last resort: append at end (should not happen in your case)
       xml2::xml_add_child(dataset, ir_node)
     }
   }
@@ -358,4 +363,96 @@ register_gbif_dataset_test <- function(
     endpoint = httr2::resp_body_json(endpoint_resp)
   )
   # https://registry.gbif-test.org/dataset/{dataset_key}
+}
+
+#' Render ZooGoN MC Survey Report
+#'
+#' This function renders the Quarto report using the preprocessed survey data.
+#' It downloads the latest preprocessed data from SharePoint and renders the
+#' report to HTML format, saving it in the working directory.
+#'
+#' @param output_dir Directory where the rendered report will be saved.
+#'   Defaults to the current working directory.
+#'
+#' @return Invisible NULL. Renders the report to the output directory.
+#'
+#' @details
+#' The function performs the following steps:
+#' 1. Reads configuration settings from config.yml
+#' 2. Locates Report.qmd inside the installed package (inst/report/)
+#' 3. Renders the Quarto report to HTML in the specified output directory
+#'
+#' @keywords workflow report
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' render_report()
+#' }
+render_report <- function(output_dir = "/home") {
+  conf <- read_config()
+
+  report_path <- system.file("report/REPORT.qmd", package = "ZooGoN")
+
+  if (report_path == "") {
+    stop(
+      "Report.qmd not found in inst/report/. Make sure the package is installed."
+    )
+  }
+
+  logger::log_info("Rendering Quarto report...", namespace = "ZooGoN")
+  quarto::quarto_render(
+    input = report_path,
+    output_format = "html",
+    execute_params = list(
+      sharepoint_site_url = conf$storage$sharepoint$credentials$site_url,
+      data_prefix = conf$ingestion$surveys$preprocessed$file_prefix,
+      automation_bucket = conf$storage$sharepoint$buckets$automation_bucket
+    )
+  )
+
+  # Quarto saves files next to the .qmd -- copy both to output_dir
+  out_file <- "REPORT.html"
+  rendered_path <- file.path(dirname(report_path), out_file)
+  dest_path <- file.path(
+    output_dir,
+    paste0("ZooGoN-report-", Sys.Date(), ".html")
+  )
+  if (file.exists(rendered_path)) {
+    file.copy(rendered_path, dest_path, overwrite = TRUE)
+    logger::log_success(
+      "Report saved as: {dest_path}",
+      namespace = "ZooGoN"
+    )
+  } else {
+    logger::log_warn(
+      "Expected file not found: {rendered_path}",
+      namespace = "ZooGoN"
+    )
+  }
+}
+
+
+#' Run the full ZooGoN pipeline
+#'
+#' Runs the full ZooGoN data pipeline in sequence:
+#' ingestion -> preprocessing -> report rendering.
+#'
+#' @return Invisible NULL.
+#' @keywords workflow
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' run_pipeline()
+#' }
+run_pipeline <- function() {
+  logger::log_info("Starting ZooGoN pipeline...", namespace = "ZooGoN")
+
+  ingest_surveys()
+  preprocess_surveys()
+  render_report()
+
+  logger::log_success("ZooGoN pipeline complete", namespace = "ZooGoN")
+  invisible(NULL)
 }

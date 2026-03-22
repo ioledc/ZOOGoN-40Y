@@ -1,6 +1,6 @@
 Package: ZooGoN
 Title: Gulf of Naples 40-Year Zooplankton Biodiversity Assessment and Standardization
-Version: 3.1.0
+Version: 4.0.0
 Authors@R: 
     c(person(given = "Lorenzo",
              family = "Longobardi",
@@ -43,7 +43,8 @@ Imports:
     EML,
     LivingNorwayR,
     xml2,
-    openxlsx
+    openxlsx,
+    quarto
 Remotes:
     LivingNorway/LivingNorwayR
 Suggests: 
@@ -56,6 +57,6 @@ Suggests:
 Config/testthat/edition: 3
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.3
+RoxygenNote: 7.3.2
 LazyData: true
 VignetteBuilder: knitr

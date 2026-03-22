@@ -193,7 +193,7 @@ zoo_heatmap <-
   ) |>
   dplyr::group_by(year, week, rankCalss, rankOrder, scientificName) |> # Group by year, week, species and life stage
   dplyr::summarise(
-    abundance = sum(individualCount, na.rm = TRUE),
+    abundance = sum(Abundance, na.rm = TRUE),
     .groups = "drop"
   ) |> # Sum abundances
   dplyr::mutate(log_abundance = log(abundance + 1)) # Log-transformation (+1 to avoid log(0))
@@ -510,7 +510,7 @@ plot_temporal_trend <- function(
       zoo_filtered |>
       dplyr::group_by(eventDate) |>
       dplyr::summarise(
-        abundance = sum(individualCount, na.rm = TRUE),
+        abundance = sum(Abundance, na.rm = TRUE),
         .groups = "drop"
       )
   } else {
@@ -519,7 +519,7 @@ plot_temporal_trend <- function(
       dplyr::filter(scientificName == species_name) |>
       dplyr::group_by(eventDate) |>
       dplyr::summarise(
-        abundance = sum(individualCount, na.rm = TRUE),
+        abundance = sum(Abundance, na.rm = TRUE),
         .groups = "drop"
       )
   }

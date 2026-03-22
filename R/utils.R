@@ -11,10 +11,16 @@
 #'
 load_dotenv <- function(file = ".env") {
   if (file.exists(file)) {
-    logger::log_debug("Loading environment variables from {file}", namespace = "ZooGoN")
+    logger::log_debug(
+      "Loading environment variables from {file}",
+      namespace = "ZooGoN"
+    )
     dotenv::load_dot_env(file = file)
   } else {
-    logger::log_debug("No .env file found at {file}, skipping dotenv loading", namespace = "ZooGoN")
+    logger::log_debug(
+      "No .env file found at {file}, skipping dotenv loading",
+      namespace = "ZooGoN"
+    )
   }
   invisible(NULL)
 }
@@ -43,7 +49,10 @@ read_config <- function() {
       package = "ZooGoN"
     )
   )
-  logger::log_info("Using configuration: {attr(conf, 'config')}", namespace = "ZooGoN")
+  logger::log_info(
+    "Using configuration: {attr(conf, 'config')}",
+    namespace = "ZooGoN"
+  )
   logger::log_debug("Running with parameters {conf}", namespace = "ZooGoN")
 
   conf
@@ -101,3 +110,18 @@ add_version <- function(filename, extension = "", sha_nchar = 7, sep = "__") {
 
   paste0(filename, sep, version, sep, extension)
 }
+
+#' Pipe operator
+#'
+#' See \code{magrittr::\link[magrittr:pipe]{\%>\%}} for details.
+#'
+#' @name %>%
+#' @rdname pipe
+#' @keywords internal
+#' @export
+#' @importFrom magrittr %>%
+#' @usage lhs \%>\% rhs
+#' @param lhs A value or the magrittr placeholder.
+#' @param rhs A function call using the magrittr semantics.
+#' @return The result of calling `rhs(lhs)`.
+NULL

@@ -42,12 +42,34 @@ This represents one of the longest continuous time series in the Mediterranean S
 - **Mesh Size**: 200 μm
 - **Location**: Gulf of Naples, Tyrrhenian Sea, Western Mediterranean
 
+# Before you start
+
+To run the pipeline you need:
+
+- **Access to the project SharePoint workspace** — all intermediate files are
+  read from and written to SharePoint automatically.
+- **`inst/config.yml` configured** with your SharePoint credentials and KoboToolbox
+  API key. A template is included in the repository.
+- **R with the ZooGoN package installed** — see the README for installation
+  instructions.
+
+The pipeline does not require any manual file transfers between steps; each
+function downloads its input and uploads its output automatically.
+
 # The Pipeline
 
-The pipeline consists of five steps, each implemented as a standalone function.
+The pipeline consists of seven steps, each implemented as a standalone function.
 The same sequence runs on GitHub Actions for fully automated processing.
+The two legacy-ingestion steps (0a and 0b) are one-time or on-demand operations;
+the remaining steps run on a regular schedule.
 
 ```{r pipeline}
+# 0a. Ingest legacy dataset 1984-2015 (run once or when source data changes)
+ingest_legacy_84_15()
+
+# 0b. Ingest legacy dataset 2016-2020 (run once or when source data changes)
+ingest_legacy_16_20()
+
 # 1. Ingest field surveys from KoboToolbox
 ingest_surveys()
 
@@ -55,58 +77,75 @@ ingest_surveys()
 preprocess_surveys()
 
 # 3. Merge legacy + ongoing data into an analysis-ready dataset
-raw_to_tidy()
+format_to_tidy()
 
 # 4. Convert tidy data to Darwin Core format
-raw_to_dc()
+format_to_dc()
 
 # 5. Build Darwin Core Archive with EML metadata
-dc_to_archive()
+format_to_DC_archive()
 ```
+
+## Steps 0a–0b: Ingest Legacy Data
+
+`ingest_legacy_84_15()` and `ingest_legacy_16_20()` migrate the historical
+zooplankton records (1984–2015 and 2016–2020) into the cloud infrastructure.
+They validate and harmonise the data — including taxonomic lookups against WoRMS
+and standardisation of life-stage codes — and store the results in a dedicated
+SharePoint folder for validated historical data.
+These steps are run once, or whenever the source data are corrected or updated.
 
 ## Step 1: Ingest Surveys
 
 `ingest_surveys()` connects to the KoboToolbox API, downloads the latest field
-survey submissions, flattens the nested JSON into a tabular format, and uploads
-the result to SharePoint.
+survey submissions, flattens the nested form structure into a tabular format, and
+uploads the result to SharePoint. This captures all new samples submitted by the
+field team since the last run.
 
 ## Step 2: Preprocess Surveys
 
 `preprocess_surveys()` downloads the raw survey data from SharePoint, applies
-data cleaning and transformation, and uploads the cleaned dataset back to
-SharePoint.
+data cleaning and transformation (including WoRMS taxonomic lookups and
+life-stage code harmonisation), and uploads the standardised dataset back to
+SharePoint. This ensures new records use the same species names and codes as the
+legacy data.
 
 ## Step 3: Merge into Tidy Data
 
-`raw_to_tidy()` merges the legacy datasets (`McZoo_84-15.parquet` and
-`McZoo_16-20.parquet` from the hot bucket) with the preprocessed ongoing surveys
-into a single analysis-ready dataset. The merged data is uploaded to SharePoint
-in both CSV and Parquet formats.
+`format_to_tidy()` merges the legacy datasets with the preprocessed ongoing
+surveys into a single analysis-ready dataset covering the full 1984–present time
+series. The result is saved to SharePoint in both CSV and Parquet (a compact
+columnar) format.
 
 ## Step 4: Darwin Core Conversion
 
-`raw_to_dc()` downloads the tidy dataset from SharePoint and builds the three
-Darwin Core extension tables (Event, Occurrence, eMoF). The tables are uploaded
-to SharePoint as a versioned RDS file.
+`format_to_dc()` downloads the merged dataset from SharePoint and builds the
+three Darwin Core tables (Event, Occurrence, eMoF), making the data ready for
+submission to international repositories such as OBIS and EMODnet Biology.
 
 See the [Darwin Core vignette](darwin-core.html) for details on the table
 structure and standards applied.
 
 ## Step 5: Build Archive
 
-`dc_to_archive()` downloads the Darwin Core tables, builds an EML metadata file,
-assembles a Darwin Core Archive zip, and uploads the archive to the
-`darwin_core_bucket` on SharePoint.
+`format_to_DC_archive()` assembles the Darwin Core tables into a submission-ready
+zip archive with embedded EML metadata, and uploads it to SharePoint. This is the
+file that is registered with and downloaded by GBIF or EMODnet Biology.
 
 # Expected Input Data Format
 
-The pipeline expects legacy parquet files containing at least:
+This section is a reference for the column names expected in the legacy files.
+The ingestion functions (`ingest_legacy_84_15()`, `ingest_legacy_16_20()`)
+produce files in this format automatically, so you only need this if you are
+adapting the pipeline to a different dataset.
+
+The pipeline expects legacy files containing at least:
 
 ```{r input-format}
 # Example of expected input data structure:
 #
 # # A tibble: 350,112 × 6
-#    eventID eventDate  scientificname                 lsid                                      individualCount lifeStage
+#    eventID eventDate  scientificname                 lsid                                      Abundance lifeStage
 #    <chr>   <date>     <chr>                          <chr>                                               <dbl> <chr>
 #  1 mc_1    1984-01-26 Acartia (Acartia) danae        urn:lsid:marinespecies.org:taxname:346026             0   f
 #  2 mc_1    1984-01-26 Acartia (Acartia) danae        urn:lsid:marinespecies.org:taxname:346026             0   m
@@ -119,13 +158,13 @@ The pipeline expects legacy parquet files containing at least:
 # - eventDate: Sampling date (Date format)
 # - scientificname: Full scientific name with WoRMS validation
 # - lsid: WoRMS Life Science Identifier URN
-# - individualCount: Abundance measurement (ind/m³)
+# - Abundance: Abundance measurement (ind/m³)
 # - lifeStage: Life stage code ("f"=female, "m"=male, "j"=juvenile, "fm"=both sexes, "fmj"=all stages)
 ```
 
 # Darwin Core Output
 
-`raw_to_dc()` produces three tables following OBIS standards:
+`format_to_dc()` produces three tables following OBIS standards:
 
 ### Event Extension
 - One row per unique sampling event
@@ -134,12 +173,12 @@ The pipeline expects legacy parquet files containing at least:
 
 ### Occurrence Extension
 - Links species occurrences to events via `eventID`
-- `occurrenceStatus` derived from `individualCount` (present/absent)
+- `occurrenceStatus` derived from `Abundance` (present/absent)
 - WoRMS LSIDs for taxonomic validation
 
 ### eMoF (Extended Measurement or Fact) Extension
 - Measurements standardised with BODC NERC Vocabulary
-- `individualCount`, `sex`, and `lifeStage` mapped to controlled vocabulary URIs
+- `Abundance`, `sex`, and `lifeStage` mapped to controlled vocabulary URIs
 
 # Data Standards Applied
 
