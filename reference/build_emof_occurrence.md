@@ -16,7 +16,7 @@ build_emof_occurrence(data = NULL)
 - data:
 
   A data frame containing at least `eventID`, `eventDate`,
-  `occurrenceID`, `individualCount`, and `lifeStage`.
+  `occurrenceID`, `Abundance`, and `lifeStage`.
 
 ## Value
 

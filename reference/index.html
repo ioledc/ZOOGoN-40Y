@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">ZooGoN</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">3.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.0.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -36,6 +36,59 @@
     </div>
 
     <div class="section level2">
+      <h2 id="survey-data-ingestion">Survey Data Ingestion<a class="anchor" aria-label="anchor" href="#survey-data-ingestion"></a></h2>
+
+      <div class="section-desc"><p>KoboToolbox integration for field survey data collection</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="ingest_surveys.html">ingest_surveys()</a></code>
+
+        </dt>
+        <dd>Download MC Surveys from Kobotoolbox</dd>
+
+        <dt>
+
+          <code><a href="get_kobo_data.html">get_kobo_data()</a></code>
+
+        </dt>
+        <dd>Retrieve Data from Kobotoolbox API</dd>
+
+        <dt>
+
+          <code><a href="preprocess_surveys.html">preprocess_surveys()</a></code>
+
+        </dt>
+        <dd>Preprocess MC Surveys</dd>
+      </dl></div><div class="section level2">
+      <h2 id="legacy-data-ingestion">Legacy Data Ingestion<a class="anchor" aria-label="anchor" href="#legacy-data-ingestion"></a></h2>
+
+      <div class="section-desc"><p>Download, validate, and harmonize legacy zooplankton datasets</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="ingest_legacy_84_15.html">ingest_legacy_84_15()</a></code>
+
+        </dt>
+        <dd>Ingest Legacy Zooplankton Data (1984-2015)</dd>
+
+        <dt>
+
+          <code><a href="ingest_legacy_16_20.html">ingest_legacy_16_20()</a></code>
+
+        </dt>
+        <dd>Ingest Legacy Zooplankton Data (2016-2020)</dd>
+      </dl></div><div class="section level2">
       <h2 id="data-processing">Data Processing<a class="anchor" aria-label="anchor" href="#data-processing"></a></h2>
 
       <div class="section-desc"><p>Merge, harmonize, and convert zooplankton data</p></div>
@@ -47,14 +100,14 @@
 
       <dl><dt>
 
-          <code><a href="raw_to_tidy.html">raw_to_tidy()</a></code>
+          <code><a href="format_to_tidy.html">format_to_tidy()</a></code>
 
         </dt>
         <dd>Merge all zooplankton datasets into an analysis-ready tidy table</dd>
 
         <dt>
 
-          <code><a href="raw_to_dc.html">raw_to_dc()</a></code>
+          <code><a href="format_to_dc.html">format_to_dc()</a></code>
 
         </dt>
         <dd>Convert legacy LTER-MareChiara zooplankton data to Darwin Core format</dd>
@@ -91,14 +144,21 @@
 
         <dt>
 
+          <code><a href="upload_sharepoint_file.html">upload_sharepoint_file()</a></code>
+
+        </dt>
+        <dd>Upload a local file to SharePoint</dd>
+
+        <dt>
+
           <code><a href="download_sharepoint_file.html">download_sharepoint_file()</a></code>
 
         </dt>
         <dd>Download a file from SharePoint</dd>
       </dl></div><div class="section level2">
-      <h2 id="survey-data-ingestion">Survey Data Ingestion<a class="anchor" aria-label="anchor" href="#survey-data-ingestion"></a></h2>
+      <h2 id="pipeline-reporting">Pipeline &amp; Reporting<a class="anchor" aria-label="anchor" href="#pipeline-reporting"></a></h2>
 
-      <div class="section-desc"><p>KoboToolbox integration for field survey data collection</p></div>
+      <div class="section-desc"><p>Orchestrate the full pipeline and render monitoring reports</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -107,24 +167,17 @@
 
       <dl><dt>
 
-          <code><a href="ingest_surveys.html">ingest_surveys()</a></code>
+          <code><a href="run_pipeline.html">run_pipeline()</a></code>
 
         </dt>
-        <dd>Download MC Surveys from Kobotoolbox</dd>
+        <dd>Run the ZooGoN survey-to-report pipeline</dd>
 
         <dt>
 
-          <code><a href="get_kobo_data.html">get_kobo_data()</a></code>
+          <code><a href="render_report.html">render_report()</a></code>
 
         </dt>
-        <dd>Retrieve Data from Kobotoolbox API</dd>
-
-        <dt>
-
-          <code><a href="preprocess_surveys.html">preprocess_surveys()</a></code>
-
-        </dt>
-        <dd>Preprocess MC Surveys</dd>
+        <dd>Render ZooGoN MC Survey Report</dd>
       </dl></div><div class="section level2">
       <h2 id="utility-functions">Utility Functions<a class="anchor" aria-label="anchor" href="#utility-functions"></a></h2>
 
@@ -174,7 +227,7 @@
 
       <dl><dt>
 
-          <code><a href="dc_to_archive.html">dc_to_archive()</a></code>
+          <code><a href="format_to_DC_archive.html">format_to_DC_archive()</a></code>
 
         </dt>
         <dd>Build a Darwin Core Archive and upload to SharePoint</dd>

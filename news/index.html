@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">ZooGoN</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">3.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.0.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,6 +37,39 @@
     </div>
 
     <div class="section level2">
+<h2 class="pkg-version" data-toc-text="4.0.0" id="zoogon-400">ZooGoN 4.0.0<a class="anchor" aria-label="anchor" href="#zoogon-400"></a></h2>
+<div class="section level3">
+<h3 id="breaking-changes-4-0-0">Breaking changes<a class="anchor" aria-label="anchor" href="#breaking-changes-4-0-0"></a></h3>
+<ul><li>
+<strong><code>raw_to_tidy()</code></strong> renamed to <strong><code><a href="../reference/format_to_tidy.html">format_to_tidy()</a></code></strong>.</li>
+<li>
+<strong><code>raw_to_dc()</code></strong> renamed to <strong><code><a href="../reference/format_to_dc.html">format_to_dc()</a></code></strong>.</li>
+<li>
+<strong><code>dc_to_archive()</code></strong> renamed to <strong><code><a href="../reference/format_to_DC_archive.html">format_to_DC_archive()</a></code></strong>.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="new-functions-4-0-0">New functions<a class="anchor" aria-label="anchor" href="#new-functions-4-0-0"></a></h3>
+<ul><li>
+<strong><code><a href="../reference/ingest_legacy_84_15.html">ingest_legacy_84_15()</a></code></strong>: downloads, validates, and harmonises the 1984–2015 historical zooplankton dataset, including WoRMS taxonomic lookups and life-stage code standardisation. Outputs <code>McZoo_84-15</code> to SharePoint.</li>
+<li>
+<strong><code><a href="../reference/ingest_legacy_16_20.html">ingest_legacy_16_20()</a></code></strong>: same workflow as above for the 2016–2020 legacy dataset. Outputs <code>McZoo_16-20</code> to SharePoint.</li>
+<li>
+<strong><code><a href="../reference/upload_sharepoint_file.html">upload_sharepoint_file()</a></code></strong>: uploads an arbitrary local file to SharePoint (complements the existing <code><a href="../reference/upload_sharepoint_df.html">upload_sharepoint_df()</a></code> for data frames).</li>
+</ul></div>
+<div class="section level3">
+<h3 id="code-organisation-4-0-0">Code organisation<a class="anchor" aria-label="anchor" href="#code-organisation-4-0-0"></a></h3>
+<ul><li>Survey ingestion logic moved to <code>R/kobo-ingestion.R</code>.</li>
+<li>Survey preprocessing logic moved to <code>R/kobo-processing.R</code>.</li>
+<li>Legacy data ingestion logic consolidated in <code>R/legacy-data-ingestion.R</code>.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="documentation-4-0-0">Documentation<a class="anchor" aria-label="anchor" href="#documentation-4-0-0"></a></h3>
+<ul><li>Vignettes updated to reflect renamed functions and new legacy-ingestion steps.</li>
+<li>Added plain-language introductions to both vignettes for a non-technical (biology/ecology) audience.</li>
+<li>pkgdown reference index reorganised: added “Legacy Data Ingestion”, “Pipeline &amp; Reporting” sections; all renamed functions updated.</li>
+</ul></div>
+</div>
+    <div class="section level2">
 <h2 class="pkg-version" data-toc-text="3.1.0" id="zoogon-310">ZooGoN 3.1.0<a class="anchor" aria-label="anchor" href="#zoogon-310"></a></h2>
 <div class="section level3">
 <h3 id="full-automated-pipeline-3-1-0">Full Automated Pipeline<a class="anchor" aria-label="anchor" href="#full-automated-pipeline-3-1-0"></a></h3>
@@ -44,15 +77,15 @@
 <div class="section level4">
 <h4 id="new-functions-3-1-0">New Functions<a class="anchor" aria-label="anchor" href="#new-functions-3-1-0"></a></h4>
 <ul><li>
-<strong><code><a href="../reference/raw_to_tidy.html">raw_to_tidy()</a></code></strong>: Merges legacy datasets (1984-2020) with preprocessed ongoing surveys into a single analysis-ready dataset. Uploads the merged data in both CSV and Parquet formats to SharePoint.</li>
+<strong><code>raw_to_tidy()</code></strong>: Merges legacy datasets (1984-2020) with preprocessed ongoing surveys into a single analysis-ready dataset. Uploads the merged data in both CSV and Parquet formats to SharePoint.</li>
 </ul></div>
 <div class="section level4">
 <h4 id="pipeline--automation-3-1-0">Pipeline &amp; Automation<a class="anchor" aria-label="anchor" href="#pipeline--automation-3-1-0"></a></h4>
 <ul><li>Complete 6-step GitHub Actions pipeline: build container → ingest surveys → preprocess → merge tidy data → Darwin Core conversion → build archive.</li>
 <li>
-<code><a href="../reference/raw_to_dc.html">raw_to_dc()</a></code> now reads from the tidy data output (produced by <code><a href="../reference/raw_to_tidy.html">raw_to_tidy()</a></code>) instead of merging legacy files internally. Results are uploaded to SharePoint as versioned RDS.</li>
+<code>raw_to_dc()</code> now reads from the tidy data output (produced by <code>raw_to_tidy()</code>) instead of merging legacy files internally. Results are uploaded to SharePoint as versioned RDS.</li>
 <li>
-<code><a href="../reference/dc_to_archive.html">dc_to_archive()</a></code> no longer takes arguments — it downloads Darwin Core tables from SharePoint automatically.</li>
+<code>dc_to_archive()</code> no longer takes arguments — it downloads Darwin Core tables from SharePoint automatically.</li>
 </ul></div>
 <div class="section level4">
 <h4 id="storage-improvements-3-1-0">Storage Improvements<a class="anchor" aria-label="anchor" href="#storage-improvements-3-1-0"></a></h4>
@@ -78,7 +111,7 @@
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="3.0.0" id="zoogon-300">ZooGoN 3.0.0<a class="anchor" aria-label="anchor" href="#zoogon-300"></a></h2>
 <ul><li>Added automated GBIF publishing helpers: <code><a href="../reference/register_gbif_dataset.html">register_gbif_dataset()</a></code> for production use and <code><a href="../reference/register_gbif_dataset_test.html">register_gbif_dataset_test()</a></code> for the GBIF-Test demo flow; both take a public DwC-A URL and handle dataset registration.</li>
-<li>Simplified Darwin Core export: <code><a href="../reference/dc_to_archive.html">dc_to_archive()</a></code> now builds the DwC-A + EML from <code><a href="../reference/raw_to_dc.html">raw_to_dc()</a></code> output and uploads the archive to SharePoint.</li>
+<li>Simplified Darwin Core export: <code>dc_to_archive()</code> now builds the DwC-A + EML from <code>raw_to_dc()</code> output and uploads the archive to SharePoint.</li>
 <li>Clarified EML generation (<code><a href="../reference/get_metadata.html">get_metadata()</a></code>) and cleaned up pkgdown reference sections.</li>
 </ul></div>
     <div class="section level2">
@@ -120,7 +153,7 @@
 <div class="section level5">
 <h5 id="darwin-core-conversion-2-0-0">Darwin Core Conversion<a class="anchor" aria-label="anchor" href="#darwin-core-conversion-2-0-0"></a></h5>
 <ul><li>
-<strong><code><a href="../reference/raw_to_dc.html">raw_to_dc()</a></code></strong>: Convert preprocessed legacy data to Darwin Core format
+<strong><code>raw_to_dc()</code></strong>: Convert preprocessed legacy data to Darwin Core format
 <ul><li>Processes parquet files with WoRMS-validated taxonomic data</li>
 <li>Creates Event, Occurrence, and eMoF (Extended Measurement or Fact) tables</li>
 <li>Applies BODC NERC Vocabulary standards</li>
@@ -169,15 +202,15 @@
 <div class="section level4">
 <h4 id="documentation-2-0-0">Documentation<a class="anchor" aria-label="anchor" href="#documentation-2-0-0"></a></h4>
 <ul><li>Updated function documentation with roxygen2</li>
-<li>Revised <code>data-processing.Rmd</code> vignette to document <code><a href="../reference/raw_to_dc.html">raw_to_dc()</a></code> workflow</li>
+<li>Revised <code>data-processing.Rmd</code> vignette to document <code>raw_to_dc()</code> workflow</li>
 <li>Updated <code>raw_to_dc.Rd</code> manual page</li>
 </ul></div>
 <div class="section level4">
 <h4 id="breaking-changes-2-0-0">Breaking Changes<a class="anchor" aria-label="anchor" href="#breaking-changes-2-0-0"></a></h4>
-<ul><li>Removed <code>process_lter_data()</code> function (replaced by <code><a href="../reference/raw_to_dc.html">raw_to_dc()</a></code>)</li>
+<ul><li>Removed <code>process_lter_data()</code> function (replaced by <code>raw_to_dc()</code>)</li>
 <li>Requires <code>inst/config.yml</code> configuration file with credentials</li>
 <li>
-<code><a href="../reference/raw_to_dc.html">raw_to_dc()</a></code> expects preprocessed parquet files instead of raw Excel files</li>
+<code>raw_to_dc()</code> expects preprocessed parquet files instead of raw Excel files</li>
 </ul></div>
 <div class="section level4">
 <h4 id="notes-2-0-0">Notes<a class="anchor" aria-label="anchor" href="#notes-2-0-0"></a></h4>

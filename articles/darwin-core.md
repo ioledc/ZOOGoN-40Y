@@ -7,38 +7,48 @@ library(dplyr)
 
 ## Overview
 
-This vignette shows how the package builds Darwin Core tables from the
-LTER-MareChiara zooplankton dataset. The conversion is handled by
-[`raw_to_dc()`](https://ioledc.github.io/ZOOGoN-40Y/reference/raw_to_dc.md),
+Darwin Core is the international data standard required by OBIS, EMODnet
+Biology, and GBIF to publish biodiversity occurrence records. It
+structures data into three linked tables — sampling events, species
+occurrences, and associated measurements — allowing any repository
+worldwide to ingest and cross-reference the records. Converting the
+LTER-MareChiara dataset to this format is the step that makes it ready
+for submission to these repositories.
+
+This vignette shows how the package builds those Darwin Core tables from
+the LTER-MareChiara zooplankton dataset. The conversion is handled by
+[`format_to_dc()`](https://ioledc.github.io/ZOOGoN-40Y/reference/format_to_dc.md),
 which downloads the merged tidy dataset from SharePoint (produced by
-[`raw_to_tidy()`](https://ioledc.github.io/ZOOGoN-40Y/reference/raw_to_tidy.md)),
-adds the required Darwin Core fields, and uploads the resulting tables
-back to SharePoint as a versioned RDS file. The function uses data that
-already contains WoRMS LSIDs and does not perform additional taxonomic
-queries.
+[`format_to_tidy()`](https://ioledc.github.io/ZOOGoN-40Y/reference/format_to_tidy.md)),
+adds the required Darwin Core fields, and returns the three tables as an
+R list. The function does not upload anything — that is handled by
+[`format_to_DC_archive()`](https://ioledc.github.io/ZOOGoN-40Y/reference/format_to_DC_archive.md),
+which calls
+[`format_to_dc()`](https://ioledc.github.io/ZOOGoN-40Y/reference/format_to_dc.md)
+internally and then assembles and uploads the Darwin Core Archive zip.
+The function uses data that already contains WoRMS LSIDs and does not
+perform additional taxonomic queries.
 
 ### Prerequisites
 
 - `inst/config.yml` configured with SharePoint credentials and bucket
   names.
-- The tidy dataset must exist in the `automation_bucket` (produced by
-  running
-  [`raw_to_tidy()`](https://ioledc.github.io/ZOOGoN-40Y/reference/raw_to_tidy.md)
-  earlier in the pipeline). This merged dataset covers 1984-2024 and
-  contains preprocessed records with WoRMS LSIDs.
+- The merged dataset must exist in SharePoint (produced by running
+  [`format_to_tidy()`](https://ioledc.github.io/ZOOGoN-40Y/reference/format_to_tidy.md)
+  earlier in the pipeline). This dataset covers 1984-2024 and contains
+  preprocessed records with WoRMS LSIDs.
 - Optional: set `verbose = FALSE` to silence log messages.
 
 ## Expected Input Structure
 
-[`raw_to_dc()`](https://ioledc.github.io/ZOOGoN-40Y/reference/raw_to_dc.md)
+[`format_to_dc()`](https://ioledc.github.io/ZOOGoN-40Y/reference/format_to_dc.md)
 expects the tidy dataset to contain at least:
 
 - `eventID`: sampling event identifier (for example `"mc_1"`).
 - `eventDate`: sampling date (`Date` column).
 - `scientificname`: WoRMS validated taxon name.
 - `lsid`: WoRMS Life Science Identifier.
-- `individualCount`: abundance measurement (individuals per cubic
-  meter).
+- `Abundance`: abundance measurement (individuals per cubic meter).
 - `lifeStage`: life stage codes (`f`, `m`, `j`, `fm`, `fmj`).
 
 Any extra columns are carried through and pivoted into the measurement
@@ -49,25 +59,30 @@ table.
 ``` r
 # Convert tidy data to Darwin Core format
 # Tables are uploaded to SharePoint automatically
-raw_to_dc()
+format_to_dc()
 ```
 
-The function downloads the tidy dataset from SharePoint, builds the
-three Darwin Core tables (Event, Occurrence, eMoF), and uploads them as
-a versioned RDS file to the `automation_bucket`.
+The function downloads the merged dataset from SharePoint and builds the
+three Darwin Core tables (Event, Occurrence, eMoF) in memory. It does
+**not** upload anything to SharePoint.
 
-To build a Darwin Core Archive with EML metadata on top of the tables:
+To build a Darwin Core Archive and upload it to SharePoint, call
+[`format_to_DC_archive()`](https://ioledc.github.io/ZOOGoN-40Y/reference/format_to_DC_archive.md).
+This function calls
+[`format_to_dc()`](https://ioledc.github.io/ZOOGoN-40Y/reference/format_to_dc.md)
+internally, so in the automated pipeline it is the only function you
+need to run:
 
 ``` r
-# Build DwC-A zip and upload to SharePoint
-dc_to_archive()
+# Build DwC-A zip (runs format_to_dc() internally) and upload to SharePoint
+format_to_DC_archive()
 ```
 
 ## Darwin Core tables
 
 ### Event
 
-[`raw_to_dc()`](https://ioledc.github.io/ZOOGoN-40Y/reference/raw_to_dc.md)
+[`format_to_dc()`](https://ioledc.github.io/ZOOGoN-40Y/reference/format_to_dc.md)
 builds one row per unique event with fixed station metadata.
 
 ``` r
@@ -91,18 +106,22 @@ Columns include:
 Occurrences are derived from the tidy data with an automatically
 generated `occurrenceID` and presence flag.
 
-- `occurrenceStatus` is set to `"present"` when `individualCount > 0`,
+- `occurrenceStatus` is set to `"present"` when `Abundance > 0`,
   otherwise `"absent"`.
 - `scientificName` and `scientificNameID` come directly from the input
   (no new validation is run).
 
 ### eMoF (Extended Measurement or Fact)
 
-Measurements are produced by pivoting the remaining columns per
-occurrence.
+eMoF is the Darwin Core extension used to store quantitative
+measurements alongside each occurrence record. For the LTER-MareChiara
+dataset this includes abundance (individuals per m³), sex, and life
+stage. Each measurement is linked to a controlled-vocabulary identifier
+so that the values can be interpreted unambiguously by any international
+biodiversity database.
 
 Mapping logic implemented in
-[`raw_to_dc()`](https://ioledc.github.io/ZOOGoN-40Y/reference/raw_to_dc.md):
+[`format_to_dc()`](https://ioledc.github.io/ZOOGoN-40Y/reference/format_to_dc.md):
 
 - Measurements with values `f`, `m`, `fm`, `fmj` are labelled as
   `measurementType = "sex"` with
@@ -110,22 +129,19 @@ Mapping logic implemented in
 - Measurements with value `j` are labelled
   `measurementType = "lifeStage"` with
   `measurementTypeID = http://vocab.nerc.ac.uk/collection/P01/current/LSTAGE01/`.
-- `individualCount` keeps `measurementType = "individualCount"` with
+- `Abundance` keeps `measurementType = "Abundance"` with
   `measurementTypeID = https://vocab.nerc.ac.uk/collection/S06/current/S0600002/`
   and
   `measurementUnitID = http://vocab.nerc.ac.uk/collection/P06/current/UPMM/`.
 - `measurementValueID` is set for the coded values above (S10/S11 URIs);
   other measurements keep `NA`.
 
-## Processing metadata
+## Processing summary
 
-[`raw_to_dc()`](https://ioledc.github.io/ZOOGoN-40Y/reference/raw_to_dc.md)
-stores processing metadata alongside the tables:
-
-- `processing_info`: event, occurrence and measurement counts, date
-  range, unique taxa count.
-- `metadata`: dataset title, contact, institution, license, project tag,
-  and the processing statistics.
+[`format_to_dc()`](https://ioledc.github.io/ZOOGoN-40Y/reference/format_to_dc.md)
+prints a processing summary on completion: the number of sampling
+events, occurrences, and measurements produced, the date range covered,
+and the number of unique taxa included.
 
 ## Publishing (optional)
 

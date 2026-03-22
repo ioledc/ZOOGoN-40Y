@@ -25,7 +25,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">ZooGoN</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">3.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.0.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -98,76 +98,133 @@ Mediterranean</p>
 </div>
 </div>
 <div class="section level2">
+<h2 id="before-you-start">Before you start<a class="anchor" aria-label="anchor" href="#before-you-start"></a>
+</h2>
+<p>To run the pipeline you need:</p>
+<ul>
+<li>
+<strong>Access to the project SharePoint workspace</strong> — all
+intermediate files are read from and written to SharePoint
+automatically.</li>
+<li>
+<strong><code>inst/config.yml</code> configured</strong> with your
+SharePoint credentials and KoboToolbox API key. A template is included
+in the repository.</li>
+<li>
+<strong>R with the ZooGoN package installed</strong> — see the
+README for installation instructions.</li>
+</ul>
+<p>The pipeline does not require any manual file transfers between
+steps; each function downloads its input and uploads its output
+automatically.</p>
+</div>
+<div class="section level2">
 <h2 id="the-pipeline">The Pipeline<a class="anchor" aria-label="anchor" href="#the-pipeline"></a>
 </h2>
-<p>The pipeline consists of five steps, each implemented as a standalone
+<p>The pipeline consists of six steps, each implemented as a standalone
 function. The same sequence runs on GitHub Actions for fully automated
-processing.</p>
+processing. The two legacy-ingestion steps (0a and 0b) are one-time or
+on-demand operations. After step 3, the archive build (4a) and the
+report render (4b) run in parallel — both start as soon as the merged
+dataset is available.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># 1. Ingest field surveys from KoboToolbox</span></span>
+<code class="sourceCode R"><span><span class="co"># 0a. Ingest legacy dataset 1984-2015 (run once or when source data changes)</span></span>
+<span><span class="fu"><a href="../reference/ingest_legacy_84_15.html">ingest_legacy_84_15</a></span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># 0b. Ingest legacy dataset 2016-2020 (run once or when source data changes)</span></span>
+<span><span class="fu"><a href="../reference/ingest_legacy_16_20.html">ingest_legacy_16_20</a></span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># 1. Ingest field surveys from KoboToolbox</span></span>
 <span><span class="fu"><a href="../reference/ingest_surveys.html">ingest_surveys</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># 2. Preprocess and standardize survey data</span></span>
 <span><span class="fu"><a href="../reference/preprocess_surveys.html">preprocess_surveys</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># 3. Merge legacy + ongoing data into an analysis-ready dataset</span></span>
-<span><span class="fu"><a href="../reference/raw_to_tidy.html">raw_to_tidy</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/format_to_tidy.html">format_to_tidy</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># 4. Convert tidy data to Darwin Core format</span></span>
-<span><span class="fu"><a href="../reference/raw_to_dc.html">raw_to_dc</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co"># 4a. Build Darwin Core Archive with EML metadata and upload to SharePoint</span></span>
+<span><span class="co">#     (format_to_dc() is called internally — no need to call it separately)</span></span>
+<span><span class="fu"><a href="../reference/format_to_DC_archive.html">format_to_DC_archive</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># 5. Build Darwin Core Archive with EML metadata</span></span>
-<span><span class="fu"><a href="../reference/dc_to_archive.html">dc_to_archive</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<span><span class="co"># 4b. Render the monitoring report (runs in parallel with 4a in GitHub Actions)</span></span>
+<span><span class="fu"><a href="../reference/render_report.html">render_report</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<div class="section level3">
+<h3 id="steps-0a0b-ingest-legacy-data">Steps 0a–0b: Ingest Legacy Data<a class="anchor" aria-label="anchor" href="#steps-0a0b-ingest-legacy-data"></a>
+</h3>
+<p><code><a href="../reference/ingest_legacy_84_15.html">ingest_legacy_84_15()</a></code> and
+<code><a href="../reference/ingest_legacy_16_20.html">ingest_legacy_16_20()</a></code> migrate the historical zooplankton
+records (1984–2015 and 2016–2020) into the cloud infrastructure. They
+validate and harmonise the data — including taxonomic lookups against
+WoRMS and standardisation of life-stage codes — and store the results in
+a dedicated SharePoint folder for validated historical data. These steps
+are run once, or whenever the source data are corrected or updated.</p>
+</div>
 <div class="section level3">
 <h3 id="step-1-ingest-surveys">Step 1: Ingest Surveys<a class="anchor" aria-label="anchor" href="#step-1-ingest-surveys"></a>
 </h3>
 <p><code><a href="../reference/ingest_surveys.html">ingest_surveys()</a></code> connects to the KoboToolbox API,
-downloads the latest field survey submissions, flattens the nested JSON
-into a tabular format, and uploads the result to SharePoint.</p>
+downloads the latest field survey submissions, flattens the nested form
+structure into a tabular format, and uploads the result to SharePoint.
+This captures all new samples submitted by the field team since the last
+run.</p>
 </div>
 <div class="section level3">
 <h3 id="step-2-preprocess-surveys">Step 2: Preprocess Surveys<a class="anchor" aria-label="anchor" href="#step-2-preprocess-surveys"></a>
 </h3>
 <p><code><a href="../reference/preprocess_surveys.html">preprocess_surveys()</a></code> downloads the raw survey data from
-SharePoint, applies data cleaning and transformation, and uploads the
-cleaned dataset back to SharePoint.</p>
+SharePoint, applies data cleaning and transformation (including WoRMS
+taxonomic lookups and life-stage code harmonisation), and uploads the
+standardised dataset back to SharePoint. This ensures new records use
+the same species names and codes as the legacy data.</p>
 </div>
 <div class="section level3">
 <h3 id="step-3-merge-into-tidy-data">Step 3: Merge into Tidy Data<a class="anchor" aria-label="anchor" href="#step-3-merge-into-tidy-data"></a>
 </h3>
-<p><code><a href="../reference/raw_to_tidy.html">raw_to_tidy()</a></code> merges the legacy datasets
-(<code>McZoo_84-15.parquet</code> and <code>McZoo_16-20.parquet</code>
-from the hot bucket) with the preprocessed ongoing surveys into a single
-analysis-ready dataset. The merged data is uploaded to SharePoint in
-both CSV and Parquet formats.</p>
+<p><code><a href="../reference/format_to_tidy.html">format_to_tidy()</a></code> merges the legacy datasets with the
+preprocessed ongoing surveys into a single analysis-ready dataset
+covering the full 1984–present time series. The result is saved to
+SharePoint in both CSV and Parquet (a compact columnar) format.</p>
 </div>
 <div class="section level3">
-<h3 id="step-4-darwin-core-conversion">Step 4: Darwin Core Conversion<a class="anchor" aria-label="anchor" href="#step-4-darwin-core-conversion"></a>
+<h3 id="step-4a-build-darwin-core-archive">Step 4a: Build Darwin Core Archive<a class="anchor" aria-label="anchor" href="#step-4a-build-darwin-core-archive"></a>
 </h3>
-<p><code><a href="../reference/raw_to_dc.html">raw_to_dc()</a></code> downloads the tidy dataset from SharePoint
-and builds the three Darwin Core extension tables (Event, Occurrence,
-eMoF). The tables are uploaded to SharePoint as a versioned RDS
-file.</p>
-<p>See the <a href="darwin-core.html">Darwin Core vignette</a> for
-details on the table structure and standards applied.</p>
+<p><code><a href="../reference/format_to_DC_archive.html">format_to_DC_archive()</a></code> handles the full Darwin Core
+conversion and archiving in one call: it internally runs
+<code><a href="../reference/format_to_dc.html">format_to_dc()</a></code> to build the Event, Occurrence, and eMoF
+tables, then assembles them into a submission-ready zip archive with
+embedded EML metadata, and uploads it to SharePoint. This is the file
+that is registered with and downloaded by GBIF or EMODnet Biology.</p>
+<p><code><a href="../reference/format_to_dc.html">format_to_dc()</a></code> can also be called on its own to inspect
+the Darwin Core tables without building the archive (e.g., for quality
+checks before submission). See the <a href="darwin-core.html">Darwin
+Core vignette</a> for details on the table structure and standards
+applied.</p>
 </div>
 <div class="section level3">
-<h3 id="step-5-build-archive">Step 5: Build Archive<a class="anchor" aria-label="anchor" href="#step-5-build-archive"></a>
+<h3 id="step-4b-render-report">Step 4b: Render Report<a class="anchor" aria-label="anchor" href="#step-4b-render-report"></a>
 </h3>
-<p><code><a href="../reference/dc_to_archive.html">dc_to_archive()</a></code> downloads the Darwin Core tables, builds
-an EML metadata file, assembles a Darwin Core Archive zip, and uploads
-the archive to the <code>darwin_core_bucket</code> on SharePoint.</p>
+<p><code><a href="../reference/render_report.html">render_report()</a></code> renders the Quarto monitoring report
+using the latest preprocessed survey data and saves it as a dated HTML
+file. In the automated pipeline this runs in parallel with the archive
+build, so both outputs are produced from the same merged dataset in the
+same pipeline run.</p>
 </div>
 </div>
 <div class="section level2">
 <h2 id="expected-input-data-format">Expected Input Data Format<a class="anchor" aria-label="anchor" href="#expected-input-data-format"></a>
 </h2>
-<p>The pipeline expects legacy parquet files containing at least:</p>
+<p>This section is a reference for the column names expected in the
+legacy files. The ingestion functions
+(<code><a href="../reference/ingest_legacy_84_15.html">ingest_legacy_84_15()</a></code>, <code><a href="../reference/ingest_legacy_16_20.html">ingest_legacy_16_20()</a></code>)
+produce files in this format automatically, so you only need this if you
+are adapting the pipeline to a different dataset.</p>
+<p>The pipeline expects legacy files containing at least:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Example of expected input data structure:</span></span>
 <span><span class="co">#</span></span>
 <span><span class="co"># # A tibble: 350,112 × 6</span></span>
-<span><span class="co">#    eventID eventDate  scientificname                 lsid                                      individualCount lifeStage</span></span>
+<span><span class="co">#    eventID eventDate  scientificname                 lsid                                      Abundance lifeStage</span></span>
 <span><span class="co">#    &lt;chr&gt;   &lt;date&gt;     &lt;chr&gt;                          &lt;chr&gt;                                               &lt;dbl&gt; &lt;chr&gt;</span></span>
 <span><span class="co">#  1 mc_1    1984-01-26 Acartia (Acartia) danae        urn:lsid:marinespecies.org:taxname:346026             0   f</span></span>
 <span><span class="co">#  2 mc_1    1984-01-26 Acartia (Acartia) danae        urn:lsid:marinespecies.org:taxname:346026             0   m</span></span>
@@ -180,13 +237,13 @@ the archive to the <code>darwin_core_bucket</code> on SharePoint.</p>
 <span><span class="co"># - eventDate: Sampling date (Date format)</span></span>
 <span><span class="co"># - scientificname: Full scientific name with WoRMS validation</span></span>
 <span><span class="co"># - lsid: WoRMS Life Science Identifier URN</span></span>
-<span><span class="co"># - individualCount: Abundance measurement (ind/m³)</span></span>
+<span><span class="co"># - Abundance: Abundance measurement (ind/m³)</span></span>
 <span><span class="co"># - lifeStage: Life stage code ("f"=female, "m"=male, "j"=juvenile, "fm"=both sexes, "fmj"=all stages)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="darwin-core-output">Darwin Core Output<a class="anchor" aria-label="anchor" href="#darwin-core-output"></a>
 </h2>
-<p><code><a href="../reference/raw_to_dc.html">raw_to_dc()</a></code> produces three tables following OBIS
+<p><code><a href="../reference/format_to_dc.html">format_to_dc()</a></code> produces three tables following OBIS
 standards:</p>
 <div class="section level4">
 <h4 id="event-extension">Event Extension<a class="anchor" aria-label="anchor" href="#event-extension"></a>
@@ -205,8 +262,8 @@ standards:</p>
 <li>Links species occurrences to events via <code>eventID</code>
 </li>
 <li>
-<code>occurrenceStatus</code> derived from
-<code>individualCount</code> (present/absent)</li>
+<code>occurrenceStatus</code> derived from <code>Abundance</code>
+(present/absent)</li>
 <li>WoRMS LSIDs for taxonomic validation</li>
 </ul>
 </div>
@@ -216,8 +273,8 @@ standards:</p>
 <ul>
 <li>Measurements standardised with BODC NERC Vocabulary</li>
 <li>
-<code>individualCount</code>, <code>sex</code>, and
-<code>lifeStage</code> mapped to controlled vocabulary URIs</li>
+<code>Abundance</code>, <code>sex</code>, and <code>lifeStage</code>
+mapped to controlled vocabulary URIs</li>
 </ul>
 </div>
 </div>

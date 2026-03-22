@@ -25,7 +25,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">ZooGoN</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">3.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.0.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -75,13 +75,24 @@
 <div class="section level2">
 <h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
 </h2>
-<p>This vignette shows how the package builds Darwin Core tables from
-the LTER-MareChiara zooplankton dataset. The conversion is handled by
-<code><a href="../reference/raw_to_dc.html">raw_to_dc()</a></code>, which downloads the merged tidy dataset from
-SharePoint (produced by <code><a href="../reference/raw_to_tidy.html">raw_to_tidy()</a></code>), adds the required
-Darwin Core fields, and uploads the resulting tables back to SharePoint
-as a versioned RDS file. The function uses data that already contains
-WoRMS LSIDs and does not perform additional taxonomic queries.</p>
+<p>Darwin Core is the international data standard required by OBIS,
+EMODnet Biology, and GBIF to publish biodiversity occurrence records. It
+structures data into three linked tables — sampling events, species
+occurrences, and associated measurements — allowing any repository
+worldwide to ingest and cross-reference the records. Converting the
+LTER-MareChiara dataset to this format is the step that makes it ready
+for submission to these repositories.</p>
+<p>This vignette shows how the package builds those Darwin Core tables
+from the LTER-MareChiara zooplankton dataset. The conversion is handled
+by <code><a href="../reference/format_to_dc.html">format_to_dc()</a></code>, which downloads the merged tidy dataset
+from SharePoint (produced by <code><a href="../reference/format_to_tidy.html">format_to_tidy()</a></code>), adds the
+required Darwin Core fields, and returns the three tables as an R list.
+The function does not upload anything — that is handled by
+<code><a href="../reference/format_to_DC_archive.html">format_to_DC_archive()</a></code>, which calls
+<code><a href="../reference/format_to_dc.html">format_to_dc()</a></code> internally and then assembles and uploads
+the Darwin Core Archive zip. The function uses data that already
+contains WoRMS LSIDs and does not perform additional taxonomic
+queries.</p>
 <div class="section level3">
 <h3 id="prerequisites">Prerequisites<a class="anchor" aria-label="anchor" href="#prerequisites"></a>
 </h3>
@@ -89,10 +100,10 @@ WoRMS LSIDs and does not perform additional taxonomic queries.</p>
 <li>
 <code>inst/config.yml</code> configured with SharePoint credentials
 and bucket names.</li>
-<li>The tidy dataset must exist in the <code>automation_bucket</code>
-(produced by running <code><a href="../reference/raw_to_tidy.html">raw_to_tidy()</a></code> earlier in the
-pipeline). This merged dataset covers 1984-2024 and contains
-preprocessed records with WoRMS LSIDs.</li>
+<li>The merged dataset must exist in SharePoint (produced by running
+<code><a href="../reference/format_to_tidy.html">format_to_tidy()</a></code> earlier in the pipeline). This dataset
+covers 1984-2024 and contains preprocessed records with WoRMS
+LSIDs.</li>
 <li>Optional: set <code>verbose = FALSE</code> to silence log
 messages.</li>
 </ul>
@@ -101,7 +112,7 @@ messages.</li>
 <div class="section level2">
 <h2 id="expected-input-structure">Expected Input Structure<a class="anchor" aria-label="anchor" href="#expected-input-structure"></a>
 </h2>
-<p><code><a href="../reference/raw_to_dc.html">raw_to_dc()</a></code> expects the tidy dataset to contain at
+<p><code><a href="../reference/format_to_dc.html">format_to_dc()</a></code> expects the tidy dataset to contain at
 least:</p>
 <ul>
 <li>
@@ -115,8 +126,8 @@ column).</li>
 <li>
 <code>lsid</code>: WoRMS Life Science Identifier.</li>
 <li>
-<code>individualCount</code>: abundance measurement (individuals per
-cubic meter).</li>
+<code>Abundance</code>: abundance measurement (individuals per cubic
+meter).</li>
 <li>
 <code>lifeStage</code>: life stage codes (<code>f</code>,
 <code>m</code>, <code>j</code>, <code>fm</code>, <code>fmj</code>).</li>
@@ -130,15 +141,17 @@ measurement table.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Convert tidy data to Darwin Core format</span></span>
 <span><span class="co"># Tables are uploaded to SharePoint automatically</span></span>
-<span><span class="fu"><a href="../reference/raw_to_dc.html">raw_to_dc</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p>The function downloads the tidy dataset from SharePoint, builds the
-three Darwin Core tables (Event, Occurrence, eMoF), and uploads them as
-a versioned RDS file to the <code>automation_bucket</code>.</p>
-<p>To build a Darwin Core Archive with EML metadata on top of the
-tables:</p>
+<span><span class="fu"><a href="../reference/format_to_dc.html">format_to_dc</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p>The function downloads the merged dataset from SharePoint and builds
+the three Darwin Core tables (Event, Occurrence, eMoF) in memory. It
+does <strong>not</strong> upload anything to SharePoint.</p>
+<p>To build a Darwin Core Archive and upload it to SharePoint, call
+<code><a href="../reference/format_to_DC_archive.html">format_to_DC_archive()</a></code>. This function calls
+<code><a href="../reference/format_to_dc.html">format_to_dc()</a></code> internally, so in the automated pipeline it
+is the only function you need to run:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Build DwC-A zip and upload to SharePoint</span></span>
-<span><span class="fu"><a href="../reference/dc_to_archive.html">dc_to_archive</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="co"># Build DwC-A zip (runs format_to_dc() internally) and upload to SharePoint</span></span>
+<span><span class="fu"><a href="../reference/format_to_DC_archive.html">format_to_DC_archive</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="darwin-core-tables">Darwin Core tables<a class="anchor" aria-label="anchor" href="#darwin-core-tables"></a>
@@ -146,8 +159,8 @@ tables:</p>
 <div class="section level3">
 <h3 id="event">Event<a class="anchor" aria-label="anchor" href="#event"></a>
 </h3>
-<p><code><a href="../reference/raw_to_dc.html">raw_to_dc()</a></code> builds one row per unique event with fixed
-station metadata.</p>
+<p><code><a href="../reference/format_to_dc.html">format_to_dc()</a></code> builds one row per unique event with
+fixed station metadata.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># After downloading the DC tables from SharePoint:</span></span>
 <span><span class="co"># event_table %&gt;%</span></span>
@@ -181,8 +194,7 @@ generated <code>occurrenceID</code> and presence flag.</p>
 <ul>
 <li>
 <code>occurrenceStatus</code> is set to <code>"present"</code> when
-<code>individualCount &gt; 0</code>, otherwise
-<code>"absent"</code>.</li>
+<code>Abundance &gt; 0</code>, otherwise <code>"absent"</code>.</li>
 <li>
 <code>scientificName</code> and <code>scientificNameID</code> come
 directly from the input (no new validation is run).</li>
@@ -191,9 +203,13 @@ directly from the input (no new validation is run).</li>
 <div class="section level3">
 <h3 id="emof-extended-measurement-or-fact">eMoF (Extended Measurement or Fact)<a class="anchor" aria-label="anchor" href="#emof-extended-measurement-or-fact"></a>
 </h3>
-<p>Measurements are produced by pivoting the remaining columns per
-occurrence.</p>
-<p>Mapping logic implemented in <code><a href="../reference/raw_to_dc.html">raw_to_dc()</a></code>:</p>
+<p>eMoF is the Darwin Core extension used to store quantitative
+measurements alongside each occurrence record. For the LTER-MareChiara
+dataset this includes abundance (individuals per m³), sex, and life
+stage. Each measurement is linked to a controlled-vocabulary identifier
+so that the values can be interpreted unambiguously by any international
+biodiversity database.</p>
+<p>Mapping logic implemented in <code><a href="../reference/format_to_dc.html">format_to_dc()</a></code>:</p>
 <ul>
 <li>Measurements with values <code>f</code>, <code>m</code>,
 <code>fm</code>, <code>fmj</code> are labelled as
@@ -203,8 +219,8 @@ occurrence.</p>
 <code>measurementType = "lifeStage"</code> with
 <code>measurementTypeID = http://vocab.nerc.ac.uk/collection/P01/current/LSTAGE01/</code>.</li>
 <li>
-<code>individualCount</code> keeps
-<code>measurementType = "individualCount"</code> with
+<code>Abundance</code> keeps
+<code>measurementType = "Abundance"</code> with
 <code>measurementTypeID = https://vocab.nerc.ac.uk/collection/S06/current/S0600002/</code>
 and
 <code>measurementUnitID = http://vocab.nerc.ac.uk/collection/P06/current/UPMM/</code>.</li>
@@ -215,18 +231,12 @@ and
 </div>
 </div>
 <div class="section level2">
-<h2 id="processing-metadata">Processing metadata<a class="anchor" aria-label="anchor" href="#processing-metadata"></a>
+<h2 id="processing-summary">Processing summary<a class="anchor" aria-label="anchor" href="#processing-summary"></a>
 </h2>
-<p><code><a href="../reference/raw_to_dc.html">raw_to_dc()</a></code> stores processing metadata alongside the
-tables:</p>
-<ul>
-<li>
-<code>processing_info</code>: event, occurrence and measurement
-counts, date range, unique taxa count.</li>
-<li>
-<code>metadata</code>: dataset title, contact, institution, license,
-project tag, and the processing statistics.</li>
-</ul>
+<p><code><a href="../reference/format_to_dc.html">format_to_dc()</a></code> prints a processing summary on
+completion: the number of sampling events, occurrences, and measurements
+produced, the date range covered, and the number of unique taxa
+included.</p>
 </div>
 <div class="section level2">
 <h2 id="publishing-optional">Publishing (optional)<a class="anchor" aria-label="anchor" href="#publishing-optional"></a>

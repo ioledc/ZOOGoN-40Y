@@ -61,13 +61,13 @@ ingest_surveys()
 preprocess_surveys()
 
 # 3. Merge legacy + ongoing data into an analysis-ready dataset
-raw_to_tidy()
+format_to_tidy()
 
 # 4. Convert tidy data to Darwin Core format (Event, Occurrence, eMoF)
-raw_to_dc()
+format_to_dc()
 
 # 5. Build Darwin Core Archive with EML metadata and upload
-dc_to_archive()
+format_to_DC_archive()
 ```
 
 The pipeline produces OBIS-compliant Darwin Core tables: - **Event
@@ -148,10 +148,10 @@ standards:
 ## Publishing to GBIF (optional)
 
 - Build a Darwin Core Archive and EML with
-  [`dc_to_archive()`](https://ioledc.github.io/ZOOGoN-40Y/reference/dc_to_archive.md)
+  [`format_to_DC_archive()`](https://ioledc.github.io/ZOOGoN-40Y/reference/format_to_DC_archive.md)
   (writes the zip and uploads it to SharePoint). This reads the Darwin
   Core tables produced by
-  [`raw_to_dc()`](https://ioledc.github.io/ZOOGoN-40Y/reference/raw_to_dc.md).
+  [`format_to_dc()`](https://ioledc.github.io/ZOOGoN-40Y/reference/format_to_dc.md).
 - Production registration: use
   [`register_gbif_dataset()`](https://ioledc.github.io/ZOOGoN-40Y/reference/register_gbif_dataset.md)
   with your real GBIF organization key, installation key, credentials,

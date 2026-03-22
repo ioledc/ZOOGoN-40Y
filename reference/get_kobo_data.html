@@ -9,7 +9,7 @@ It supports pagination and handles both JSON and XML formats."><meta property="o
 
     <a class="navbar-brand me-2" href="../index.html">ZooGoN</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">3.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.0.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -35,7 +35,7 @@ It supports pagination and handles both JSON and XML formats."><meta property="o
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.svg" class="logo" alt=""><h1>Retrieve Data from Kobotoolbox API</h1>
-      <small class="dont-index">Source: <a href="https://github.com/ioledc/ZOOGoN-40Y/blob/main/R/ingestion-surveys.R" class="external-link"><code>R/ingestion-surveys.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/ioledc/ZOOGoN-40Y/blob/main/R/kobo-ingestion.R" class="external-link"><code>R/kobo-ingestion.R</code></a></small>
       <div class="d-none name"><code>get_kobo_data.Rd</code></div>
     </div>
 
@@ -52,11 +52,7 @@ It supports pagination and handles both JSON and XML formats.</p>
 <span>  uname <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  pwd <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  encoding <span class="op">=</span> <span class="st">"UTF-8"</span>,</span>
-<span>  format <span class="op">=</span> <span class="st">"json"</span>,</span>
-<span>  limit <span class="op">=</span> <span class="fl">1000</span>,</span>
-<span>  since_id <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  retry_times <span class="op">=</span> <span class="fl">3</span>,</span>
-<span>  progress <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  format <span class="op">=</span> <span class="st">"json"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -87,23 +83,6 @@ It supports pagination and handles both JSON and XML formats.</p>
 <dt id="arg-format">format<a class="anchor" aria-label="anchor" href="#arg-format"></a></dt>
 <dd><p>Format of the data to retrieve, either "json" or "xml" (default is "json").</p></dd>
 
-
-<dt id="arg-limit">limit<a class="anchor" aria-label="anchor" href="#arg-limit"></a></dt>
-<dd><p>Number of records per page (default 1000). Maximum allowed is 1000.</p></dd>
-
-
-<dt id="arg-since-id">since_id<a class="anchor" aria-label="anchor" href="#arg-since-id"></a></dt>
-<dd><p>Optional. If provided, only fetch submissions with <code>_id</code>
-greater than or equal to this value. Useful for incremental data retrieval.</p></dd>
-
-
-<dt id="arg-retry-times">retry_times<a class="anchor" aria-label="anchor" href="#arg-retry-times"></a></dt>
-<dd><p>Number of retry attempts for failed requests (default is 3).</p></dd>
-
-
-<dt id="arg-progress">progress<a class="anchor" aria-label="anchor" href="#arg-progress"></a></dt>
-<dd><p>Logical. Whether to show a progress message (default is TRUE).</p></dd>
-
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -111,32 +90,17 @@ greater than or equal to this value. Useful for incremental data retrieval.</p><
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>As of March 2026, the Kobotoolbox API enforces a maximum page size of 1,000
-records per request (previously 30,000). The default page size if not specified
-is 100. This function uses pagination via the <code><a href="https://rdrr.io/r/base/Control.html" class="external-link">next</a></code> field in the API response
-to iterate through all available records.</p>
-<p>For incremental data retrieval (e.g., syncing only new submissions), use the
-<code>since_id</code> parameter with the last known <code>_id</code> value.</p>
-<p>Note: This change does NOT affect synchronous export endpoints
-(<code>/api/v2/assets/{uid}/export-settings/{uid_export}/data.xlsx|csv</code>).</p>
+    <p>The function uses pagination to retrieve large datasets, with a limit of 30,000 records per request.
+It continues to fetch data until all records are retrieved or an error occurs.</p>
     </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
-<span class="r-in"><span><span class="co"># Full retrieval</span></span></span>
 <span class="r-in"><span><span class="va">kobo_data</span> <span class="op">&lt;-</span> <span class="fu">get_kobo_data</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  assetid <span class="op">=</span> <span class="st">"your_asset_id"</span>,</span></span>
 <span class="r-in"><span>  uname <span class="op">=</span> <span class="st">"your_username"</span>,</span></span>
 <span class="r-in"><span>  pwd <span class="op">=</span> <span class="st">"your_password"</span></span></span>
-<span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Incremental retrieval (only new records since last sync)</span></span></span>
-<span class="r-in"><span><span class="va">new_data</span> <span class="op">&lt;-</span> <span class="fu">get_kobo_data</span><span class="op">(</span></span></span>
-<span class="r-in"><span>  assetid <span class="op">=</span> <span class="st">"your_asset_id"</span>,</span></span>
-<span class="r-in"><span>  uname <span class="op">=</span> <span class="st">"your_username"</span>,</span></span>
-<span class="r-in"><span>  pwd <span class="op">=</span> <span class="st">"your_password"</span>,</span></span>
-<span class="r-in"><span>  since_id <span class="op">=</span> <span class="fl">52149</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 </code></pre></div>

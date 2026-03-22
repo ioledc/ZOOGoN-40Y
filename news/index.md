@@ -1,5 +1,47 @@
 # Changelog
 
+## ZooGoN 4.0.0
+
+### Breaking changes
+
+- **`raw_to_tidy()`** renamed to
+  **[`format_to_tidy()`](https://ioledc.github.io/ZOOGoN-40Y/reference/format_to_tidy.md)**.
+- **`raw_to_dc()`** renamed to
+  **[`format_to_dc()`](https://ioledc.github.io/ZOOGoN-40Y/reference/format_to_dc.md)**.
+- **`dc_to_archive()`** renamed to
+  **[`format_to_DC_archive()`](https://ioledc.github.io/ZOOGoN-40Y/reference/format_to_DC_archive.md)**.
+
+### New functions
+
+- **[`ingest_legacy_84_15()`](https://ioledc.github.io/ZOOGoN-40Y/reference/ingest_legacy_84_15.md)**:
+  downloads, validates, and harmonises the 1984–2015 historical
+  zooplankton dataset, including WoRMS taxonomic lookups and life-stage
+  code standardisation. Outputs `McZoo_84-15` to SharePoint.
+- **[`ingest_legacy_16_20()`](https://ioledc.github.io/ZOOGoN-40Y/reference/ingest_legacy_16_20.md)**:
+  same workflow as above for the 2016–2020 legacy dataset. Outputs
+  `McZoo_16-20` to SharePoint.
+- **[`upload_sharepoint_file()`](https://ioledc.github.io/ZOOGoN-40Y/reference/upload_sharepoint_file.md)**:
+  uploads an arbitrary local file to SharePoint (complements the
+  existing
+  [`upload_sharepoint_df()`](https://ioledc.github.io/ZOOGoN-40Y/reference/upload_sharepoint_df.md)
+  for data frames).
+
+### Code organisation
+
+- Survey ingestion logic moved to `R/kobo-ingestion.R`.
+- Survey preprocessing logic moved to `R/kobo-processing.R`.
+- Legacy data ingestion logic consolidated in
+  `R/legacy-data-ingestion.R`.
+
+### Documentation
+
+- Vignettes updated to reflect renamed functions and new
+  legacy-ingestion steps.
+- Added plain-language introductions to both vignettes for a
+  non-technical (biology/ecology) audience.
+- pkgdown reference index reorganised: added “Legacy Data Ingestion”,
+  “Pipeline & Reporting” sections; all renamed functions updated.
+
 ## ZooGoN 3.1.0
 
 ### Full Automated Pipeline
@@ -9,24 +51,20 @@ collection to Darwin Core Archive publication.
 
 #### New Functions
 
-- **[`raw_to_tidy()`](https://ioledc.github.io/ZOOGoN-40Y/reference/raw_to_tidy.md)**:
-  Merges legacy datasets (1984-2020) with preprocessed ongoing surveys
-  into a single analysis-ready dataset. Uploads the merged data in both
-  CSV and Parquet formats to SharePoint.
+- **`raw_to_tidy()`**: Merges legacy datasets (1984-2020) with
+  preprocessed ongoing surveys into a single analysis-ready dataset.
+  Uploads the merged data in both CSV and Parquet formats to SharePoint.
 
 #### Pipeline & Automation
 
 - Complete 6-step GitHub Actions pipeline: build container → ingest
   surveys → preprocess → merge tidy data → Darwin Core conversion →
   build archive.
-- [`raw_to_dc()`](https://ioledc.github.io/ZOOGoN-40Y/reference/raw_to_dc.md)
-  now reads from the tidy data output (produced by
-  [`raw_to_tidy()`](https://ioledc.github.io/ZOOGoN-40Y/reference/raw_to_tidy.md))
-  instead of merging legacy files internally. Results are uploaded to
-  SharePoint as versioned RDS.
-- [`dc_to_archive()`](https://ioledc.github.io/ZOOGoN-40Y/reference/dc_to_archive.md)
-  no longer takes arguments — it downloads Darwin Core tables from
-  SharePoint automatically.
+- `raw_to_dc()` now reads from the tidy data output (produced by
+  `raw_to_tidy()`) instead of merging legacy files internally. Results
+  are uploaded to SharePoint as versioned RDS.
+- `dc_to_archive()` no longer takes arguments — it downloads Darwin Core
+  tables from SharePoint automatically.
 
 #### Storage Improvements
 
@@ -63,11 +101,9 @@ collection to Darwin Core Archive publication.
   [`register_gbif_dataset_test()`](https://ioledc.github.io/ZOOGoN-40Y/reference/register_gbif_dataset_test.md)
   for the GBIF-Test demo flow; both take a public DwC-A URL and handle
   dataset registration.
-- Simplified Darwin Core export:
-  [`dc_to_archive()`](https://ioledc.github.io/ZOOGoN-40Y/reference/dc_to_archive.md)
-  now builds the DwC-A + EML from
-  [`raw_to_dc()`](https://ioledc.github.io/ZOOGoN-40Y/reference/raw_to_dc.md)
-  output and uploads the archive to SharePoint.
+- Simplified Darwin Core export: `dc_to_archive()` now builds the
+  DwC-A + EML from `raw_to_dc()` output and uploads the archive to
+  SharePoint.
 - Clarified EML generation
   ([`get_metadata()`](https://ioledc.github.io/ZOOGoN-40Y/reference/get_metadata.md))
   and cleaned up pkgdown reference sections.
@@ -111,8 +147,8 @@ Darwin Core conversion.
 
 ##### Darwin Core Conversion
 
-- **[`raw_to_dc()`](https://ioledc.github.io/ZOOGoN-40Y/reference/raw_to_dc.md)**:
-  Convert preprocessed legacy data to Darwin Core format
+- **`raw_to_dc()`**: Convert preprocessed legacy data to Darwin Core
+  format
   - Processes parquet files with WoRMS-validated taxonomic data
   - Creates Event, Occurrence, and eMoF (Extended Measurement or Fact)
     tables
@@ -148,18 +184,16 @@ Darwin Core conversion.
 #### Documentation
 
 - Updated function documentation with roxygen2
-- Revised `data-processing.Rmd` vignette to document
-  [`raw_to_dc()`](https://ioledc.github.io/ZOOGoN-40Y/reference/raw_to_dc.md)
+- Revised `data-processing.Rmd` vignette to document `raw_to_dc()`
   workflow
 - Updated `raw_to_dc.Rd` manual page
 
 #### Breaking Changes
 
-- Removed `process_lter_data()` function (replaced by
-  [`raw_to_dc()`](https://ioledc.github.io/ZOOGoN-40Y/reference/raw_to_dc.md))
+- Removed `process_lter_data()` function (replaced by `raw_to_dc()`)
 - Requires `inst/config.yml` configuration file with credentials
-- [`raw_to_dc()`](https://ioledc.github.io/ZOOGoN-40Y/reference/raw_to_dc.md)
-  expects preprocessed parquet files instead of raw Excel files
+- `raw_to_dc()` expects preprocessed parquet files instead of raw Excel
+  files
 
 #### Notes
 
