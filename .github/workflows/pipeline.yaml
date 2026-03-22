@@ -98,7 +98,7 @@ jobs:
 
   build-darwincore-archive:
     name: Build Darwin Core Archive
-    needs: convert-to-darwincore
+    needs: merge-data
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/ioledc/zoogon-40y/r-runner-zoogon-mc:latest

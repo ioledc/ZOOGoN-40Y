@@ -58,10 +58,11 @@ function downloads its input and uploads its output automatically.
 
 # The Pipeline
 
-The pipeline consists of seven steps, each implemented as a standalone function.
+The pipeline consists of six steps, each implemented as a standalone function.
 The same sequence runs on GitHub Actions for fully automated processing.
-The two legacy-ingestion steps (0a and 0b) are one-time or on-demand operations;
-the remaining steps run on a regular schedule.
+The two legacy-ingestion steps (0a and 0b) are one-time or on-demand operations.
+After step 3, the archive build (4a) and the report render (4b) run in
+parallel — both start as soon as the merged dataset is available.
 
 ```{r pipeline}
 # 0a. Ingest legacy dataset 1984-2015 (run once or when source data changes)
@@ -79,11 +80,12 @@ preprocess_surveys()
 # 3. Merge legacy + ongoing data into an analysis-ready dataset
 format_to_tidy()
 
-# 4. Convert tidy data to Darwin Core format
-format_to_dc()
-
-# 5. Build Darwin Core Archive with EML metadata
+# 4a. Build Darwin Core Archive with EML metadata and upload to SharePoint
+#     (format_to_dc() is called internally — no need to call it separately)
 format_to_DC_archive()
+
+# 4b. Render the monitoring report (runs in parallel with 4a in GitHub Actions)
+render_report()
 ```
 
 ## Steps 0a–0b: Ingest Legacy Data
@@ -117,20 +119,25 @@ surveys into a single analysis-ready dataset covering the full 1984–present ti
 series. The result is saved to SharePoint in both CSV and Parquet (a compact
 columnar) format.
 
-## Step 4: Darwin Core Conversion
+## Step 4a: Build Darwin Core Archive
 
-`format_to_dc()` downloads the merged dataset from SharePoint and builds the
-three Darwin Core tables (Event, Occurrence, eMoF), making the data ready for
-submission to international repositories such as OBIS and EMODnet Biology.
+`format_to_DC_archive()` handles the full Darwin Core conversion and archiving
+in one call: it internally runs `format_to_dc()` to build the Event, Occurrence,
+and eMoF tables, then assembles them into a submission-ready zip archive with
+embedded EML metadata, and uploads it to SharePoint. This is the file that is
+registered with and downloaded by GBIF or EMODnet Biology.
 
-See the [Darwin Core vignette](darwin-core.html) for details on the table
-structure and standards applied.
+`format_to_dc()` can also be called on its own to inspect the Darwin Core tables
+without building the archive (e.g., for quality checks before submission). See the
+[Darwin Core vignette](darwin-core.html) for details on the table structure and
+standards applied.
 
-## Step 5: Build Archive
+## Step 4b: Render Report
 
-`format_to_DC_archive()` assembles the Darwin Core tables into a submission-ready
-zip archive with embedded EML metadata, and uploads it to SharePoint. This is the
-file that is registered with and downloaded by GBIF or EMODnet Biology.
+`render_report()` renders the Quarto monitoring report using the latest
+preprocessed survey data and saves it as a dated HTML file. In the automated
+pipeline this runs in parallel with the archive build, so both outputs are
+produced from the same merged dataset in the same pipeline run.
 
 # Expected Input Data Format
 

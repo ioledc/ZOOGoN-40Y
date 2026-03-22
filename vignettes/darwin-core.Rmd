@@ -32,10 +32,11 @@ format is the step that makes it ready for submission to these repositories.
 This vignette shows how the package builds those Darwin Core tables from the
 LTER-MareChiara zooplankton dataset. The conversion is handled by `format_to_dc()`,
 which downloads the merged tidy dataset from SharePoint (produced by
-`format_to_tidy()`), adds the required Darwin Core fields, and uploads the
-resulting tables back to SharePoint as a timestamped file. The function uses
-data that already contains WoRMS LSIDs and does not perform additional taxonomic
-queries.
+`format_to_tidy()`), adds the required Darwin Core fields, and returns the three
+tables as an R list. The function does not upload anything — that is handled by
+`format_to_DC_archive()`, which calls `format_to_dc()` internally and then
+assembles and uploads the Darwin Core Archive zip. The function uses data that
+already contains WoRMS LSIDs and does not perform additional taxonomic queries.
 
 ## Prerequisites
 
@@ -66,14 +67,16 @@ Any extra columns are carried through and pivoted into the measurement table.
 format_to_dc()
 ```
 
-The function downloads the merged dataset from SharePoint, builds the three
-Darwin Core tables (Event, Occurrence, eMoF), and saves them as a timestamped
-file in SharePoint.
+The function downloads the merged dataset from SharePoint and builds the three
+Darwin Core tables (Event, Occurrence, eMoF) in memory. It does **not** upload
+anything to SharePoint.
 
-To build a Darwin Core Archive with EML metadata on top of the tables:
+To build a Darwin Core Archive and upload it to SharePoint, call
+`format_to_DC_archive()`. This function calls `format_to_dc()` internally, so
+in the automated pipeline it is the only function you need to run:
 
 ```{r build-archive}
-# Build DwC-A zip and upload to SharePoint
+# Build DwC-A zip (runs format_to_dc() internally) and upload to SharePoint
 format_to_DC_archive()
 ```
 

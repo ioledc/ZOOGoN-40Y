@@ -433,10 +433,13 @@ render_report <- function(output_dir = "/home") {
 }
 
 
-#' Run the full ZooGoN pipeline
+#' Run the ZooGoN survey-to-report pipeline
 #'
-#' Runs the full ZooGoN data pipeline in sequence:
-#' ingestion -> preprocessing -> report rendering.
+#' Runs the survey ingestion and report rendering steps in sequence:
+#' ingestion -> preprocessing -> report rendering. This covers the
+#' reporting branch of the pipeline. To also build the Darwin Core
+#' Archive, call \code{format_to_tidy()} followed by
+#' \code{format_to_DC_archive()}.
 #'
 #' @return Invisible NULL.
 #' @keywords workflow
