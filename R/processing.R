@@ -337,7 +337,6 @@ build_emof_occurrence <- function(data = NULL) {
     lifeStage = "http://vocab.nerc.ac.uk/collection/P01/current/LSTAGE01/",
     Abundance = "http://vocab.nerc.ac.uk/collection/P01/current/ZU00M00D/"
   )
-  #TODO: is http://vocab.nerc.ac.uk/collection/P01/current/ZU00M00D/ ok?
 
   data |>
     dplyr::select(-"scientificName", -"occurrenceStatus", -"lsid") |>

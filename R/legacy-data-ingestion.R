@@ -37,7 +37,10 @@
 ingest_legacy_84_15 <- function() {
   conf <- read_config()
 
-  logger::log_info("Downloading sample ID metadata (1984-2015)...", namespace = "ZooGoN")
+  logger::log_info(
+    "Downloading sample ID metadata (1984-2015)...",
+    namespace = "ZooGoN"
+  )
   ids <-
     download_sharepoint_file(
       prefix = "ids_84_15.csv",
@@ -51,7 +54,10 @@ ingest_legacy_84_15 <- function() {
       sample_id = stringr::str_replace_all(.data$sample_id, "_", "")
     )
 
-  logger::log_info("Downloading biological data (1984-2015)...", namespace = "ZooGoN")
+  logger::log_info(
+    "Downloading biological data (1984-2015)...",
+    namespace = "ZooGoN"
+  )
   bio <-
     download_sharepoint_file(
       prefix = "zoo_84_15.csv",
@@ -64,13 +70,19 @@ ingest_legacy_84_15 <- function() {
       TAXA = stringr::str_trim(.data$TAXA)
     )
 
-  logger::log_debug("Biological records loaded: {nrow(bio)}", namespace = "ZooGoN")
+  logger::log_debug(
+    "Biological records loaded: {nrow(bio)}",
+    namespace = "ZooGoN"
+  )
 
   dates <-
     bio |>
     dplyr::select(-c(1:10), "dat_id")
 
-  logger::log_info("Integrating manually curated unmatched taxa...", namespace = "ZooGoN")
+  logger::log_info(
+    "Integrating manually curated unmatched taxa...",
+    namespace = "ZooGoN"
+  )
   unmatched_fixed <-
     download_sharepoint_file(
       prefix = "unmatched_worms_84_15.xlsx",
@@ -88,14 +100,20 @@ ingest_legacy_84_15 <- function() {
         !is.na(.data$accepted_scientific_name) ~ .data$accepted_scientific_name,
         TRUE ~ .data$TAXA
       ),
-      stage = dplyr::case_when(!is.na(.data$lifestage) ~ .data$lifestage, TRUE ~ .data$stage)
+      stage = dplyr::case_when(
+        !is.na(.data$lifestage) ~ .data$lifestage,
+        TRUE ~ .data$stage
+      )
     ) |>
     dplyr::select(-c("accepted_scientific_name", "aphia_id", "lifestage"))
 
   reported_taxa <-
     as.character(unique(bio$TAXA))
 
-  logger::log_info("Querying WoRMS for {length(reported_taxa)} unique taxa...", namespace = "ZooGoN")
+  logger::log_info(
+    "Querying WoRMS for {length(reported_taxa)} unique taxa...",
+    namespace = "ZooGoN"
+  )
 
   worms_matched <- purrr::map2_dfr(
     .x = seq_along(reported_taxa),
@@ -126,7 +144,9 @@ ingest_legacy_84_15 <- function() {
 
   verification_unmatched <-
     worms_matched |>
-    dplyr::filter(is.na(.data$valid_AphiaID) | .data$match_type == "no_match") |>
+    dplyr::filter(
+      is.na(.data$valid_AphiaID) | .data$match_type == "no_match"
+    ) |>
     dplyr::distinct(.data$original)
 
   if (nrow(verification_unmatched) > 0) {
@@ -139,7 +159,6 @@ ingest_legacy_84_15 <- function() {
     logger::log_info("All taxa matched on WoRMS.", namespace = "ZooGoN")
   }
 
-  # Ensure we get one AphiaID per taxon
   worms_matched_clean <-
     worms_matched |>
     dplyr::select(
@@ -148,17 +167,17 @@ ingest_legacy_84_15 <- function() {
       "lsid",
       "scientificname",
       "status",
+      "valid_AphiaID",
+      "valid_name",
       "match_type"
     ) |>
-    dplyr::distinct() |>
-    dplyr::group_by(.data$original) |>
-    dplyr::arrange(.data$AphiaID, .by_group = TRUE) |>
-    #take only the first row by group (i.e. pick the oldest classification)
-    dplyr::slice_head(n = 1) |>
-    dplyr::select(-"AphiaID") |>
-    dplyr::ungroup()
+    dplyr::distinct()
 
-  logger::log_info("Joining taxonomy with sample metadata...", namespace = "ZooGoN")
+  logger::log_info(
+    "Joining taxonomy with sample metadata...",
+    namespace = "ZooGoN"
+  )
+
   taxa_df <-
     bio |>
     dplyr::select(
@@ -170,6 +189,28 @@ ingest_legacy_84_15 <- function() {
       worms_matched_clean,
       by = c("reported_taxa" = "original")
     ) |>
+    dplyr::mutate(
+      AphiaID = dplyr::if_else(
+        .data$status == "unaccepted",
+        .data$valid_AphiaID,
+        .data$AphiaID
+      ),
+      scientificname = dplyr::if_else(
+        .data$status == "unaccepted",
+        .data$valid_name,
+        .data$scientificname
+      ),
+      lsid = dplyr::if_else(
+        .data$status == "unaccepted",
+        paste0("urn:lsid:marinespecies.org:taxname:", .data$AphiaID),
+        .data$lsid
+      )
+    ) |>
+    dplyr::select(-c("valid_AphiaID", "valid_name")) |>
+    dplyr::group_by(.data$dat_id, .data$reported_taxa, .data$stage) |>
+    dplyr::slice_min(order_by = .data$AphiaID, n = 1, with_ties = FALSE) |>
+    dplyr::select(-"AphiaID") |>
+    dplyr::ungroup() |>
     dplyr::full_join(dates, by = "dat_id") |>
     tidyr::pivot_longer(
       -c(
@@ -228,13 +269,10 @@ ingest_legacy_84_15 <- function() {
     dplyr::select(
       "eventID",
       "eventDate",
-      "scientificname",
+      scientificName = "scientificname",
       "lsid",
       "Abundance",
       "lifeStage"
-    ) |>
-    dplyr::rename(
-      scientificName = "scientificname"
     ) |>
     dplyr::distinct() |>
     dplyr::filter(!is.na(.data$lsid)) |>
@@ -255,7 +293,51 @@ ingest_legacy_84_15 <- function() {
       !is.na(.data$eventID)
     ) |>
     # remove duplicates
-    dplyr::group_by(.data$eventID, .data$eventDate, .data$scientificName, .data$lsid, .data$lifeStage) |>
+    dplyr::group_by(
+      .data$eventID,
+      .data$eventDate,
+      .data$scientificName,
+      .data$lsid,
+      .data$lifeStage
+    ) |>
+    dplyr::summarise(
+      Abundance = sum(.data$Abundance, na.rm = TRUE),
+      .groups = "drop"
+    ) |>
+    # fix appendicularia
+    dplyr::mutate(
+      lsid = dplyr::if_else(
+        .data$lsid == "urn:lsid:marinespecies.org:taxname:103357",
+        "urn:lsid:marinespecies.org:taxname:146421",
+        .data$lsid
+      )
+    ) |>
+    dplyr::group_by(
+      .data$eventID,
+      .data$eventDate,
+      .data$scientificName,
+      .data$lsid,
+      .data$lifeStage
+    ) |>
+    dplyr::summarise(
+      Abundance = sum(.data$Abundance, na.rm = TRUE),
+      .groups = "drop"
+    ) |>
+    # fix appendicularia
+    dplyr::mutate(
+      lsid = dplyr::if_else(
+        .data$lsid == "urn:lsid:marinespecies.org:taxname:103357",
+        "urn:lsid:marinespecies.org:taxname:146421",
+        .data$lsid
+      )
+    ) |>
+    dplyr::group_by(
+      .data$eventID,
+      .data$eventDate,
+      .data$scientificName,
+      .data$lsid,
+      .data$lifeStage
+    ) |>
     dplyr::summarise(
       Abundance = sum(.data$Abundance, na.rm = TRUE),
       .groups = "drop"
@@ -267,7 +349,10 @@ ingest_legacy_84_15 <- function() {
     namespace = "ZooGoN"
   )
 
-  logger::log_info("Uploading legacy 1984-2015 data (CSV + Parquet)...", namespace = "ZooGoN")
+  logger::log_info(
+    "Uploading legacy 1984-2015 data (CSV + Parquet)...",
+    namespace = "ZooGoN"
+  )
   formats <- c("parquet", "csv")
 
   purrr::walk(formats, function(fmt) {
@@ -460,14 +545,11 @@ ingest_legacy_16_20 <- function() {
       "lsid",
       "scientificname",
       "status",
+      "valid_AphiaID",
+      "valid_name",
       "match_type"
     ) |>
-    dplyr::distinct() |>
-    dplyr::group_by(.data$original) |>
-    dplyr::arrange(.data$AphiaID, .by_group = TRUE) |>
-    dplyr::slice_head(n = 1) |>
-    dplyr::select(-"AphiaID") |>
-    dplyr::ungroup()
+    dplyr::distinct()
 
   logger::log_info(
     "Joining taxonomy with sample metadata...",
@@ -487,8 +569,29 @@ ingest_legacy_16_20 <- function() {
       worms_matched_clean,
       by = c("reported_taxa" = "original")
     ) |>
+    dplyr::mutate(
+      AphiaID = dplyr::if_else(
+        .data$status == "unaccepted",
+        .data$valid_AphiaID,
+        .data$AphiaID
+      ),
+      scientificname = dplyr::if_else(
+        .data$status == "unaccepted",
+        .data$valid_name,
+        .data$scientificname
+      ),
+      lsid = dplyr::if_else(
+        .data$status == "unaccepted",
+        paste0("urn:lsid:marinespecies.org:taxname:", .data$AphiaID),
+        .data$lsid
+      )
+    ) |>
+    dplyr::select(-c("valid_AphiaID", "valid_name")) |>
+    dplyr::group_by(.data$dat_id, .data$reported_taxa, .data$stage) |>
+    dplyr::slice_min(order_by = .data$AphiaID, n = 1, with_ties = FALSE) |>
+    dplyr::select(-"AphiaID") |>
+    dplyr::ungroup() |>
     janitor::clean_names() |>
-    dplyr::select(-"dat_id") |>
     dplyr::left_join(ids, by = c("date", "sample_id")) |>
     dplyr::relocate("stage", .after = "ind_m3") |>
     dplyr::relocate("date", .after = "sample_id") |>
@@ -558,6 +661,25 @@ ingest_legacy_16_20 <- function() {
       !is.na(.data$Abundance),
       !is.na(.data$eventDate),
       !is.na(.data$eventID)
+    ) |>
+    dplyr::group_by(
+      .data$eventID,
+      .data$eventDate,
+      .data$scientificName,
+      .data$lsid,
+      .data$lifeStage
+    ) |>
+    dplyr::summarise(
+      Abundance = sum(.data$Abundance, na.rm = TRUE),
+      .groups = "drop"
+    ) |>
+    # fix appendicularia
+    dplyr::mutate(
+      lsid = dplyr::if_else(
+        .data$lsid == "urn:lsid:marinespecies.org:taxname:103357",
+        "urn:lsid:marinespecies.org:taxname:146421",
+        .data$lsid
+      )
     ) |>
     dplyr::group_by(
       .data$eventID,

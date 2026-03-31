@@ -56,8 +56,6 @@ preprocess_surveys <- function(raw_data = NULL) {
     # remove legacy columns
     dplyr::select(-"sampling_name")
 
-  #TODO: add some validation checks, i.e. flowmeter
-
   logger::log_info("Extracting taxa info...", namespace = "ZooGoN")
   taxa_info <-
     raw_surveys |>
@@ -76,8 +74,31 @@ preprocess_surveys <- function(raw_data = NULL) {
       ))
     ) |>
     dplyr::relocate("taxon", .after = "n_sample") |>
-    # remove old duplicated labels
-    dplyr::mutate(taxon = stringr::str_replace(.data$taxon, "_1", ""))
+    # remove old duplicated labels and replace unnaccepted taxon names
+    dplyr::mutate(
+      taxon = stringr::str_replace(.data$taxon, "_1", ""),
+      taxon = dplyr::case_when(
+        .data$taxon == "254409" ~ "1371",
+        .data$taxon == "722540" ~ "108497",
+        .data$taxon == "105437" ~ "1859314",
+        .data$taxon == "105460" ~ "105464",
+        .data$taxon == "298181" ~ "126426",
+        .data$taxon == "135477" ~ "152189",
+        .data$taxon == "104722" ~ "364368",
+        .data$taxon == "237975" ~ "128806",
+        .data$taxon == "237976" ~ "128795",
+        .data$taxon == "237977" ~ "128821",
+        .data$taxon == "237978" ~ "128817",
+        .data$taxon == "237980" ~ "128796",
+        .data$taxon == "346306" ~ "128808",
+        .data$taxon == "237981" ~ "128819",
+        .data$taxon == "104522" ~ "355570",
+        .data$taxon == "104801" ~ "104792",
+        .data$taxon == "237972" ~ "356949",
+        .data$taxon == "103357" ~ "146421",
+        TRUE ~ .data$taxon
+      )
+    )
 
   preprocessed_survey <-
     dplyr::full_join(cruise_info, taxa_info, by = "submission_id") |>
@@ -120,9 +141,21 @@ preprocess_surveys <- function(raw_data = NULL) {
       aphiaID = "taxon"
     ) |>
     janitor::clean_names() |>
-    dplyr::mutate(dplyr::across(dplyr::starts_with("n_"), as.numeric)) |>
-    # TODO: Ideally there should be no NAs unless the net was empty(!), to clarify. Meanwhile we drop all NAs
-    dplyr::filter(!is.na(.data$aphia_id))
+    dplyr::mutate(dplyr::across(dplyr::starts_with("n_"), as.numeric))
+
+  na_rows <- dplyr::filter(clean_21_24, is.na(.data$aphia_id))
+  if (nrow(na_rows) > 0) {
+    event_ids_with_na <- na_rows %>%
+      dplyr::select("event_id") %>%
+      dplyr::distinct()
+    stop(
+      paste0(
+        "There are rows with NA AphiaIDs in the following samplings: ",
+        paste(event_ids_with_na$event_id, collapse = ", ")
+      ),
+      call. = FALSE
+    )
+  }
 
   logger::log_debug(
     "Cleaned data: {nrow(clean_21_24)} rows",
@@ -170,7 +203,6 @@ preprocess_surveys <- function(raw_data = NULL) {
         life_stage_temp == "n_undetermined" ~ "fmj",
         life_stage_temp == "n_larvae" ~ "lar",
         life_stage_temp == "n_eggs" ~ "egg",
-        # TO DO: do we have nauplii only in 21-24 data?
         life_stage_temp == "n_nauplius" ~ "nau",
         TRUE ~ NA_character_
       )
@@ -195,6 +227,17 @@ preprocess_surveys <- function(raw_data = NULL) {
       !is.na(.data$eventID)
     ) |>
     # remove duplicates
+    dplyr::group_by(
+      .data$eventID,
+      .data$eventDate,
+      .data$scientificName,
+      .data$lsid,
+      .data$lifeStage
+    ) |>
+    dplyr::summarise(
+      Abundance = sum(.data$Abundance, na.rm = TRUE),
+      .groups = "drop"
+    ) |>
     dplyr::group_by(
       .data$eventID,
       .data$eventDate,
