@@ -1,5 +1,33 @@
 # Changelog
 
+## ZooGoN 4.1.0
+
+### Bug fixes and data quality improvements
+
+- **[`preprocess_surveys()`](https://ioledc.github.io/ZOOGoN-40Y/reference/preprocess_surveys.md)**:
+  Added an explicit AphiaID remapping table that replaces 16 unaccepted
+  WoRMS taxon identifiers with their accepted equivalents before any
+  downstream processing. Previously, unaccepted IDs from KoboToolbox
+  submissions were passed through unchanged and resolved only later (or
+  not at all).
+
+- **[`preprocess_surveys()`](https://ioledc.github.io/ZOOGoN-40Y/reference/preprocess_surveys.md)**:
+  NA AphiaIDs now raise an informative error listing the affected
+  `event_id` values instead of silently dropping those rows. This makes
+  data-quality issues in incoming survey submissions immediately
+  visible.
+
+- **[`ingest_legacy_84_15()`](https://ioledc.github.io/ZOOGoN-40Y/reference/ingest_legacy_84_15.md)**
+  and
+  **[`ingest_legacy_16_20()`](https://ioledc.github.io/ZOOGoN-40Y/reference/ingest_legacy_16_20.md)**:
+  Improved resolution of unaccepted WoRMS names. The functions now
+  retain `valid_AphiaID` and `valid_name` from the WoRMS match and
+  explicitly overwrite `AphiaID`, `scientificName`, and `lsid` with
+  accepted values for any taxon whose status is `"unaccepted"`.
+  Deduplication is then performed by `slice_min(AphiaID)` within each
+  (sample, taxon, life-stage) group, replacing the previous strategy of
+  sorting by `AphiaID` and taking the first row.
+
 ## ZooGoN 4.0.0
 
 ### Breaking changes

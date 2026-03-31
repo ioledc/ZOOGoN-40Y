@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">ZooGoN</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -36,6 +36,15 @@
       <small>Source: <a href="https://github.com/ioledc/ZOOGoN-40Y/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="4.1.0" id="zoogon-410">ZooGoN 4.1.0<a class="anchor" aria-label="anchor" href="#zoogon-410"></a></h2>
+<div class="section level3">
+<h3 id="bug-fixes-and-data-quality-improvements-4-1-0">Bug fixes and data quality improvements<a class="anchor" aria-label="anchor" href="#bug-fixes-and-data-quality-improvements-4-1-0"></a></h3>
+<ul><li><p><strong><code><a href="../reference/preprocess_surveys.html">preprocess_surveys()</a></code></strong>: Added an explicit AphiaID remapping table that replaces 16 unaccepted WoRMS taxon identifiers with their accepted equivalents before any downstream processing. Previously, unaccepted IDs from KoboToolbox submissions were passed through unchanged and resolved only later (or not at all).</p></li>
+<li><p><strong><code><a href="../reference/preprocess_surveys.html">preprocess_surveys()</a></code></strong>: NA AphiaIDs now raise an informative error listing the affected <code>event_id</code> values instead of silently dropping those rows. This makes data-quality issues in incoming survey submissions immediately visible.</p></li>
+<li><p><strong><code><a href="../reference/ingest_legacy_84_15.html">ingest_legacy_84_15()</a></code></strong> and <strong><code><a href="../reference/ingest_legacy_16_20.html">ingest_legacy_16_20()</a></code></strong>: Improved resolution of unaccepted WoRMS names. The functions now retain <code>valid_AphiaID</code> and <code>valid_name</code> from the WoRMS match and explicitly overwrite <code>AphiaID</code>, <code>scientificName</code>, and <code>lsid</code> with accepted values for any taxon whose status is <code>"unaccepted"</code>. Deduplication is then performed by <code>slice_min(AphiaID)</code> within each (sample, taxon, life-stage) group, replacing the previous strategy of sorting by <code>AphiaID</code> and taking the first row.</p></li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="4.0.0" id="zoogon-400">ZooGoN 4.0.0<a class="anchor" aria-label="anchor" href="#zoogon-400"></a></h2>
 <div class="section level3">
