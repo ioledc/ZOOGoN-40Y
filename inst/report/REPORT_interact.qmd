@@ -1,0 +1,461 @@
+---
+title: "Gulf of Naples – 40 Years of Zooplankton Biodiversity Assessment"
+subtitle: "ZOOGoN-40Y | LTER MareChiara"
+author: "Andrea Marcucci (andrea.marcucci@szn.it)"
+date: today
+format:
+  html:
+    theme:
+      light: flatly
+      dark: darkly
+    toc: true
+    toc-location: right
+    toc-depth: 3
+    toc-title: "Contents"
+    number-sections: false
+    code-fold: true
+    code-tools: true
+    embed-resources: true
+    fig-width: 10
+    fig-height: 6
+    page-layout: article
+---
+
+<style>
+.taxon-card {
+  border-left: 4px solid #2fa4e7;
+  padding: 0.75rem 1.25rem;
+  border-radius: 4px;
+  margin: 1rem 0;
+  font-size: 0.95rem;
+  background: rgba(47, 164, 231, 0.07);
+}
+</style>
+
+# Aim
+
+The MareChiara station represents one of the longest-running marine monitoring
+sites in the Mediterranean Sea, providing a unique 40-year time series that
+enables investigation of long-term zooplankton community dynamics and
+variability. This report presents the harmonized taxonomic zooplankton metadata
+derived from the LTER dataset, structured in accordance with Darwin Core and
+EMODnet Biology standards.
+
+Use the **Taxon Explorer** below to interactively explore the seasonal heatmap
+and long-term trend for any taxon in the full dataset.
+
+---
+
+# Data Sources and Pipeline
+
+The three temporal datasets cover 1984–2015, 2016–2020, and 2021–2024, from
+the ZOOGoN-40Y project (VLIZ / SZN). Legacy data (1984–2020) are stored in
+SharePoint; new surveys since 2021 are collected via
+[KoBoToolbox](https://www.kobotoolbox.org). Data are processed through the
+[ZooGoN](https://github.com/ioledc/ZOOGoN-40Y) R package — see the
+[pipeline vignette](https://ioledc.github.io/ZOOGoN-40Y/articles/data-processing.html)
+for details.
+
+```{mermaid}
+flowchart LR
+A[Build R container] --> B[Ingest surveys]
+B --> C[Preprocess surveys]
+C --> D[Merge legacy + ongoing data]
+D --> E[Build Darwin Core Archive]
+D --> F[Render MC survey report]
+
+classDef step fill:#2fa4e7,color:#fff,stroke:#1a8cc0
+class A,B,C,D,E,F step
+```
+
+---
+
+# Data Loading and Preparation
+
+```{r setup}
+#| echo: true
+#| code-fold: true
+#| message: false
+#| warning: false
+
+#run with: R_CONFIG_ACTIVE=production quarto preview inst/report/REPORT_copy.qmd
+library(ZooGoN)
+
+# Quarto sets the working directory to inst/report/ — search parent dirs for .env
+for (.env_path in c(".env", "../../.env")) {
+  if (file.exists(.env_path)) { dotenv::load_dot_env(file = .env_path); break }
+}
+rm(.env_path)
+
+conf <- ZooGoN::read_config()
+pacman::p_load(dplyr, lubridate, worrms, stringr, arrow)
+
+merged <- tryCatch(
+  ZooGoN::download_sharepoint_file(
+    prefix  = conf$ingestion$tidy_data$file_prefix,
+    options = conf$storage$sharepoint$credentials,
+    bucket  = conf$storage$sharepoint$buckets$automation_bucket,
+    format  = "parquet"
+  ),
+  error = function(e) {
+    warning(sprintf(
+      "Could not download tidy data from bucket '%s': %s",
+      conf$storage$sharepoint$buckets$automation_bucket,
+      conditionMessage(e)
+    ))
+    NULL
+  }
+)
+
+# Boolean flag used by downstream chunk eval options (avoids !expr !is.null() YAML conflict)
+has_data <- !is.null(merged)
+```
+
+```{r data-status}
+#| echo: false
+#| results: asis
+
+if (is.null(merged)) {
+  cat(sprintf(paste0(
+    "::: {.callout-warning}\n",
+    "## Data not available\n\n",
+    "The tidy dataset could not be loaded from SharePoint bucket **`%s`**.\n\n",
+    "**To fix this locally:**\n\n",
+    "- Set `R_CONFIG_ACTIVE=production` in your R session to read from the ",
+    "production bucket, then re-render: `Sys.setenv(R_CONFIG_ACTIVE = \"production\")`\n",
+    "- Or run `format_to_tidy()` first to populate the dev bucket.\n\n",
+    "The interactive explorer below will be empty until data is available.\n",
+    ":::\n"
+  ), conf$storage$sharepoint$buckets$automation_bucket))
+}
+```
+
+```{r process}
+#| echo: true
+#| code-fold: true
+#| message: false
+#| warning: false
+#| eval: !expr has_data
+
+# --- 1. WoRMS enrichment (Class + Order) with full fallback ---
+aphiaid <- merged |>
+  dplyr::mutate(aphiaID = as.integer(stringr::str_extract(lsid, "[0-9]+")))
+
+ids <- unique(aphiaid$aphiaID)
+
+get_class_order <- function(id) {
+  tryCatch({
+    cls <- worrms::wm_classification(id)
+    data.frame(
+      aphiaID = id,
+      class   = if (length(cls$scientificname[cls$rank == "Class"]) > 0)
+                  cls$scientificname[cls$rank == "Class"][1] else NA_character_,
+      order   = if (length(cls$scientificname[cls$rank == "Order"]) > 0)
+                  cls$scientificname[cls$rank == "Order"][1] else NA_character_,
+      stringsAsFactors = FALSE
+    )
+  }, error = function(e) {
+    data.frame(aphiaID = id, class = NA_character_, order = NA_character_,
+               stringsAsFactors = FALSE)
+  })
+}
+
+ranks_df <- tryCatch(
+  dplyr::bind_rows(lapply(ids, get_class_order)),
+  error = function(e) {
+    warning(sprintf("WoRMS enrichment failed: %s — taxonomy shown as NA.", conditionMessage(e)))
+    data.frame(aphiaID = ids, class = NA_character_, order = NA_character_,
+               stringsAsFactors = FALSE)
+  }
+)
+
+zoo_all <- tryCatch({
+  aphiaid |>
+    dplyr::left_join(ranks_df, by = "aphiaID") |>
+    dplyr::select(-aphiaID) |>
+    dplyr::rename(rankClass = class, rankOrder = order)
+}, error = function(e) {
+  warning(sprintf("WoRMS join failed: %s — proceeding without taxonomy.", conditionMessage(e)))
+  merged |> dplyr::mutate(rankClass = NA_character_, rankOrder = NA_character_)
+})
+
+# --- 2. Pre-aggregate for OJS ---
+
+# A. Weekly heatmap: one row per taxon × year × week (non-zero only)
+heatmap_data <- zoo_all |>
+  dplyr::mutate(
+    week = lubridate::week(eventDate),
+    year = lubridate::year(eventDate)
+  ) |>
+  dplyr::group_by(year, week, rankClass, rankOrder, scientificName) |>
+  dplyr::summarise(abundance = sum(Abundance, na.rm = TRUE), .groups = "drop") |>
+  dplyr::filter(abundance > 0) |>
+  dplyr::mutate(log_abundance = log(abundance + 1))
+
+# B. Monthly anomaly trend: deseasonalized per-taxon time series
+trend_data <- zoo_all |>
+  dplyr::group_by(scientificName, rankClass, rankOrder, eventDate) |>
+  dplyr::summarise(abundance = sum(Abundance, na.rm = TRUE), .groups = "drop") |>
+  dplyr::mutate(
+    month      = lubridate::month(eventDate),
+    quarter    = as.character(lubridate::quarter(eventDate)),
+    year       = lubridate::year(eventDate),
+    month_date = as.character(lubridate::floor_date(eventDate, "month")),
+    series     = ifelse(year < 1993, "before", "after")
+  ) |>
+  dplyr::group_by(series, month, scientificName, rankClass, rankOrder) |>
+  dplyr::mutate(mean_abund = mean(abundance), anomaly = abundance - mean_abund) |>
+  dplyr::group_by(series, month_date, quarter, scientificName, rankClass, rankOrder) |>
+  dplyr::summarise(anomaly = mean(anomaly), .groups = "drop")
+
+# C. Taxon metadata for the selector
+taxa_meta <- zoo_all |>
+  dplyr::distinct(scientificName, rankClass, rankOrder) |>
+  dplyr::arrange(scientificName)
+
+ojs_define(heatmap_data = heatmap_data)
+ojs_define(trend_data   = trend_data)
+ojs_define(taxa_meta    = taxa_meta)
+```
+
+```{r ojs-fallback}
+#| echo: false
+#| include: false
+#| eval: !expr isFALSE(has_data)
+
+# When data loading failed, pass empty frames so OJS cells still render
+ojs_define(heatmap_data = data.frame(
+  scientificName = character(), rankClass = character(), rankOrder = character(),
+  year = integer(), week = integer(), abundance = numeric(), log_abundance = numeric()
+))
+ojs_define(trend_data = data.frame(
+  scientificName = character(), rankClass = character(), rankOrder = character(),
+  month_date = character(), quarter = character(), series = character(),
+  anomaly = numeric()
+))
+ojs_define(taxa_meta = data.frame(
+  scientificName = character(), rankClass = character(), rankOrder = character()
+))
+```
+
+---
+
+# Taxon Explorer
+
+::: {.callout-note collapse="true"}
+## Note: interactive features require HTTP
+
+OJS plots work when this document is served via HTTP. Open via
+`quarto preview` locally, or view the file through the
+[GitHub Actions artifact viewer](https://github.com/ioledc/ZOOGoN-40Y/actions)
+(not via `file://`).
+:::
+
+```{ojs}
+//| echo: false
+
+heatmap_js = transpose(heatmap_data)
+trend_js   = transpose(trend_data)
+taxa_js    = transpose(taxa_meta)
+```
+
+Type in **Filter taxa** to narrow the list by species name, class or order,
+then choose from the **Select taxon** dropdown. Both charts update instantly.
+
+```{ojs}
+//| echo: false
+
+viewof search_query = Inputs.text({
+  label: "Filter taxa",
+  placeholder: "Type a species name, class or order…",
+  width: 420
+})
+```
+
+```{ojs}
+//| echo: false
+
+filtered_names = (() => {
+  const q = search_query.toLowerCase()
+  const names = taxa_js
+    .filter(d =>
+      q === "" ||
+      d.scientificName.toLowerCase().includes(q) ||
+      (d.rankClass && d.rankClass.toLowerCase().includes(q)) ||
+      (d.rankOrder && d.rankOrder.toLowerCase().includes(q))
+    )
+    .map(d => d.scientificName)
+    .sort()
+  return names.length > 0 ? names : taxa_js.map(d => d.scientificName).sort()
+})()
+
+viewof selected = Inputs.select(filtered_names, {
+  label: "Select taxon",
+  width: 420
+})
+```
+
+```{ojs}
+//| echo: false
+
+// Summary card — updates reactively when selected changes
+{
+  const rows     = heatmap_js.filter(d => d.scientificName === selected)
+  const total    = d3.sum(rows, d => d.abundance)
+  const years    = rows.map(d => +d.year)
+  const n_years  = new Set(years).size
+  const min_year = d3.min(years)
+  const max_year = d3.max(years)
+  const meta     = taxa_js.find(d => d.scientificName === selected) || {}
+  return htl.html`<div class="taxon-card">
+    <strong style="font-size:1.05em"><em>${selected}</em></strong><br>
+    Class: <strong>${meta.rankClass ?? "—"}</strong> &ensp;|&ensp;
+    Order: <strong>${meta.rankOrder ?? "—"}</strong> &ensp;|&ensp;
+    Observed: <strong>${min_year ?? "—"}–${max_year ?? "—"}</strong>
+    (${n_years} yr) &ensp;|&ensp;
+    Total: <strong>${d3.format(",.0f")(total)}</strong> ind/m³
+  </div>`
+}
+```
+
+::: {.panel-tabset}
+
+## Seasonal Heatmap
+
+Each cell shows total abundance (ind/m³) for a given **week** (x-axis) and
+**year** (y-axis), log-transformed (log(x + 1)) to compress the dynamic range.
+Missing cells indicate no sampling or zero abundance for that period. Hover over
+a cell for the exact values.
+
+```{ojs}
+//| echo: false
+
+{
+  const data = heatmap_js
+    .filter(d => d.scientificName === selected)
+    .map(d => ({ ...d, week: +d.week, year: +d.year }))
+
+  return Plot.plot({
+    height: 540,
+    marginLeft: 52,
+    marginRight: 20,
+    style: { fontSize: "13px" },
+    color: {
+      scheme: "turbo",
+      legend: true,
+      label: "log(ind/m³ + 1)",
+      width: 280
+    },
+    x: {
+      type: "band",
+      label: "Week of year",
+      tickValues: [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
+    },
+    y: {
+      type: "band",
+      label: "Year"
+    },
+    marks: [
+      Plot.cell(data, {
+        x: d => String(d.week),
+        y: d => String(d.year),
+        fill: "log_abundance",
+        tip: true,
+        inset: 0.5
+      })
+    ]
+  })
+}
+```
+
+## Long-term Trend
+
+Deseasonalized monthly abundance anomaly. Points show deviation from the
+long-term monthly mean, coloured by quarter (Q1–Q4). Linear regression lines
+are fitted to the post-1993 period (after the sampling gap) by quarter.
+
+```{ojs}
+//| echo: false
+
+{
+  const pts   = trend_js
+    .filter(d => d.scientificName === selected)
+    .map(d => ({ ...d, date: new Date(d.month_date) }))
+    .sort((a, b) => a.date - b.date)
+  const after = pts.filter(d => d.series === "after")
+
+  return Plot.plot({
+    height: 420,
+    marginLeft: 60,
+    marginRight: 20,
+    style: { fontSize: "13px" },
+    color: {
+      legend: true,
+      label: "Quarter",
+      domain: ["1", "2", "3", "4"],
+      scheme: "Spectral"
+    },
+    x: { type: "utc", label: "Date" },
+    y: { label: "Anomaly (ind/m³)", zero: true },
+    marks: [
+      Plot.ruleY([0], { stroke: "#aaa", strokeDasharray: "4 4" }),
+      Plot.line(pts, {
+        x: "date",
+        y: "anomaly",
+        stroke: "#bbb",
+        strokeOpacity: 0.25,
+        strokeWidth: 0.8
+      }),
+      Plot.dot(pts, {
+        x: "date",
+        y: "anomaly",
+        fill: "quarter",
+        fillOpacity: 0.65,
+        r: 3,
+        tip: true
+      }),
+      Plot.linearRegressionY(after, {
+        x: "date",
+        y: "anomaly",
+        stroke: "quarter",
+        strokeWidth: 2.5
+      })
+    ]
+  })
+}
+```
+
+:::
+
+---
+
+# Dataset Overview
+
+All `r if (exists("taxa_meta")) nrow(taxa_meta) else "–"` taxa in the 40-year
+dataset. Click a column header to sort. Use the search box in the Taxon Explorer
+to narrow the selection.
+
+```{ojs}
+//| echo: false
+
+Inputs.table(taxa_js, {
+  columns: ["scientificName", "rankClass", "rankOrder"],
+  header: {
+    scientificName: "Scientific Name",
+    rankClass: "Class",
+    rankOrder: "Order"
+  },
+  sort: "scientificName",
+  width: { scientificName: 320, rankClass: 190, rankOrder: 190 }
+})
+```
+
+---
+
+# Automated Data Pipeline
+
+This report is produced by a fully automated pipeline running daily at 00:00 UTC
+via [GitHub Actions](https://github.com/ioledc/ZOOGoN-40Y/actions). HTML
+artifacts are retained for 90 days and are accessible directly through the
+Actions UI. All survey data are simultaneously converted into Darwin Core–compliant
+format for integration with OBIS, EMODnet Biology, and GBIF.
