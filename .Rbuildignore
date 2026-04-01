@@ -5,6 +5,8 @@
 ^README\.html$
 ^cran-comments\.md$
 ^data-raw$
+^analysis$
+^_quarto\.yml$
 ^data$
 ^_pkgdown\.yml$
 ^docs$

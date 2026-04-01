@@ -6,8 +6,4 @@
     format = "{level} [{format(time, \"%Y-%m-%d %H:%M:%S\")}] {msg}"
   ), namespace = pkgname)
 
-  # In GitHub Actions, use the GHA layout for proper grouping/annotations
-  if (nzchar(Sys.getenv("GITHUB_ACTIONS"))) {
-    logger::log_layout(logger::layout_gha, namespace = pkgname)
-  }
 }

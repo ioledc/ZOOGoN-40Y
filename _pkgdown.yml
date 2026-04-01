@@ -35,11 +35,24 @@ navbar:
       href: https://dto-bioflow.eu
 
 reference:
+  - title: "Survey Data Ingestion"
+    desc: "KoboToolbox integration for field survey data collection"
+    contents:
+      - ingest_surveys
+      - get_kobo_data
+      - preprocess_surveys
+
+  - title: "Legacy Data Ingestion"
+    desc: "Download, validate, and harmonize legacy zooplankton datasets"
+    contents:
+      - ingest_legacy_84_15
+      - ingest_legacy_16_20
+
   - title: "Data Processing"
     desc: "Merge, harmonize, and convert zooplankton data"
     contents:
-      - raw_to_tidy
-      - raw_to_dc
+      - format_to_tidy
+      - format_to_dc
       - build_emof_occurrence
       - build_emof_events
 
@@ -47,14 +60,14 @@ reference:
     desc: "SharePoint integration for data storage and retrieval"
     contents:
       - upload_sharepoint_df
+      - upload_sharepoint_file
       - download_sharepoint_file
 
-  - title: "Survey Data Ingestion"
-    desc: "KoboToolbox integration for field survey data collection"
+  - title: "Pipeline & Reporting"
+    desc: "Orchestrate the full pipeline and render monitoring reports"
     contents:
-      - ingest_surveys
-      - get_kobo_data
-      - preprocess_surveys
+      - run_pipeline
+      - render_report
 
   - title: "Utility Functions"
     desc: "Helper functions for data processing"
@@ -67,7 +80,7 @@ reference:
   - title: "Publishing"
     desc: "Build and register Darwin Core Archives"
     contents:
-      - dc_to_archive
+      - format_to_DC_archive
       - register_gbif_dataset
       - register_gbif_dataset_test
       - add_gbif_license_block

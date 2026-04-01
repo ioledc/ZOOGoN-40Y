@@ -48,15 +48,24 @@ ingest_surveys <- function() {
     stop("Number of submission ids not the same as number of records")
   }
 
-  logger::log_info("Converting MC Survey Kobo data to tabular format...", namespace = "ZooGoN")
+  logger::log_info(
+    "Converting MC Survey Kobo data to tabular format...",
+    namespace = "ZooGoN"
+  )
   raw_survey <-
     purrr::map(data_raw, flatten_row) %>%
     dplyr::bind_rows() %>%
     dplyr::rename(submission_id = "_id")
 
-  logger::log_debug("Flattened survey: {nrow(raw_survey)} rows, {ncol(raw_survey)} columns", namespace = "ZooGoN")
+  logger::log_debug(
+    "Flattened survey: {nrow(raw_survey)} rows, {ncol(raw_survey)} columns",
+    namespace = "ZooGoN"
+  )
 
-  logger::log_info("Uploading raw survey data (CSV + Parquet)...", namespace = "ZooGoN")
+  logger::log_info(
+    "Uploading raw survey data (CSV + Parquet)...",
+    namespace = "ZooGoN"
+  )
   c("csv", "parquet") |>
     purrr::walk(
       ~ upload_sharepoint_df(
@@ -144,12 +153,18 @@ get_kobo_data <- function(
     format
   )
 
-  logger::log_info("Starting data retrieval from {base_url}", namespace = "ZooGoN")
+  logger::log_info(
+    "Starting data retrieval from {base_url}",
+    namespace = "ZooGoN"
+  )
 
   get_page <- function(url, limit = 30000, start = 0) {
     full_url <- paste0(url, "?limit=", limit, "&start=", start)
 
-    logger::log_debug("Retrieving page starting at record {start}", namespace = "ZooGoN")
+    logger::log_debug(
+      "Retrieving page starting at record {start}",
+      namespace = "ZooGoN"
+    )
 
     respon.kpi <- tryCatch(
       expr = {
@@ -158,7 +173,10 @@ get_kobo_data <- function(
           httr2::req_perform()
       },
       error = function(x) {
-        logger::log_error("Error on page starting at record {start}. Please try again or check the input parameters.", namespace = "ZooGoN")
+        logger::log_error(
+          "Error on page starting at record {start}. Please try again or check the input parameters.",
+          namespace = "ZooGoN"
+        )
         return(NULL)
       }
     )
@@ -167,10 +185,16 @@ get_kobo_data <- function(
       content_type <- httr2::resp_content_type(respon.kpi)
 
       if (grepl("json", content_type)) {
-        logger::log_debug("Successfully retrieved JSON data starting at record {start}", namespace = "ZooGoN")
+        logger::log_debug(
+          "Successfully retrieved JSON data starting at record {start}",
+          namespace = "ZooGoN"
+        )
         return(httr2::resp_body_json(respon.kpi, encoding = encoding))
       } else if (grepl("xml", content_type)) {
-        logger::log_debug("Successfully retrieved XML data starting at record {start}", namespace = "ZooGoN")
+        logger::log_debug(
+          "Successfully retrieved XML data starting at record {start}",
+          namespace = "ZooGoN"
+        )
         return(httr2::resp_body_string(respon.kpi, encoding = encoding))
       } else if (grepl("html", content_type)) {
         warning(
@@ -203,14 +227,20 @@ get_kobo_data <- function(
     page_results <- get_page(base_url, limit, start)
 
     if (is.null(page_results)) {
-      logger::log_error("Error occurred. Stopping data retrieval.", namespace = "ZooGoN")
+      logger::log_error(
+        "Error occurred. Stopping data retrieval.",
+        namespace = "ZooGoN"
+      )
       break
     }
 
     new_results <- page_results$results
     all_results <- c(all_results, new_results)
 
-    logger::log_debug("Total records retrieved so far: {length(all_results)}", namespace = "ZooGoN")
+    logger::log_debug(
+      "Total records retrieved so far: {length(all_results)}",
+      namespace = "ZooGoN"
+    )
 
     if (length(new_results) < limit) {
       logger::log_info("Retrieved all available records.", namespace = "ZooGoN")
@@ -220,7 +250,10 @@ get_kobo_data <- function(
     }
   }
 
-  logger::log_info("Data retrieval complete. Total records: {length(all_results)}", namespace = "ZooGoN")
+  logger::log_info(
+    "Data retrieval complete. Total records: {length(all_results)}",
+    namespace = "ZooGoN"
+  )
 
   # Check for unique submission IDs
   submission_ids <- sapply(all_results, function(x) x$`_id`)

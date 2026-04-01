@@ -1,3 +1,35 @@
+# ZooGoN 4.0.0
+
+## Breaking changes
+
+* **`raw_to_tidy()`** renamed to **`format_to_tidy()`**.
+* **`raw_to_dc()`** renamed to **`format_to_dc()`**.
+* **`dc_to_archive()`** renamed to **`format_to_DC_archive()`**.
+
+## New functions
+
+* **`ingest_legacy_84_15()`**: downloads, validates, and harmonises the
+  1984–2015 historical zooplankton dataset, including WoRMS taxonomic lookups
+  and life-stage code standardisation. Outputs `McZoo_84-15` to SharePoint.
+* **`ingest_legacy_16_20()`**: same workflow as above for the 2016–2020 legacy
+  dataset. Outputs `McZoo_16-20` to SharePoint.
+* **`upload_sharepoint_file()`**: uploads an arbitrary local file to SharePoint
+  (complements the existing `upload_sharepoint_df()` for data frames).
+
+## Code organisation
+
+* Survey ingestion logic moved to `R/kobo-ingestion.R`.
+* Survey preprocessing logic moved to `R/kobo-processing.R`.
+* Legacy data ingestion logic consolidated in `R/legacy-data-ingestion.R`.
+
+## Documentation
+
+* Vignettes updated to reflect renamed functions and new legacy-ingestion steps.
+* Added plain-language introductions to both vignettes for a non-technical
+  (biology/ecology) audience.
+* pkgdown reference index reorganised: added "Legacy Data Ingestion",
+  "Pipeline & Reporting" sections; all renamed functions updated.
+
 # ZooGoN 3.1.0
 
 ## Full Automated Pipeline

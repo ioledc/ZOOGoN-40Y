@@ -32,9 +32,12 @@ preprocess_surveys <- function(raw_data = NULL) {
       -dplyr::all_of(c("formhub/uuid", "start", "end", "today"))
     )
 
-  logger::log_debug("Raw surveys: {nrow(raw_surveys)} rows", namespace = "ZooGoN")
+  logger::log_debug(
+    "Raw surveys: {nrow(raw_surveys)} rows",
+    namespace = "ZooGoN"
+  )
 
-logger::log_info("Extracting cruise info...", namespace = "ZooGoN")
+  logger::log_info("Extracting cruise info...", namespace = "ZooGoN")
   cruise_info <-
     raw_surveys |>
     dplyr::select("submission_id", !dplyr::starts_with("group_taxa")) |>
@@ -53,6 +56,7 @@ logger::log_info("Extracting cruise info...", namespace = "ZooGoN")
     # remove legacy columns
     dplyr::select(-"sampling_name")
 
+  #TODO: add some validation checks, i.e. flowmeter
 
   logger::log_info("Extracting taxa info...", namespace = "ZooGoN")
   taxa_info <-
@@ -63,16 +67,12 @@ logger::log_info("Extracting cruise info...", namespace = "ZooGoN")
       taxon = dplyr::coalesce(
         .data$taxon_cope_sel,
         .data$taxon_noncope_sel
-        # TO DO: fix missing other_taxon
-        #.data$other_taxon
       )
     ) |>
     dplyr::select(
       -dplyr::all_of(c(
         "taxon_cope_sel",
         "taxon_noncope_sel"
-        # TO DO: fix missing other_taxon
-        #"other_taxon"
       ))
     ) |>
     dplyr::relocate("taxon", .after = "n_sample") |>
@@ -121,14 +121,20 @@ logger::log_info("Extracting cruise info...", namespace = "ZooGoN")
     ) |>
     janitor::clean_names() |>
     dplyr::mutate(dplyr::across(dplyr::starts_with("n_"), as.numeric)) |>
-    # TO DO: Ideally there should be no NAs unless the net was empty(!), to clarify. Meanwhile we drop all NAs
+    # TODO: Ideally there should be no NAs unless the net was empty(!), to clarify. Meanwhile we drop all NAs
     dplyr::filter(!is.na(.data$aphia_id))
 
-  logger::log_debug("Cleaned data: {nrow(clean_21_24)} rows", namespace = "ZooGoN")
+  logger::log_debug(
+    "Cleaned data: {nrow(clean_21_24)} rows",
+    namespace = "ZooGoN"
+  )
 
   # Get unique AphiaID
   unique_aphia_ids <- as.numeric(unique(clean_21_24$aphia_id))
-  logger::log_info("Querying WoRMS for {length(unique_aphia_ids)} unique AphiaIDs...", namespace = "ZooGoN")
+  logger::log_info(
+    "Querying WoRMS for {length(unique_aphia_ids)} unique AphiaIDs...",
+    namespace = "ZooGoN"
+  )
 
   worms_records <-
     unique_aphia_ids |>
@@ -179,12 +185,12 @@ logger::log_info("Extracting cruise info...", namespace = "ZooGoN")
       eventID = "event_id",
       eventDate = "event_date",
       lifeStage = "life_stage",
-      individualCount = "individual_count"
+      Abundance = "individual_count"
     ) |>
     dplyr::distinct() |>
     # remove NA counts & IDs
     dplyr::filter(
-      !is.na(.data$individualCount),
+      !is.na(.data$Abundance),
       !is.na(.data$eventDate),
       !is.na(.data$eventID)
     ) |>
@@ -197,13 +203,19 @@ logger::log_info("Extracting cruise info...", namespace = "ZooGoN")
       .data$lifeStage
     ) |>
     dplyr::summarise(
-      individualCount = sum(.data$individualCount, na.rm = TRUE),
+      Abundance = sum(.data$Abundance, na.rm = TRUE),
       .groups = "drop"
     ) |>
-    dplyr::relocate("individualCount", .before = "lifeStage")
+    dplyr::relocate("Abundance", .before = "lifeStage")
 
-  logger::log_info("Preprocessed data: {nrow(tidy_data)} rows, {length(unique(tidy_data$scientificName))} unique taxa", namespace = "ZooGoN")
-  logger::log_info("Uploading preprocessed data (CSV + Parquet)...", namespace = "ZooGoN")
+  logger::log_info(
+    "Preprocessed data: {nrow(tidy_data)} rows, {length(unique(tidy_data$scientificName))} unique taxa",
+    namespace = "ZooGoN"
+  )
+  logger::log_info(
+    "Uploading preprocessed data (CSV + Parquet)...",
+    namespace = "ZooGoN"
+  )
   c("csv", "parquet") |>
     purrr::walk(
       ~ upload_sharepoint_df(
@@ -215,25 +227,8 @@ logger::log_info("Extracting cruise info...", namespace = "ZooGoN")
       )
     )
   logger::log_success("preprocess_surveys complete", namespace = "ZooGoN")
-  # upload_sharepoint_df(
-  #   data = preprocessed_complete,
-  #   prefix = conf$ingestion$survey$preprocessed$file_prefix,
-  #   options = conf$storage$sharepoint$credentials,
-  #   bucket = conf$storage$sharepoint$buckets$automation_bucket,
-  #   format = "csv"
-  # )
 }
 
-# TO DO:
-# belongs to the function reinsert after Lorenzo's check
-# upload_sharepoint_df(
-# data = preprocessed_survey,
-# prefix = conf$ingestion$surveys$preprocessed$file_prefix,
-# options = conf$storage$sharepoint,
-# bucket = conf$storage$sharepoint$aut_bucket,
-# format = "csv"
-# )
-#}
 
 #' Prepare repeat answers from Kobo survey forms
 #'
