@@ -152,9 +152,10 @@ if (is.null(merged)) {
 aphiaid <- merged |>
   dplyr::mutate(aphiaID = as.integer(stringr::str_extract(lsid, "[0-9]+")))
 
-ids <- unique(aphiaid$aphiaID)
+ids <- na.omit(unique(aphiaid$aphiaID))
 
 get_class_order <- function(id) {
+  Sys.sleep(0.1) # Respect WoRMS API rate limits
   tryCatch({
     cls <- worrms::wm_classification(id)
     data.frame(
@@ -306,14 +307,17 @@ zoogon_json <- jsonlite::toJSON(list(
   phenology = phenology_data |> dplyr::select(scientificName, year, peak_week, peak_abundance),
   phenoReg  = phenology_regression,
   meta      = taxa_meta
-), auto_unbox = TRUE, na = "null")
+), auto_unbox = TRUE, na = "null", digits = 4)
 
 first_taxon <- taxa_meta |>
   dplyr::filter(scientificName %in% unique(heatmap_data$scientificName)) |>
   dplyr::pull(scientificName) |>
   as.character() |>
   head(1)
-if (length(first_taxon) == 0) first_taxon <- as.character(taxa_meta$scientificName[1])
+
+if (length(first_taxon) == 0 || is.na(first_taxon)) {
+  first_taxon <- if (nrow(taxa_meta) > 0) as.character(taxa_meta$scientificName[1]) else ""
+}
 ```
 
 ```{r data-fallback}
@@ -454,7 +458,7 @@ if (!has_data) {
     dplyr::mutate(
       x     = week - 1L,
       y     = as.integer(year_idx_map[as.character(year)]),
-      value = abundance
+      value = log_abundance
     ) |>
     dplyr::select(x, y, value)
 

@@ -200,3 +200,38 @@ df |>
 #   )
 
 # p_final
+
+aggregated <-
+  merged_data |>
+  dplyr::mutate(
+    aphiaid = stringr::str_extract(lsid, "[0-9]+"),
+    date = lubridate::floor_date(eventDate, "month")
+  ) |>
+  dplyr::group_by(date, scientificName, aphiaid) |>
+  dplyr::summarise(count = mean(Abundance), .groups = "drop") |>
+  dplyr::filter(date > "1995-01-01")
+
+
+features_df <- aggregated %>%
+  dplyr::mutate(date = tsibble::yearmonth(date)) %>%
+  tsibble::as_tsibble(key = scientificName, index = date) %>%
+  tsibble::fill_gaps(count = 0) %>%
+  dplyr::group_by(scientificName) %>%
+  tidyr::nest() %>%
+  dplyr::mutate(
+    stl_feats = purrr::map(
+      data,
+      ~ {
+        y <- stats::ts(.x$count, frequency = 12)
+        if (stats::sd(y) > 0 && length(y) >= 24) {
+          tsfeatures::stl_features(y)
+        } else {
+          NULL
+        }
+      }
+    )
+  ) %>%
+  dplyr::filter(!purrr::map_lgl(stl_feats, purrr::is_null)) %>%
+  tidyr::unnest_wider(stl_feats) %>%
+  dplyr::select(-data) |>
+  dplyr::ungroup()
