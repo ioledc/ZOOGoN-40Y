@@ -115,7 +115,8 @@ preprocess_surveys <- function(raw_data = NULL) {
           "n_copepodite",
           "n_undetermined",
           "n_larvae",
-          "n_eggs"
+          "n_eggs",
+          "n_nauplius"
         ),
         ~ as.numeric(.x) *
           (.data$total_volume / .data$subsample_volume) /
