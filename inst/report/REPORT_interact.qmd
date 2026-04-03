@@ -1,13 +1,13 @@
 ---
 title: "Gulf of Naples – 40 Years of Zooplankton Biodiversity Assessment"
 subtitle: "ZOOGoN-40Y | LTER MareChiara"
-author: "Andrea Marcucci (andrea.marcucci@szn.it)"
+author: "Andrea Marcucci (andrea.marcucci@szn.it) & Lorenzo Longobardi (lorenzo.longobardi@gmail.com)"
 date: today
 format:
   html:
     theme:
       light: flatly
-      dark: darkly
+      #dark: darkly
     toc: true
     toc-location: right
     toc-depth: 3
@@ -22,13 +22,23 @@ format:
 ---
 
 <style>
+#zg-heatmap { height: 720px !important; }
+#zg-trend { height: 520px !important; }
+#zg-phenology { height: 480px !important; }
+
 .taxon-card {
-  border-left: 4px solid #2fa4e7;
+  border-left: 4px solid #1f78b4;
   padding: 0.75rem 1.25rem;
-  border-radius: 4px;
+  border-radius: 6px;
   margin: 1rem 0;
   font-size: 0.95rem;
-  background: rgba(47, 164, 231, 0.07);
+  background: rgba(31, 120, 180, 0.07);
+}
+.section-intro {
+  color: #555;
+  font-size: 0.97rem;
+  line-height: 1.6;
+  margin-bottom: 0.75rem;
 }
 </style>
 
@@ -88,7 +98,8 @@ for (.env_path in c(".env", "../../.env")) {
 rm(.env_path)
 
 conf <- ZooGoN::read_config()
-pacman::p_load(dplyr, lubridate, worrms, stringr, arrow)
+pacman::p_load(dplyr, lubridate, worrms, stringr, arrow,
+               highcharter, DT, jsonlite, RColorBrewer, htmltools, htmlwidgets)
 
 merged <- tryCatch(
   ZooGoN::download_sharepoint_file(
@@ -179,7 +190,7 @@ zoo_all <- tryCatch({
   merged |> dplyr::mutate(rankClass = NA_character_, rankOrder = NA_character_)
 })
 
-# --- 2. Pre-aggregate for OJS ---
+# --- 2. Pre-aggregate data ---
 
 # A. Weekly heatmap: one row per taxon × year × week (non-zero only)
 heatmap_data <- zoo_all |>
@@ -210,112 +221,217 @@ trend_data <- zoo_all |>
 
 # C. Taxon metadata for the selector
 taxa_meta <- zoo_all |>
-  dplyr::distinct(scientificName, rankClass, rankOrder) |>
+  dplyr::distinct(scientificName, rankClass, rankOrder, lsid) |>
+  dplyr::mutate(
+    id = stringr::str_extract(lsid, "[0-9]+"),
+    link = paste0(
+      "https://www.marinespecies.org/aphia.php?p=taxdetails&id=",
+      id
+    )
+  ) |>
+  dplyr::select(-c("id", "lsid")) |>
+  dplyr::relocate(link, .after = "scientificName") |>
   dplyr::arrange(scientificName)
 
-ojs_define(heatmap_data = heatmap_data)
-ojs_define(trend_data   = trend_data)
-ojs_define(taxa_meta    = taxa_meta)
+# D. Annual taxonomic composition by Class (community-level)
+composition_data <- zoo_all |>
+  dplyr::mutate(year = lubridate::year(eventDate)) |>
+  dplyr::group_by(year, rankClass) |>
+  dplyr::summarise(abundance = sum(Abundance, na.rm = TRUE), .groups = "drop") |>
+  dplyr::group_by(year) |>
+  dplyr::mutate(total = sum(abundance), pct = abundance / total * 100) |>
+  dplyr::ungroup() |>
+  dplyr::filter(!is.na(rankClass))
+
+# E. Annual peak week per taxon (phenology)
+phenology_data <- zoo_all |>
+  dplyr::mutate(
+    week = lubridate::week(eventDate),
+    year = lubridate::year(eventDate)
+  ) |>
+  dplyr::group_by(scientificName, rankClass, rankOrder, year, week) |>
+  dplyr::summarise(abundance = sum(Abundance, na.rm = TRUE), .groups = "drop") |>
+  dplyr::group_by(scientificName, rankClass, rankOrder, year) |>
+  dplyr::slice_max(abundance, n = 1, with_ties = FALSE) |>
+  dplyr::ungroup() |>
+  dplyr::rename(peak_week = week, peak_abundance = abundance)
+
+# F. Regression line endpoints for trend chart (per taxon × quarter, post-1993)
+trend_regression <- trend_data |>
+  dplyr::filter(series == "after") |>
+  dplyr::mutate(date_num = as.numeric(as.Date(month_date))) |>
+  dplyr::group_by(scientificName, quarter) |>
+  dplyr::filter(dplyr::n() >= 3) |>
+  dplyr::group_modify(~ {
+    m  <- lm(anomaly ~ date_num, data = .x)
+    x0 <- min(.x$date_num); x1 <- max(.x$date_num)
+    dplyr::tibble(
+      x_min_ms = x0 * 86400000, x_max_ms = x1 * 86400000,
+      y_min    = as.numeric(predict(m, data.frame(date_num = x0))),
+      y_max    = as.numeric(predict(m, data.frame(date_num = x1)))
+    )
+  }, .keep = FALSE) |>
+  dplyr::ungroup()
+
+# G. Regression line endpoints for phenology chart (per taxon)
+phenology_regression <- phenology_data |>
+  dplyr::group_by(scientificName) |>
+  dplyr::filter(dplyr::n() >= 3) |>
+  dplyr::group_modify(~ {
+    m  <- lm(peak_week ~ year, data = .x)
+    x0 <- min(.x$year); x1 <- max(.x$year)
+    dplyr::tibble(
+      x_min = x0, x_max = x1,
+      y_min = as.numeric(predict(m, data.frame(year = x0))),
+      y_max = as.numeric(predict(m, data.frame(year = x1)))
+    )
+  }, .keep = FALSE) |>
+  dplyr::ungroup()
+
+# H. Serialise everything for client-side JS (file:// compatible, no OJS)
+all_years_rev <- seq(
+  max(2024, max(lubridate::year(zoo_all$eventDate), na.rm = TRUE)),
+  1984
+)
+year_idx_map  <- setNames(seq_along(all_years_rev) - 1L, as.character(all_years_rev))
+
+zoogon_json <- jsonlite::toJSON(list(
+  yearCats  = as.character(all_years_rev),
+  yearIdx   = as.list(year_idx_map),
+  heatmap   = heatmap_data   |> dplyr::select(scientificName, week, year, log_abundance, abundance),
+  trend     = trend_data |>
+    dplyr::mutate(month_ms = as.numeric(as.POSIXct(month_date, tz = "UTC")) * 1000) |>
+    dplyr::select(scientificName, month_ms, quarter, anomaly),
+  trendReg  = trend_regression,
+  phenology = phenology_data |> dplyr::select(scientificName, year, peak_week, peak_abundance),
+  phenoReg  = phenology_regression,
+  meta      = taxa_meta
+), auto_unbox = TRUE, na = "null")
+
+first_taxon <- taxa_meta |>
+  dplyr::filter(scientificName %in% unique(heatmap_data$scientificName)) |>
+  dplyr::pull(scientificName) |>
+  as.character() |>
+  head(1)
+if (length(first_taxon) == 0) first_taxon <- as.character(taxa_meta$scientificName[1])
 ```
 
-```{r ojs-fallback}
+```{r data-fallback}
 #| echo: false
 #| include: false
 #| eval: !expr isFALSE(has_data)
 
-# When data loading failed, pass empty frames so OJS cells still render
-ojs_define(heatmap_data = data.frame(
-  scientificName = character(), rankClass = character(), rankOrder = character(),
-  year = integer(), week = integer(), abundance = numeric(), log_abundance = numeric()
-))
-ojs_define(trend_data = data.frame(
-  scientificName = character(), rankClass = character(), rankOrder = character(),
-  month_date = character(), quarter = character(), series = character(),
-  anomaly = numeric()
-))
-ojs_define(taxa_meta = data.frame(
-  scientificName = character(), rankClass = character(), rankOrder = character()
-))
+# When data loading failed, initialise empty objects so downstream chunks
+# can still reference these variables without error
+heatmap_data        <- data.frame(scientificName=character(), week=integer(),
+                                   year=integer(), log_abundance=numeric(), abundance=numeric())
+trend_data          <- data.frame(scientificName=character(), month_date=character(),
+                                   quarter=character(), series=character(), anomaly=numeric())
+taxa_meta           <- data.frame(scientificName=character(), rankClass=character(), rankOrder=character())
+composition_data    <- data.frame(year=integer(), rankClass=character(), pct=numeric())
+phenology_data      <- data.frame(scientificName=character(), year=integer(),
+                                   peak_week=integer(), peak_abundance=numeric())
+trend_regression    <- data.frame(scientificName=character(), quarter=character(),
+                                   x_min_ms=numeric(), x_max_ms=numeric(),
+                                   y_min=numeric(), y_max=numeric())
+phenology_regression <- data.frame(scientificName=character(),
+                                    x_min=integer(), x_max=integer(),
+                                    y_min=numeric(), y_max=numeric())
+all_years_rev <- integer(0)
+year_idx_map  <- setNames(integer(0), character(0))
+zoogon_json   <- "{}"
+first_taxon   <- ""
+```
+
+---
+
+# Community Overview
+
+Annual relative abundance (%) of each taxonomic Class across all samples.
+The stacked area chart reveals shifts in community composition over the 40-year
+record. Hover over any area for exact values.
+
+```{r composition-chart}
+#| echo: false
+#| message: false
+if (!has_data) {
+  htmltools::p("Data not available.", style = "color:#888; font-style:italic")
+} else {
+  classes <- composition_data |>
+    dplyr::group_by(rankClass) |>
+    dplyr::summarise(tot = sum(pct, na.rm = TRUE), .groups = "drop") |>
+    dplyr::arrange(dplyr::desc(tot)) |>
+    dplyr::pull(rankClass)
+  years_v <- sort(unique(composition_data$year))
+
+  hc <- highchart() |>
+    hc_chart(type = "area", animation = FALSE) |>
+    hc_xAxis(categories = as.character(years_v), tickInterval = 5,
+             title = list(text = "Year")) |>
+    hc_yAxis(title = list(text = "Relative abundance (%)"), max = 100, min = 0) |>
+    hc_plotOptions(area = list(stacking = "normal", lineWidth = 0.5,
+                               marker = list(enabled = FALSE))) |>
+    hc_tooltip(shared = TRUE, valueDecimals = 1, valueSuffix = "%") |>
+    hc_legend(enabled = TRUE)
+
+  for (cls in classes) {
+    vals <- composition_data |>
+      dplyr::filter(rankClass == cls) |>
+      dplyr::right_join(data.frame(year = years_v), by = "year") |>
+      dplyr::arrange(year) |>
+      dplyr::pull(pct)
+    hc <- hc |>
+      hc_add_series(name = cls, data = as.list(replace(vals, is.na(vals), 0)), type = "area")
+  }
+  hc
+}
 ```
 
 ---
 
 # Taxon Explorer
 
-::: {.callout-note collapse="true"}
-## Note: interactive features require HTTP
-
-OJS plots work when this document is served via HTTP. Open via
-`quarto preview` locally, or view the file through the
-[GitHub Actions artifact viewer](https://github.com/ioledc/ZOOGoN-40Y/actions)
-(not via `file://`).
-:::
-
-```{ojs}
-//| echo: false
-
-heatmap_js = transpose(heatmap_data)
-trend_js   = transpose(trend_data)
-taxa_js    = transpose(taxa_meta)
-```
-
 Type in **Filter taxa** to narrow the list by species name, class or order,
-then choose from the **Select taxon** dropdown. Both charts update instantly.
+then choose from the **Select taxon** dropdown. All charts update instantly.
 
-```{ojs}
-//| echo: false
-
-viewof search_query = Inputs.text({
-  label: "Filter taxa",
-  placeholder: "Type a species name, class or order…",
-  width: 420
-})
+```{r explorer-data}
+#| echo: false
+# type="application/json" is never executed by the browser and immune to
+# </script> injection — the only safe way to embed large JSON blobs in HTML
+htmltools::tags$script(
+  type = "application/json",
+  id   = "zoogon-data",
+  htmltools::HTML(zoogon_json)
+)
 ```
 
-```{ojs}
-//| echo: false
-
-filtered_names = (() => {
-  const q = search_query.toLowerCase()
-  const names = taxa_js
-    .filter(d =>
-      q === "" ||
-      d.scientificName.toLowerCase().includes(q) ||
-      (d.rankClass && d.rankClass.toLowerCase().includes(q)) ||
-      (d.rankOrder && d.rankOrder.toLowerCase().includes(q))
-    )
-    .map(d => d.scientificName)
-    .sort()
-  return names.length > 0 ? names : taxa_js.map(d => d.scientificName).sort()
-})()
-
-viewof selected = Inputs.select(filtered_names, {
-  label: "Select taxon",
-  width: 420
-})
+```{r explorer-ui}
+#| echo: false
+# Pure HTML — no inline event attributes; JS listeners added by zoogonInit() in explorer-js
+htmltools::tags$div(
+  style = "display:flex; gap:1.5rem; align-items:flex-end; margin:1rem 0; flex-wrap:wrap",
+  htmltools::tags$div(
+    htmltools::tags$label("Filter taxa", `for` = "taxon-search",
+      style = "display:block; font-size:.875rem; margin-bottom:.25rem; font-weight:500"),
+    htmltools::tags$input(id = "taxon-search", type = "text",
+      placeholder = "Type species, class or order\u2026",
+      style = "width:300px; padding:.35rem .5rem; border:1px solid #ccc;
+               border-radius:4px; font-size:.9rem")
+  ),
+  htmltools::tags$div(
+    htmltools::tags$label("Select taxon", `for` = "taxon-select",
+      style = "display:block; font-size:.875rem; margin-bottom:.25rem; font-weight:500"),
+    htmltools::tags$select(id = "taxon-select",
+      style = "width:300px; padding:.35rem .5rem; border:1px solid #ccc;
+               border-radius:4px; font-size:.9rem")
+  )
+)
 ```
 
-```{ojs}
-//| echo: false
-
-// Summary card — updates reactively when selected changes
-{
-  const rows     = heatmap_js.filter(d => d.scientificName === selected)
-  const total    = d3.sum(rows, d => d.abundance)
-  const years    = rows.map(d => +d.year)
-  const n_years  = new Set(years).size
-  const min_year = d3.min(years)
-  const max_year = d3.max(years)
-  const meta     = taxa_js.find(d => d.scientificName === selected) || {}
-  return htl.html`<div class="taxon-card">
-    <strong style="font-size:1.05em"><em>${selected}</em></strong><br>
-    Class: <strong>${meta.rankClass ?? "—"}</strong> &ensp;|&ensp;
-    Order: <strong>${meta.rankOrder ?? "—"}</strong> &ensp;|&ensp;
-    Observed: <strong>${min_year ?? "—"}–${max_year ?? "—"}</strong>
-    (${n_years} yr) &ensp;|&ensp;
-    Total: <strong>${d3.format(",.0f")(total)}</strong> ind/m³
-  </div>`
-}
+```{r explorer-card}
+#| echo: false
+htmltools::div(id = "taxon-card", class = "taxon-card",
+  htmltools::div(id = "taxon-card-content", "\u2014"))
 ```
 
 ::: {.panel-tabset}
@@ -323,48 +439,63 @@ viewof selected = Inputs.select(filtered_names, {
 ## Seasonal Heatmap
 
 Each cell shows total abundance (ind/m³) for a given **week** (x-axis) and
-**year** (y-axis), log-transformed (log(x + 1)) to compress the dynamic range.
-Missing cells indicate no sampling or zero abundance for that period. Hover over
-a cell for the exact values.
+**year** (y-axis). Missing cells indicate no sampling or zero abundance for that
+period. Hover over a cell for the exact value.
 
-```{ojs}
-//| echo: false
+```{r heatmap-chart}
+#| echo: false
+#| message: false
+if (!has_data) {
+  htmltools::p("Data not available.", style = "color:#888; font-style:italic")
+} else {
+  yl_colors <- color_stops(9, RColorBrewer::brewer.pal(9, "YlGnBu"))
 
-{
-  const data = heatmap_js
-    .filter(d => d.scientificName === selected)
-    .map(d => ({ ...d, week: +d.week, year: +d.year }))
+  hm_init <- heatmap_data |> dplyr::filter(scientificName == first_taxon) |>
+    dplyr::mutate(
+      x     = week - 1L,
+      y     = as.integer(year_idx_map[as.character(year)]),
+      value = abundance
+    ) |>
+    dplyr::select(x, y, value)
 
-  return Plot.plot({
-    height: 540,
-    marginLeft: 52,
-    marginRight: 20,
-    style: { fontSize: "13px" },
-    color: {
-      scheme: "turbo",
-      legend: true,
-      label: "log(ind/m³ + 1)",
-      width: 280
-    },
-    x: {
-      type: "band",
-      label: "Week of year",
-      tickValues: [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]
-    },
-    y: {
-      type: "band",
-      label: "Year"
-    },
-    marks: [
-      Plot.cell(data, {
-        x: d => String(d.week),
-        y: d => String(d.year),
-        fill: "log_abundance",
-        tip: true,
-        inset: 0.5
-      })
-    ]
-  })
+  highchart(height = 720) |>
+    hc_chart(type = "heatmap", animation = FALSE, marginBottom = 80) |>
+    hc_add_series(
+      data = highcharter::list_parse2(hm_init),
+      name = "ind/m\u00b3",
+      type = "heatmap"
+    ) |>
+    hc_xAxis(
+      categories = as.character(1:52), 
+      min = 0, max = 51,
+      tickInterval = 4,
+      title = list(text = "Week of year")
+    ) |>
+    hc_yAxis(categories = as.character(all_years_rev), 
+             min = 0, max = length(all_years_rev) - 1,
+             tickInterval = 4, title = list(text = "Year"), reversed = TRUE) |>
+    hc_colorAxis(stops = yl_colors, min = 0, nullColor = "white") |>
+    hc_tooltip(formatter = JS(
+      "function(){
+         return '<b>Week ' + this.series.xAxis.categories[this.point.x] + '</b>' +
+                ' \u00d7 <b>' + this.series.yAxis.categories[this.point.y] + '</b><br>' +
+                'ind/m\u00b3: ' + Highcharts.numberFormat(Math.round(Math.exp(this.point.value) - 1), 0);
+       }"
+    )) |>
+    hc_legend(layout = "horizontal", align = "center", verticalAlign = "top") |>
+    hc_size(height = 720) |>
+    htmlwidgets::onRender(
+      "function(el,x){
+         el.id = 'zg-heatmap';
+         var g = window.__zoogon__ = window.__zoogon__||{};
+         g.charts = g.charts||{};
+         g.charts.heatmap = Highcharts.charts.find(function(c){ return c && c.renderTo === el; });
+         if (g.meta && g.meta.length) {
+           var sel = document.getElementById('taxon-select');
+           zoogonUpdate(sel && sel.value ? sel.value : g.meta[0].scientificName);
+         }
+       }"
+    )
 }
 ```
 
@@ -374,80 +505,356 @@ Deseasonalized monthly abundance anomaly. Points show deviation from the
 long-term monthly mean, coloured by quarter (Q1–Q4). Linear regression lines
 are fitted to the post-1993 period (after the sampling gap) by quarter.
 
-```{ojs}
-//| echo: false
+```{r trend-chart}
+#| echo: false
+#| message: false
+if (!has_data) {
+  htmltools::p("Data not available.", style = "color:#888; font-style:italic")
+} else {
+  qcols    <- c("1" = "#e41a1c", "2" = "#377eb8", "3" = "#4daf4a", "4" = "#984ea3")
+  tr_init  <- trend_data        |> dplyr::filter(scientificName == first_taxon)
+  re_init  <- trend_regression  |> dplyr::filter(scientificName == first_taxon)
 
-{
-  const pts   = trend_js
-    .filter(d => d.scientificName === selected)
-    .map(d => ({ ...d, date: new Date(d.month_date) }))
-    .sort((a, b) => a.date - b.date)
-  const after = pts.filter(d => d.series === "after")
+ hc_tr <- highchart(height = 520) |>
+  hc_chart(animation = FALSE) |>
+  hc_xAxis(type = "datetime", title = list(text = "Date")) |>
+  hc_yAxis(
+    title = list(text = "Anomaly (ind/m\u00b3)"),
+    plotLines = list(list(value = 0, color = "#888", dashStyle = "Dash", width = 1))
+  )
 
-  return Plot.plot({
-    height: 420,
-    marginLeft: 60,
-    marginRight: 20,
-    style: { fontSize: "13px" },
-    color: {
-      legend: true,
-      label: "Quarter",
-      domain: ["1", "2", "3", "4"],
-      scheme: "Spectral"
-    },
-    x: { type: "utc", label: "Date" },
-    y: { label: "Anomaly (ind/m³)", zero: true },
-    marks: [
-      Plot.ruleY([0], { stroke: "#aaa", strokeDasharray: "4 4" }),
-      Plot.line(pts, {
-        x: "date",
-        y: "anomaly",
-        stroke: "#bbb",
-        strokeOpacity: 0.25,
-        strokeWidth: 0.8
-      }),
-      Plot.dot(pts, {
-        x: "date",
-        y: "anomaly",
-        fill: "quarter",
-        fillOpacity: 0.65,
-        r: 3,
-        tip: true
-      }),
-      Plot.linearRegressionY(after, {
-        x: "date",
-        y: "anomaly",
-        stroke: "quarter",
-        strokeWidth: 2.5
-      })
-    ]
-  })
+for (q in c("1", "2", "3", "4")) {
+  pts <- tr_init |>
+    dplyr::filter(quarter == q) |>
+    dplyr::arrange(month_date)
+  
+  if (nrow(pts) > 0) {
+    pts <- pts |>
+      dplyr::mutate(x = as.numeric(as.POSIXct(month_date, tz = "UTC")) * 1000, y = anomaly) |>
+      dplyr::select(x, y)
+  } else {
+    pts <- data.frame(x = numeric(0), y = numeric(0))
+  }
+    
+  hc_tr <- hc_tr |>
+    hc_add_series(
+      data   = highcharter::list_parse2(pts),
+      type   = "scatter", 
+      name   = paste0("Q", q), 
+      color  = qcols[[as.character(q)]], 
+      marker = list(radius = 3.5, symbol = "circle",
+                    lineWidth = 0.5, lineColor = "white")
+    )
+}
+
+for (q in c("1", "2", "3", "4")) {
+  r  <- re_init |> dplyr::filter(quarter == q)
+  
+  if (nrow(r) > 0) { 
+    rd <- data.frame(x = c(r$x_min_ms, r$x_max_ms), y = c(r$y_min, r$y_max))
+  } else {
+    rd <- data.frame(x = numeric(0), y = numeric(0))
+  }
+    
+  hc_tr <- hc_tr |>
+    hc_add_series(
+      data = highcharter::list_parse2(rd), type = "line",
+      name = paste0("Trend Q", q), 
+      color = qcols[[as.character(q)]],
+      lineWidth = 2.5, showInLegend = FALSE,
+      marker = list(enabled = FALSE), enableMouseTracking = FALSE
+    )
+}
+
+hc_tr |>
+  hc_size(height = 520) |>
+  htmlwidgets::onRender(
+    "function(el,x){
+       var g = window.__zoogon__ = window.__zoogon__||{};
+       g.charts = g.charts||{};
+       
+       el.id = 'zg-trend'; 
+       
+       g.charts.trend = Highcharts.charts.find(function(c){ return c && c.renderTo === el; });
+       if (g.meta && g.meta.length) {
+         var sel = document.getElementById('taxon-select');
+         // Check if zoogonUpdate exists before calling to prevent JS crashes
+         if (typeof zoogonUpdate === 'function') {
+           zoogonUpdate(sel && sel.value ? sel.value : g.meta[0].scientificName);
+         }
+       }
+     }"
+  )
+}
+```
+
+## Phenology Shift
+
+Week of peak abundance per year, showing whether the seasonal timing of the
+selected taxon has shifted over the 40-year record. The dashed line marks
+mid-year (week 26). The regression line indicates the long-term phenological
+trend.
+
+```{r phenology-chart}
+#| echo: false
+#| message: false
+if (!has_data) {
+  htmltools::p("Data not available.", style = "color:#888; font-style:italic")
+} else {
+  ph_init  <- phenology_data       |> dplyr::filter(scientificName == first_taxon) |> dplyr::arrange(year)
+  pr_init  <- phenology_regression |> dplyr::filter(scientificName == first_taxon)
+  pr_line  <- if (nrow(pr_init) > 0)
+    data.frame(x = c(pr_init$x_min, pr_init$x_max), y = c(pr_init$y_min, pr_init$y_max))
+  else
+    data.frame(x = numeric(0), y = numeric(0))
+
+  highchart(height = 480) |>
+    hc_chart(animation = FALSE) |>
+    hc_add_series(
+      data   = highcharter::list_parse2(
+        ph_init |> dplyr::mutate(x = year, y = peak_week) |> dplyr::select(x, y)
+      ),
+      type   = "scatter", name = "Peak week", color = "#2166ac",
+      marker = list(radius = 5, symbol = "circle")
+    ) |>
+    hc_add_series(
+      data = highcharter::list_parse2(pr_line), type = "line",
+      name = "Trend", color = "#d73027", lineWidth = 2.2,
+      marker = list(enabled = FALSE), showInLegend = FALSE,
+      enableMouseTracking = FALSE
+    ) |>
+    hc_xAxis(title = list(text = "Year")) |>
+    hc_yAxis(
+      title = list(text = "Peak week of year"), min = 1, max = 52,
+      plotLines = list(list(value = 26, color = "#aaa", dashStyle = "Dash", width = 1))
+    ) |>
+    hc_size(height = 480) |>
+    htmlwidgets::onRender(
+      "function(el,x){
+         var g = window.__zoogon__ = window.__zoogon__||{};
+         g.charts = g.charts||{};
+         el.id = 'zg-phenology';
+         g.charts.phenology = Highcharts.charts.find(function(c){ return c && c.renderTo === el; });
+         if (g.meta && g.meta.length) {
+           var sel = document.getElementById('taxon-select');
+           zoogonUpdate(sel && sel.value ? sel.value : g.meta[0].scientificName);
+         }
+       }"
+    )
 }
 ```
 
 :::
+
+```{r explorer-js}
+#| echo: false
+htmltools::tags$script(htmltools::HTML('
+function zoogonFilter() {
+  var g = window.__zoogon__;
+  if (!g || !g.meta) return;
+  var q   = document.getElementById("taxon-search").value.toLowerCase();
+  var sel = document.getElementById("taxon-select");
+  var cur = sel.value;
+  var flt = q === "" ? g.meta : g.meta.filter(function(t) {
+    return t.scientificName.toLowerCase().includes(q) ||
+           (t.rankClass && t.rankClass.toLowerCase().includes(q)) ||
+           (t.rankOrder && t.rankOrder.toLowerCase().includes(q));
+  });
+  if (!flt.length) flt = g.meta;
+  sel.innerHTML = "";
+  var kept = false;
+  flt.forEach(function(t) {
+    var o = document.createElement("option");
+    o.value = t.scientificName; o.textContent = t.scientificName;
+    if (t.scientificName === cur) { o.selected = true; kept = true; }
+    sel.appendChild(o);
+  });
+  zoogonUpdate(kept ? cur : flt[0].scientificName);
+}
+
+function getChart(elId) {
+  var el = document.getElementById(elId);
+  if (!el) return null;
+  return Highcharts.charts.find(function(c){ return c && c.renderTo === el; }) || null;
+}
+
+function zoogonUpdate(taxon) {
+  var g = window.__zoogon__;
+  if (!g) return;
+  var hm   = g.heatmap.filter(function(d) { return d.scientificName === taxon; });
+  var tr   = g.trend.filter(function(d)   { return d.scientificName === taxon; });
+  var ph   = g.phenology.filter(function(d){ return d.scientificName === taxon; });
+  var meta = g.meta.find(function(d) { return d.scientificName === taxon; }) || {};
+
+  /* ---- Summary card ---- */
+  var years = hm.map(function(d) { return d.year; });
+  var total = hm.reduce(function(s, d) { return s + d.abundance; }, 0);
+  var minY  = years.length ? Math.min.apply(null, years) : "\u2014";
+  var maxY  = years.length ? Math.max.apply(null, years) : "\u2014";
+  document.getElementById("taxon-card-content").innerHTML =
+    "<em>" + taxon + "</em><br>" +
+    "Class: <strong>" + (meta.rankClass || "\u2014") + "</strong> &ensp;|&ensp;" +
+    "Order: <strong>" + (meta.rankOrder || "\u2014") + "</strong> &ensp;|&ensp;" +
+    "Observed: <strong>" + minY + "\u2013" + maxY + "</strong>" +
+    " (" + new Set(years).size + " yr) &ensp;|&ensp;" +
+    "Total: <strong>" + total.toLocaleString() + "</strong> ind/m\u00b3";
+
+  /* ---- Heatmap (full year × week grid, null for missing cells) ---- */
+  var hmChart = (g.charts && g.charts.heatmap) || getChart("zg-heatmap");
+  if (hmChart) { g.charts = g.charts||{}; g.charts.heatmap = hmChart; }
+  if (hmChart) {
+    var hmMap = {};
+    hm.forEach(function(d) {
+      hmMap[(d.week - 1) + "_" + g.yearIdx[String(d.year)]] = d.log_abundance;
+    });
+    var nYears = g.yearCats.length;
+    var hmData = [];
+    for (var yi = 0; yi < nYears; yi++) {
+      for (var w = 0; w < 52; w++) {
+        var v = hmMap[w + "_" + yi];
+        if (v !== undefined && v !== null) {
+          hmData.push([w, yi, v]);
+        }
+      }
+    }
+    hmChart.series[0].setData(hmData, true, { duration: 200 });
+  }
+
+  /* ---- Trend: 4 scatter series + 4 regression lines ---- */
+  var trChart = (g.charts && g.charts.trend) || getChart("zg-trend");
+  if (trChart) { g.charts = g.charts||{}; g.charts.trend = trChart; }
+  if (trChart) {
+    ["1","2","3","4"].forEach(function(q, i) {
+      var pts = tr.filter(function(d) { return String(d.quarter) === q; })
+        .map(function(d) { return [d.month_ms, d.anomaly]; })
+        .sort(function(a, b) { return a[0] - b[0]; });
+      trChart.series[i].setData(pts, false);
+    });
+    var regs = g.trendReg || [];
+    ["1","2","3","4"].forEach(function(q, i) {
+      var r  = regs.find(function(d) { return d.scientificName === taxon && String(d.quarter) === q; });
+      var rd = r ? [[r.x_min_ms, r.y_min], [r.x_max_ms, r.y_max]] : [];
+      trChart.series[4 + i].setData(rd, false);
+    });
+    trChart.reflow();
+    trChart.redraw();
+  }
+
+  /* ---- Phenology ---- */
+  var phChart = (g.charts && g.charts.phenology) || getChart("zg-phenology");
+  if (phChart) { g.charts = g.charts||{}; g.charts.phenology = phChart; }
+  if (phChart) {
+    var phData = ph
+      .map(function(d) { return [d.year, d.peak_week]; })
+      .sort(function(a, b) { return a[0] - b[0]; });
+    phChart.series[0].setData(phData, false);
+    var pr  = (g.phenoReg || []).find(function(d) { return d.scientificName === taxon; });
+    var prd = pr ? [[pr.x_min, pr.y_min], [pr.x_max, pr.y_max]] : [];
+    phChart.series[1].setData(prd, false);
+    phChart.reflow();
+    phChart.redraw();
+  }
+}
+
+/* Reflow charts when Bootstrap tabs become visible (Highcharts can not measure
+   a hidden container, so the first reveal needs an explicit reflow) */
+document.addEventListener("shown.bs.tab", function() {
+  setTimeout(function() {
+    ["zg-heatmap", "zg-trend", "zg-phenology"].forEach(function(id) {
+      try { var c = getChart(id); if (c) { c.reflow(); c.redraw(); } } catch(e2) {}
+    });
+  }, 100);
+});
+
+/* ---- Initialisation ---- */
+/* Called once the DOM is ready (readyState guard handles the case where the
+   script runs after DOMContentLoaded has already fired, which is common in
+   Quarto embed-resources output).
+   Data is MERGED into window.__zoogon__ so any charts already registered by
+   onRender callbacks are preserved.                                          */
+function zoogonInit() {
+  var raw = document.getElementById("zoogon-data");
+  if (!raw) return;
+  var parsed = JSON.parse(raw.textContent);
+  if (!window.__zoogon__) window.__zoogon__ = {};
+  var g = window.__zoogon__;
+  /* merge parsed fields, keep any existing g.charts */
+  ["yearCats","yearIdx","heatmap","trend","trendReg",
+   "phenology","phenoReg","meta"].forEach(function(k) { g[k] = parsed[k]; });
+
+  var sel = document.getElementById("taxon-select");
+  if (!sel) return;
+  /* populate only once */
+  if (sel.options.length === 0) {
+    g.meta.forEach(function(t) {
+      var o = document.createElement("option");
+      o.value = t.scientificName; o.textContent = t.scientificName;
+      sel.appendChild(o);
+    });
+  }
+  /* attach JS event listeners (more reliable than HTML attribute handlers) */
+  document.getElementById("taxon-search")
+          .addEventListener("input", zoogonFilter);
+  sel.addEventListener("change", function() { zoogonUpdate(this.value); });
+
+  /* trigger initial update with first taxon that has heatmap data */
+  if (g.meta && g.meta.length) {
+    var taxaWithData = new Set((g.heatmap || []).map(function(d){ return d.scientificName; }));
+    var firstWithData = g.meta.find(function(t){ return taxaWithData.has(t.scientificName); });
+    var initTaxon = firstWithData ? firstWithData.scientificName : g.meta[0].scientificName;
+    var sel = document.getElementById("taxon-select");
+    if (sel && sel.options.length > 0) sel.value = initTaxon;
+    zoogonUpdate(initTaxon);
+  }
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", zoogonInit);
+} else {
+  zoogonInit();
+}
+'))
+```
 
 ---
 
 # Dataset Overview
 
 All `r if (exists("taxa_meta")) nrow(taxa_meta) else "–"` taxa in the 40-year
-dataset. Click a column header to sort. Use the search box in the Taxon Explorer
-to narrow the selection.
+dataset. Click a column header to sort.
 
-```{ojs}
-//| echo: false
+```{r dataset-table}
+#| echo: false
+if (!has_data) {
+  htmltools::p("Data not available.", style = "color:#888; font-style:italic")
+} else {
+  
+  # 1. Transform the raw URLs into clickable HTML links
+  # Using target="_blank" ensures the link opens in a new tab
+  taxa_meta <- taxa_meta |>
+    dplyr::mutate(
+      link = ifelse(
+        is.na(link) | link == "", 
+        NA, 
+        paste0('<a href="', link, '" target="_blank">View Link</a>') 
+        # Note: Replace "View Link" with `link` if you want to display the full URL text instead
+      )
+    )
 
-Inputs.table(taxa_js, {
-  columns: ["scientificName", "rankClass", "rankOrder"],
-  header: {
-    scientificName: "Scientific Name",
-    rankClass: "Class",
-    rankOrder: "Order"
-  },
-  sort: "scientificName",
-  width: { scientificName: 320, rankClass: 190, rankOrder: 190 }
-})
+  # 2. Render the datatable with escape = FALSE
+  DT::datatable(
+    taxa_meta,
+    colnames  = c(
+      "Scientific Name" = "scientificName",
+      "Link"            = "link",
+      "Class"           = "rankClass",
+      "Order"           = "rankOrder"
+    ),
+    options   = list(pageLength = 25, order = list(list(0, "asc"))),
+    rownames  = FALSE,
+    escape    = FALSE  # Critical: tells DT to render the HTML rather than printing it as text
+  )
+}
 ```
 
 ---

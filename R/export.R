@@ -392,7 +392,7 @@ register_gbif_dataset_test <- function(
 render_report <- function(output_dir = "/home") {
   conf <- read_config()
 
-  report_path <- system.file("report/REPORT.qmd", package = "ZooGoN")
+  report_path <- system.file("report/REPORT_interact.qmd", package = "ZooGoN")
 
   if (report_path == "") {
     stop(
@@ -412,7 +412,7 @@ render_report <- function(output_dir = "/home") {
   )
 
   # Quarto saves files next to the .qmd -- copy both to output_dir
-  out_file <- "REPORT.html"
+  out_file <- "REPORT_interact.html"
   rendered_path <- file.path(dirname(report_path), out_file)
   dest_path <- file.path(
     output_dir,
