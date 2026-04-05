@@ -49,6 +49,7 @@ docs
 *.parquet
 *.xml
 *.zip
+*.html
 /.quarto/
 
 
