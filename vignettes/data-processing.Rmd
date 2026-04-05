@@ -134,10 +134,16 @@ standards applied.
 
 ## Step 4b: Render Report
 
-`render_report()` renders the Quarto monitoring report using the latest
-preprocessed survey data and saves it as a dated HTML file. In the automated
-pipeline this runs in parallel with the archive build, so both outputs are
-produced from the same merged dataset in the same pipeline run.
+`render_report()` renders the Quarto monitoring report using the merged tidy
+dataset and uploads the resulting HTML to the SharePoint `reports` bucket with
+a versioned filename (timestamp + git SHA). A copy is also retained as a
+GitHub Actions artifact for 90 days. In the automated pipeline this step runs
+in parallel with the archive build (step 4a), so both outputs are produced from
+the same merged dataset in the same pipeline run.
+
+The report includes an interactive Taxon Explorer (seasonal heatmap, seasonal
+pattern, long-term trend, and phenology charts) and a Temporal Signals section
+with time-series feature analysis for the most frequently observed taxa.
 
 # Expected Input Data Format
 

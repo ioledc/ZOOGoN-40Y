@@ -109,7 +109,7 @@ preprocess_surveys <- function(raw_data = NULL) {
     preprocessed_survey |>
     dplyr::mutate(
       dplyr::across(
-        .cols = c(
+        .cols = dplyr::any_of(c(
           "n_male",
           "n_female",
           "n_copepodite",
@@ -117,7 +117,7 @@ preprocess_surveys <- function(raw_data = NULL) {
           "n_larvae",
           "n_eggs",
           "n_nauplius"
-        ),
+        )),
         ~ as.numeric(.x) *
           (.data$total_volume / .data$subsample_volume) /
           .data$filtered_volume_m3
@@ -183,7 +183,7 @@ preprocess_surveys <- function(raw_data = NULL) {
     dplyr::relocate("scientificname", "lsid", .after = "aphia_id") |>
     # Pivot abundance columns to long format
     tidyr::pivot_longer(
-      cols = c(
+      cols = dplyr::any_of(c(
         "n_male",
         "n_female",
         "n_copepodite",
@@ -191,7 +191,7 @@ preprocess_surveys <- function(raw_data = NULL) {
         "n_larvae",
         "n_eggs",
         "n_nauplius"
-      ),
+      )),
       names_to = "life_stage_temp",
       values_to = "individual_count"
     ) |>

@@ -7,23 +7,27 @@
 render_report(output_dir = "/home")
 }
 \arguments{
-\item{output_dir}{Directory where the rendered report will be saved.
-Defaults to the current working directory.}
+\item{output_dir}{Local directory where the rendered HTML is saved before
+upload. Defaults to \code{"/home"}.}
 }
 \value{
-Invisible NULL. Renders the report to the output directory.
+Invisible NULL.
 }
 \description{
-This function renders the Quarto report using the preprocessed survey data.
-It downloads the latest preprocessed data from SharePoint and renders the
-report to HTML format, saving it in the working directory.
+This function renders the Quarto monitoring report from the installed
+package, saves the HTML output with a versioned filename, and uploads it to
+the SharePoint reports bucket. The report reads the merged tidy dataset
+directly from SharePoint via \code{read_config()}.
 }
 \details{
 The function performs the following steps:
 \enumerate{
-\item Reads configuration settings from config.yml
-\item Locates Report.qmd inside the installed package (inst/report/)
-\item Renders the Quarto report to HTML in the specified output directory
+\item Reads configuration from \code{inst/config.yml} via \code{read_config()}.
+\item Locates \code{REPORT_interact.qmd} inside the installed package.
+\item Renders the Quarto report to HTML.
+\item Copies the output to \code{output_dir} with a versioned filename
+produced by \code{add_version()} (timestamp + git SHA).
+\item Uploads the HTML to the SharePoint \code{reports} bucket.
 }
 }
 \examples{

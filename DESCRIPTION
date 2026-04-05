@@ -1,6 +1,6 @@
 Package: ZooGoN
 Title: Gulf of Naples 40-Year Zooplankton Biodiversity Assessment and Standardization
-Version: 4.1.0
+Version: 5.0.0
 Authors@R: 
     c(person(given = "Lorenzo",
              family = "Longobardi",

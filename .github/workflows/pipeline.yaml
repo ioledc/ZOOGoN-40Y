@@ -130,10 +130,10 @@ jobs:
       - name: Call render_report()
         run: Rscript -e 'ZooGoN::render_report()'
       - name: List files in /home
-        run: ls -la /home/ZooGoN-report-*
+        run: ls -la /home/interactive-report__*.html
       - name: Upload report as artifact
         uses: actions/upload-artifact@v4
         with:
           name: ZooGoN-report-${{ github.run_id }}
-          path: /home/ZooGoN-report-*.html
+          path: /home/interactive-report__*.html
           retention-days: 90

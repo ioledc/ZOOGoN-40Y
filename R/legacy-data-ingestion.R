@@ -369,7 +369,7 @@ ingest_legacy_84_15 <- function() {
     upload_sharepoint_df(
       data = tidy_data,
       prefix = filename,
-      bucket = conf$storage$sharepoint$buckets$hot_bucket,
+      bucket = conf$storage$sharepoint$buckets$legacy_bucket,
       options = conf$storage$sharepoint$credentials,
       format = fmt,
       filename = TRUE
@@ -717,7 +717,7 @@ ingest_legacy_16_20 <- function() {
     upload_sharepoint_df(
       data = tidy_data,
       prefix = filename,
-      bucket = conf$storage$sharepoint$buckets$hot_bucket,
+      bucket = conf$storage$sharepoint$buckets$legacy_bucket,
       options = conf$storage$sharepoint$credentials,
       format = fmt,
       filename = TRUE

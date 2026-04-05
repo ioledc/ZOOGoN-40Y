@@ -367,20 +367,24 @@ register_gbif_dataset_test <- function(
 
 #' Render ZooGoN MC Survey Report
 #'
-#' This function renders the Quarto report using the preprocessed survey data.
-#' It downloads the latest preprocessed data from SharePoint and renders the
-#' report to HTML format, saving it in the working directory.
+#' This function renders the Quarto monitoring report from the installed
+#' package, saves the HTML output with a versioned filename, and uploads it to
+#' the SharePoint reports bucket. The report reads the merged tidy dataset
+#' directly from SharePoint via \code{read_config()}.
 #'
-#' @param output_dir Directory where the rendered report will be saved.
-#'   Defaults to the current working directory.
+#' @param output_dir Local directory where the rendered HTML is saved before
+#'   upload. Defaults to \code{"/home"}.
 #'
-#' @return Invisible NULL. Renders the report to the output directory.
+#' @return Invisible NULL.
 #'
 #' @details
 #' The function performs the following steps:
-#' 1. Reads configuration settings from config.yml
-#' 2. Locates Report.qmd inside the installed package (inst/report/)
-#' 3. Renders the Quarto report to HTML in the specified output directory
+#' 1. Reads configuration from \code{inst/config.yml} via \code{read_config()}.
+#' 2. Locates \code{REPORT_interact.qmd} inside the installed package.
+#' 3. Renders the Quarto report to HTML.
+#' 4. Copies the output to \code{output_dir} with a versioned filename
+#'    produced by \code{add_version()} (timestamp + git SHA).
+#' 5. Uploads the HTML to the SharePoint \code{reports} bucket.
 #'
 #' @keywords workflow report
 #' @export
@@ -403,33 +407,36 @@ render_report <- function(output_dir = "/home") {
   logger::log_info("Rendering Quarto report...", namespace = "ZooGoN")
   quarto::quarto_render(
     input = report_path,
-    output_format = "html",
-    execute_params = list(
-      sharepoint_site_url = conf$storage$sharepoint$credentials$site_url,
-      data_prefix = conf$ingestion$surveys$preprocessed$file_prefix,
-      automation_bucket = conf$storage$sharepoint$buckets$automation_bucket
-    )
+    output_format = "html"
   )
 
-  # Quarto saves files next to the .qmd -- copy both to output_dir
-  out_file <- "REPORT_interact.html"
-  rendered_path <- file.path(dirname(report_path), out_file)
-  dest_path <- file.path(
-    output_dir,
-    paste0("ZooGoN-report-", Sys.Date(), ".html")
-  )
-  if (file.exists(rendered_path)) {
-    file.copy(rendered_path, dest_path, overwrite = TRUE)
-    logger::log_success(
-      "Report saved as: {dest_path}",
-      namespace = "ZooGoN"
-    )
-  } else {
+  # Quarto saves the HTML next to the .qmd; move to output_dir with a versioned name
+  rendered_path <- file.path(dirname(report_path), "REPORT_interact.html")
+  prefix <- conf$ingestion$reports$file_prefix
+  versioned_name <- add_version(prefix, "html")
+  dest_path <- file.path(output_dir, versioned_name)
+
+  if (!file.exists(rendered_path)) {
     logger::log_warn(
-      "Expected file not found: {rendered_path}",
+      "Expected rendered file not found: {rendered_path}",
       namespace = "ZooGoN"
     )
+    return(invisible(NULL))
   }
+
+  file.copy(rendered_path, dest_path, overwrite = TRUE)
+  logger::log_success("Report saved as: {dest_path}", namespace = "ZooGoN")
+
+  upload_sharepoint_file(
+    file_path       = dest_path,
+    remote_filename = prefix,
+    options         = conf$storage$sharepoint$credentials,
+    bucket          = conf$storage$sharepoint$buckets$reports_bucket,
+    format          = "html"
+  )
+  logger::log_success("Report uploaded to SharePoint reports bucket.", namespace = "ZooGoN")
+
+  invisible(NULL)
 }
 
 
