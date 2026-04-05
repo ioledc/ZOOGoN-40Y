@@ -25,7 +25,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">ZooGoN</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">5.0.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -205,10 +205,16 @@ applied.</p>
 <h3 id="step-4b-render-report">Step 4b: Render Report<a class="anchor" aria-label="anchor" href="#step-4b-render-report"></a>
 </h3>
 <p><code><a href="../reference/render_report.html">render_report()</a></code> renders the Quarto monitoring report
-using the latest preprocessed survey data and saves it as a dated HTML
-file. In the automated pipeline this runs in parallel with the archive
-build, so both outputs are produced from the same merged dataset in the
-same pipeline run.</p>
+using the merged tidy dataset and uploads the resulting HTML to the
+SharePoint <code>reports</code> bucket with a versioned filename
+(timestamp + git SHA). A copy is also retained as a GitHub Actions
+artifact for 90 days. In the automated pipeline this step runs in
+parallel with the archive build (step 4a), so both outputs are produced
+from the same merged dataset in the same pipeline run.</p>
+<p>The report includes an interactive Taxon Explorer (seasonal heatmap,
+seasonal pattern, long-term trend, and phenology charts) and a Temporal
+Signals section with time-series feature analysis for the most
+frequently observed taxa.</p>
 </div>
 </div>
 <div class="section level2">

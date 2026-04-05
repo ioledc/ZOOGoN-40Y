@@ -1,5 +1,62 @@
 # Changelog
 
+## ZooGoN 5.0.0
+
+### Report
+
+- **Seasonal Pattern tab**: Added a new chart tab in the Taxon Explorer
+  showing mean abundance (ind/m³) by week of year, with ±1 standard
+  deviation shading to represent inter-annual variability in seasonal
+  timing and intensity.
+
+- **Temporal Signals section**: New section presenting time-series
+  feature analysis (STL decomposition components, spectral entropy,
+  Hurst exponent, lumpiness, stability, and maximum level shift) for
+  taxa present in ≥ 50% of monthly time points from 1995 onwards.
+  Results are displayed as an interactive `reactable` table with
+  heatmap-style column colouring.
+
+### Bug fixes
+
+- **[`render_report()`](https://ioledc.github.io/ZOOGoN-40Y/reference/render_report.md)**:
+  The rendered HTML is now uploaded to the SharePoint `reports` bucket.
+  Previously the function only saved the file locally; the reports
+  bucket was never written to.
+
+- **[`render_report()`](https://ioledc.github.io/ZOOGoN-40Y/reference/render_report.md)**:
+  Output filename now uses
+  [`add_version()`](https://ioledc.github.io/ZOOGoN-40Y/reference/add_version.md)
+  (timestamp + git SHA), consistent with all other pipeline outputs.
+  Previously [`Sys.Date()`](https://rdrr.io/r/base/Sys.time.html) was
+  used, producing a different naming convention.
+
+- **[`render_report()`](https://ioledc.github.io/ZOOGoN-40Y/reference/render_report.md)**:
+  Removed `execute_params` from the `quarto_render()` call. These were
+  silently ignored because the report reads configuration directly via
+  [`read_config()`](https://ioledc.github.io/ZOOGoN-40Y/reference/read_config.md);
+  one of the keys also pointed to a non-existent config path
+  (`$buckets$reports` instead of `$buckets$reports_bucket`).
+
+- **`inst/config.yml`**: Fixed the `production` override. The `buckets:`
+  nesting level was missing, so `automation_bucket` was never switched
+  to `zoogon_mc-prod` on the main branch — all production runs were
+  silently using the dev bucket.
+
+- **`R/kobo-processing.R`**: Column selection in
+  [`preprocess_surveys()`](https://ioledc.github.io/ZOOGoN-40Y/reference/preprocess_surveys.md)
+  now uses
+  [`dplyr::any_of()`](https://tidyselect.r-lib.org/reference/all_of.html),
+  avoiding errors when optional columns are absent from a given survey
+  batch.
+
+### Configuration
+
+- **`inst/config.yml`**: Added `ingestion.reports.file_prefix`
+  (`"interactive-report"`) to give the rendered report a configurable
+  prefix, consistent with other pipeline artefacts.
+
+- **`inst/config.yml`**: Removed the unused `hot_bucket` entry.
+
 ## ZooGoN 4.1.0
 
 ### Bug fixes and data quality improvements

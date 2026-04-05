@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">ZooGoN</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">4.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">5.0.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -36,6 +36,27 @@
       <small>Source: <a href="https://github.com/ioledc/ZOOGoN-40Y/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="5.0.0" id="zoogon-500">ZooGoN 5.0.0<a class="anchor" aria-label="anchor" href="#zoogon-500"></a></h2>
+<div class="section level3">
+<h3 id="report-5-0-0">Report<a class="anchor" aria-label="anchor" href="#report-5-0-0"></a></h3>
+<ul><li><p><strong>Seasonal Pattern tab</strong>: Added a new chart tab in the Taxon Explorer showing mean abundance (ind/m³) by week of year, with ±1 standard deviation shading to represent inter-annual variability in seasonal timing and intensity.</p></li>
+<li><p><strong>Temporal Signals section</strong>: New section presenting time-series feature analysis (STL decomposition components, spectral entropy, Hurst exponent, lumpiness, stability, and maximum level shift) for taxa present in ≥ 50% of monthly time points from 1995 onwards. Results are displayed as an interactive <code>reactable</code> table with heatmap-style column colouring.</p></li>
+</ul></div>
+<div class="section level3">
+<h3 id="bug-fixes-5-0-0">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-5-0-0"></a></h3>
+<ul><li><p><strong><code><a href="../reference/render_report.html">render_report()</a></code></strong>: The rendered HTML is now uploaded to the SharePoint <code>reports</code> bucket. Previously the function only saved the file locally; the reports bucket was never written to.</p></li>
+<li><p><strong><code><a href="../reference/render_report.html">render_report()</a></code></strong>: Output filename now uses <code><a href="../reference/add_version.html">add_version()</a></code> (timestamp + git SHA), consistent with all other pipeline outputs. Previously <code><a href="https://rdrr.io/r/base/Sys.time.html" class="external-link">Sys.Date()</a></code> was used, producing a different naming convention.</p></li>
+<li><p><strong><code><a href="../reference/render_report.html">render_report()</a></code></strong>: Removed <code>execute_params</code> from the <code>quarto_render()</code> call. These were silently ignored because the report reads configuration directly via <code><a href="../reference/read_config.html">read_config()</a></code>; one of the keys also pointed to a non-existent config path (<code>$buckets$reports</code> instead of <code>$buckets$reports_bucket</code>).</p></li>
+<li><p><strong><code>inst/config.yml</code></strong>: Fixed the <code>production</code> override. The <code>buckets:</code> nesting level was missing, so <code>automation_bucket</code> was never switched to <code>zoogon_mc-prod</code> on the main branch — all production runs were silently using the dev bucket.</p></li>
+<li><p><strong><code>R/kobo-processing.R</code></strong>: Column selection in <code><a href="../reference/preprocess_surveys.html">preprocess_surveys()</a></code> now uses <code><a href="https://tidyselect.r-lib.org/reference/all_of.html" class="external-link">dplyr::any_of()</a></code>, avoiding errors when optional columns are absent from a given survey batch.</p></li>
+</ul></div>
+<div class="section level3">
+<h3 id="configuration-5-0-0">Configuration<a class="anchor" aria-label="anchor" href="#configuration-5-0-0"></a></h3>
+<ul><li><p><strong><code>inst/config.yml</code></strong>: Added <code>ingestion.reports.file_prefix</code> (<code>"interactive-report"</code>) to give the rendered report a configurable prefix, consistent with other pipeline artefacts.</p></li>
+<li><p><strong><code>inst/config.yml</code></strong>: Removed the unused <code>hot_bucket</code> entry.</p></li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="4.1.0" id="zoogon-410">ZooGoN 4.1.0<a class="anchor" aria-label="anchor" href="#zoogon-410"></a></h2>
 <div class="section level3">
