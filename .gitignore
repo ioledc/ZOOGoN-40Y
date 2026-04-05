@@ -21,6 +21,7 @@ vignettes/*.pdf
 *.utf8.md
 *.knit.md
 .Renviron
+cran-comments.md
 
 
 ## OS X
@@ -58,3 +59,4 @@ project_info
 /doc/
 /Meta/
 *report_test
+*.vscode
