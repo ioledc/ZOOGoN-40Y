@@ -102,24 +102,27 @@ for (.env_path in c(".env", "../../.env")) {
 rm(.env_path)
 
 conf <- ZooGoN::read_config()
-pacman::p_load(
-  dplyr,
-  lubridate,
-  worrms,
-  stringr,
-  arrow,
-  highcharter,
-  DT,
-  jsonlite,
-  RColorBrewer,
-  htmltools,
-  htmlwidgets,
-  tsibble,
-  tsfeatures,
-  reactable,
-  purrr,
-  tidyr
-)
+library(dplyr)
+library(lubridate)
+library(worrms)
+library(stringr)
+library(arrow)
+library(highcharter)
+library(DT)
+library(jsonlite)
+library(RColorBrewer)
+library(htmltools)
+library(htmlwidgets)
+library(tsibble)
+library(reactable)
+library(purrr)
+library(tidyr)
+# tsfeatures: best-effort (used for temporal signal analysis; falls back if unavailable)
+if (!requireNamespace("tsfeatures", quietly = TRUE)) {
+  message("tsfeatures not available — temporal signal section will be skipped")
+} else {
+  library(tsfeatures)
+}
 
 merged <- tryCatch(
   ZooGoN::download_sharepoint_file(

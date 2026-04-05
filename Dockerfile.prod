@@ -51,16 +51,12 @@ RUN install2.r --error --skipinstalled \
     DiagrammeR
 
 # Report dependencies (interactive HTML report via Quarto)
-# Layer 1: lightweight packages (pure R / JS wrappers — fast, no compilation)
 RUN install2.r --error --skipinstalled \
     highcharter \
     htmlwidgets \
     DT \
     RColorBrewer \
-    reactable
-
-# Layer 2: time-series packages (require Fortran/C++ compilation; best-effort)
-RUN install2.r --skipinstalled \
+    reactable \
     tsibble \
     tsfeatures
 
