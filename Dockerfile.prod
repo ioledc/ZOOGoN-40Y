@@ -1,5 +1,4 @@
 FROM rocker/tidyverse:4
-# cache bust: render-report added
 RUN apt-get update && apt-get install -y --no-install-recommends \
     jq \
     libjq1 \
@@ -50,6 +49,16 @@ RUN install2.r --error --skipinstalled \
     vegan \
     gridExtra \
     DiagrammeR
+
+# Report dependencies (interactive HTML report via Quarto)
+RUN install2.r --error --skipinstalled \
+    highcharter \
+    htmlwidgets \
+    DT \
+    RColorBrewer \
+    reactable \
+    tsibble \
+    tsfeatures
 
 RUN Rscript -e 'remotes::install_github("LivingNorway/LivingNorwayR")'
 
