@@ -1,2 +1,4 @@
 /.quarto/
 **/*.quarto_ipynb
+REPORT_interact.html
+REPORT.html
