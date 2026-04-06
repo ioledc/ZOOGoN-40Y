@@ -542,7 +542,8 @@ if (!has_data) {
         marker = list(enabled = FALSE)
       )
     ) |>
-    hc_tooltip(shared = TRUE, valueDecimals = 1, valueSuffix = "%")
+    hc_tooltip(shared = TRUE, valueDecimals = 1, valueSuffix = "%") |>
+    hc_legend(enabled = TRUE)
 
   for (cls in classes) {
     vals <- composition_data |>
@@ -679,6 +680,7 @@ if (!has_data) {
        }"
       )
     ) |>
+    hc_legend(layout = "horizontal", align = "center", verticalAlign = "top") |>
     hc_size(height = 720) |>
     htmlwidgets::onRender(
       "function(el,x){
@@ -750,6 +752,7 @@ if (!has_data) {
       min = 0
     ) |>
     hc_tooltip(shared = TRUE, valueDecimals = 1, valueSuffix = " ind/m\u00b3") |>
+    hc_legend(enabled = TRUE) |>
     hc_size(height = 480) |>
     htmlwidgets::onRender(
       "function(el,x){
