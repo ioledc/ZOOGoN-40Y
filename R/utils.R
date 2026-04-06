@@ -93,9 +93,17 @@ add_version <- function(filename, extension = "", sha_nchar = 7, sep = "__") {
 
   version <- format(Sys.time(), "%Y%m%d%H%M%S")
 
-  if (git2r::in_repository()) {
-    commit_sha <- substr(git2r::sha(git2r::last_commit()), 1, sha_nchar)
-    version <- paste(version, commit_sha, sep = "_")
+  sha_from_git <- tryCatch(
+    if (git2r::in_repository()) {
+      substr(git2r::sha(git2r::last_commit()), 1, sha_nchar)
+    } else {
+      ""
+    },
+    error = function(e) ""
+  )
+
+  if (nchar(sha_from_git) > 0) {
+    version <- paste(version, sha_from_git, sep = "_")
   } else if (Sys.getenv("GITHUB_SHA") != "") {
     # If not in a git repository (for example when code is running inside a
     # container) get the sha from an environment variable if available
