@@ -4,6 +4,10 @@ name: ZooGon Kobo Automation
 on:
   push:
   schedule:
+    # Runs every Sunday at midnight UTC.
+    # NOTE: GitHub disables scheduled workflows after 60 days of repo inactivity
+    # (no pushes to any branch). If automatic runs stop, push any commit to main
+    # to re-enable, or trigger manually via workflow_dispatch.
     - cron: "0 0 * * SUN"
   workflow_dispatch:
 

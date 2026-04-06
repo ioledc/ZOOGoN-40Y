@@ -46,7 +46,7 @@ Imports:
     openxlsx,
     quarto
 Remotes:
-    LivingNorway/LivingNorwayR
+    LivingNorway/LivingNorwayR@v1.0.0
 Suggests:
     testthat (>= 3.0.0),
     knitr,

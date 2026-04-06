@@ -1,4 +1,7 @@
-FROM rocker/tidyverse:4
+# Pin to specific R version — locks R itself AND the Posit Package Manager (RSPM)
+# snapshot date, so all install2.r packages come from a frozen CRAN snapshot.
+# To upgrade: change the version tag, rebuild, and test.
+FROM rocker/tidyverse:4.5.1
 RUN apt-get update && apt-get install -y --no-install-recommends \
     jq \
     libjq1 \
@@ -7,10 +10,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libglpk40 \
   && rm -rf /var/lib/apt/lists/*
 
-# Install Quarto
-RUN curl -LO https://quarto.org/download/latest/quarto-linux-amd64.deb && \
-    dpkg -i quarto-linux-amd64.deb && \
-    rm quarto-linux-amd64.deb
+# Install Quarto — pinned version (update alongside R when upgrading the base image)
+RUN curl -LO https://github.com/quarto-dev/quarto-cli/releases/download/v1.9.36/quarto-1.9.36-linux-amd64.deb && \
+    dpkg -i quarto-1.9.36-linux-amd64.deb && \
+    rm quarto-1.9.36-linux-amd64.deb
 
 # Install TinyTeX for PDF rendering
 RUN Rscript -e 'install.packages("tinytex"); tinytex::install_tinytex()'
@@ -51,17 +54,21 @@ RUN install2.r --error --skipinstalled \
     gridExtra \
     DiagrammeR
 
-# Report dependencies (interactive HTML report via Quarto)
+# Report dependencies — pure R/JS wrappers (fast, no compilation)
 RUN install2.r --error --skipinstalled \
     highcharter \
     htmlwidgets \
     DT \
     RColorBrewer \
-    reactable \
+    reactable
+
+# Report dependencies — time-series packages (Fortran/C++ compilation; best-effort)
+RUN install2.r --skipinstalled \
     tsibble \
     tsfeatures
 
-RUN Rscript -e 'remotes::install_github("LivingNorway/LivingNorwayR")'
+# Pin to stable release tag so upstream changes do not break the pipeline
+RUN Rscript -e 'remotes::install_github("LivingNorway/LivingNorwayR@v1.0.0")'
 
 COPY . /home
 WORKDIR /home
