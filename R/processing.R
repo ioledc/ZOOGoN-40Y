@@ -211,15 +211,15 @@ format_to_dc <- function(
       datasetName = paste0(
         "Zooplankton data from LTER MareChiara site in the Gulf of Naples, Mediterranean Sea, (",
         paste0(
-          min(lubridate::month(event_ext$eventDate, label = TRUE)),
+          min(lubridate::month(.data$eventDate, label = TRUE)),
           " ",
-          min(lubridate::year(event_ext$eventDate))
+          min(lubridate::year(.data$eventDate))
         ),
         "-",
         paste0(
-          max(lubridate::month(event_ext$eventDate, label = TRUE)),
+          max(lubridate::month(.data$eventDate, label = TRUE)),
           " ",
-          max(lubridate::year(event_ext$eventDate))
+          max(lubridate::year(.data$eventDate))
         ),
         ")"
       ),
