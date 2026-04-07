@@ -25,7 +25,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">ZooGoN</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">5.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">5.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -243,11 +243,15 @@ included.</p>
 </h2>
 <p>If you need to publish the archive to GBIF:</p>
 <ul>
-<li>Production: supply your real organization/installation keys and a
-public DwC-A URL to <code><a href="../reference/register_gbif_dataset.html">register_gbif_dataset()</a></code>.</li>
-<li>Test: use the GBIF-Test demo helper
-<code><a href="../reference/register_gbif_dataset_test.html">register_gbif_dataset_test()</a></code> with the demo credentials and
-a public DwC-A URL to check the flow safely.</li>
+<li>Production: call
+<code>register_gbif_dataset(title, description)</code> — credentials,
+org/install keys, and endpoint URL are read from environment variables
+via <code>inst/config.yml</code> (<code>GBIF_ENDPOINT_URL</code>,
+<code>GBIF_ORG_KEY</code>, <code>GBIF_INSTALL_KEY</code>,
+<code>GBIF_USERNAME</code>, <code>GBIF_PASSWORD</code>).</li>
+<li>Test: call <code><a href="../reference/register_gbif_dataset_test.html">register_gbif_dataset_test()</a></code> — same pattern
+targeting the GBIF-Test sandbox; configure the <code>GBIF_TEST_*</code>
+variables (see <code>.env.example</code>).</li>
 </ul>
 </div>
 <div class="section level2">

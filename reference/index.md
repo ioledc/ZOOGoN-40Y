@@ -76,6 +76,6 @@ Build and register Darwin Core Archives
 - [`register_gbif_dataset()`](https://ioledc.github.io/ZOOGoN-40Y/reference/register_gbif_dataset.md)
   : Register a hosted archive on GBIF
 - [`register_gbif_dataset_test()`](https://ioledc.github.io/ZOOGoN-40Y/reference/register_gbif_dataset_test.md)
-  : GBIF-Test demo flow (fixed keys and credentials)
+  : GBIF-Test registration flow
 - [`add_gbif_license_block()`](https://ioledc.github.io/ZOOGoN-40Y/reference/add_gbif_license_block.md)
   : Add GBIF-style license block to an EML file

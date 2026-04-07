@@ -1,5 +1,40 @@
 # Changelog
 
+## ZooGoN 5.1.0
+
+### Automation
+
+- **New workflow `gbif-register-test.yaml`**: Monthly GitHub Actions
+  workflow (1st of each month) that calls
+  [`register_gbif_dataset_test()`](https://ioledc.github.io/ZOOGoN-40Y/reference/register_gbif_dataset_test.md)
+  with all credentials supplied as GitHub secrets.
+
+### GBIF registration refactor
+
+- **[`register_gbif_dataset()`](https://ioledc.github.io/ZOOGoN-40Y/reference/register_gbif_dataset.md)
+  and
+  [`register_gbif_dataset_test()`](https://ioledc.github.io/ZOOGoN-40Y/reference/register_gbif_dataset_test.md)**:
+  All credentials, org/install keys, and endpoint URL are now read from
+  `inst/config.yml` via
+  [`read_config()`](https://ioledc.github.io/ZOOGoN-40Y/reference/read_config.md),
+  consistent with the rest of the pipeline. The corresponding parameters
+  (`endpoint_url`, `organization_key`, `installation_key`, `username`,
+  `password`) have been removed from both function signatures. Set
+  `GBIF_ENDPOINT_URL`, `GBIF_ORG_KEY`, `GBIF_INSTALL_KEY`,
+  `GBIF_USERNAME`, `GBIF_PASSWORD` (production) or `GBIF_TEST_*`
+  equivalents (test) as environment variables.
+
+- **[`register_gbif_dataset()`](https://ioledc.github.io/ZOOGoN-40Y/reference/register_gbif_dataset.md)**:
+  Aligned with
+  [`register_gbif_dataset_test()`](https://ioledc.github.io/ZOOGoN-40Y/reference/register_gbif_dataset_test.md)
+  to use the two-call pattern — dataset creation followed by a separate
+  endpoint registration call. Both functions now return
+  `list(dataset_key, registration, endpoint)`.
+
+- **`inst/config.yml`**: Added `gbif.test` and `gbif.production`
+  sections, each reading base URL, credentials, org/install keys, and
+  endpoint URL from environment variables via `!expr Sys.getenv(...)`.
+
 ## ZooGoN 5.0.0
 
 ### Report

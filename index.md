@@ -153,13 +153,14 @@ standards:
   Core tables produced by
   [`format_to_dc()`](https://ioledc.github.io/ZOOGoN-40Y/reference/format_to_dc.md).
 - Production registration: use
-  [`register_gbif_dataset()`](https://ioledc.github.io/ZOOGoN-40Y/reference/register_gbif_dataset.md)
-  with your real GBIF organization key, installation key, credentials,
-  and a public DwC-A URL.
+  `register_gbif_dataset(title, description)` — credentials, org/install
+  keys, and endpoint URL are read from environment variables via
+  `inst/config.yml` (`GBIF_ENDPOINT_URL`, `GBIF_ORG_KEY`,
+  `GBIF_INSTALL_KEY`, `GBIF_USERNAME`, `GBIF_PASSWORD`).
 - Test registration: use
   [`register_gbif_dataset_test()`](https://ioledc.github.io/ZOOGoN-40Y/reference/register_gbif_dataset_test.md)
-  with the GBIF-Test demo credentials (ws_client_demo/Demo123) and your
-  public DwC-A URL to exercise the flow safely.
+  — same pattern targeting the GBIF-Test sandbox; set the `GBIF_TEST_*`
+  environment variables (see `.env.example`).
 
 ## Contributing
 

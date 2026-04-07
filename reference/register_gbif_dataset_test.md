@@ -1,14 +1,14 @@
-# GBIF-Test demo flow (fixed keys and credentials)
+# GBIF-Test registration flow
 
-Runs the GBIF-Test demo recipe: creates a dataset with the documented
-demo org/install keys and adds your DwC-A URL as the endpoint. No
-lookups needed. Use only on GBIF-Test with the demo credentials.
+Registers a dataset on the GBIF-Test sandbox using credentials and keys
+from `inst/config.yml` (`gbif$test`). Reads `GBIF_TEST_ENDPOINT_URL`,
+`GBIF_TEST_USER`, `GBIF_TEST_PASSWORD`, `GBIF_TEST_ORG_KEY`, and
+`GBIF_TEST_INSTALL_KEY` from the environment.
 
 ## Usage
 
 ``` r
 register_gbif_dataset_test(
-  endpoint_url,
   title = "Example dataset registration",
   description = "Minimal metadata; overwritten after GBIF fetches the archive.",
   type = "OCCURRENCE",
@@ -18,10 +18,6 @@ register_gbif_dataset_test(
 ```
 
 ## Arguments
-
-- endpoint_url:
-
-  Public URL to the DwC-A zip file.
 
 - title:
 

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">ZooGoN</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">5.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">5.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -36,6 +36,20 @@
       <small>Source: <a href="https://github.com/ioledc/ZOOGoN-40Y/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="5.1.0" id="zoogon-510">ZooGoN 5.1.0<a class="anchor" aria-label="anchor" href="#zoogon-510"></a></h2>
+<div class="section level3">
+<h3 id="automation-5-1-0">Automation<a class="anchor" aria-label="anchor" href="#automation-5-1-0"></a></h3>
+<ul><li>
+<strong>New workflow <code>gbif-register-test.yaml</code></strong>: Monthly GitHub Actions workflow (1st of each month) that calls <code><a href="../reference/register_gbif_dataset_test.html">register_gbif_dataset_test()</a></code> with all credentials supplied as GitHub secrets.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="gbif-registration-refactor-5-1-0">GBIF registration refactor<a class="anchor" aria-label="anchor" href="#gbif-registration-refactor-5-1-0"></a></h3>
+<ul><li><p><strong><code><a href="../reference/register_gbif_dataset.html">register_gbif_dataset()</a></code> and <code><a href="../reference/register_gbif_dataset_test.html">register_gbif_dataset_test()</a></code></strong>: All credentials, org/install keys, and endpoint URL are now read from <code>inst/config.yml</code> via <code><a href="../reference/read_config.html">read_config()</a></code>, consistent with the rest of the pipeline. The corresponding parameters (<code>endpoint_url</code>, <code>organization_key</code>, <code>installation_key</code>, <code>username</code>, <code>password</code>) have been removed from both function signatures. Set <code>GBIF_ENDPOINT_URL</code>, <code>GBIF_ORG_KEY</code>, <code>GBIF_INSTALL_KEY</code>, <code>GBIF_USERNAME</code>, <code>GBIF_PASSWORD</code> (production) or <code>GBIF_TEST_*</code> equivalents (test) as environment variables.</p></li>
+<li><p><strong><code><a href="../reference/register_gbif_dataset.html">register_gbif_dataset()</a></code></strong>: Aligned with <code><a href="../reference/register_gbif_dataset_test.html">register_gbif_dataset_test()</a></code> to use the two-call pattern — dataset creation followed by a separate endpoint registration call. Both functions now return <code>list(dataset_key, registration, endpoint)</code>.</p></li>
+<li><p><strong><code>inst/config.yml</code></strong>: Added <code>gbif.test</code> and <code>gbif.production</code> sections, each reading base URL, credentials, org/install keys, and endpoint URL from environment variables via <code>!expr Sys.getenv(...)</code>.</p></li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="5.0.0" id="zoogon-500">ZooGoN 5.0.0<a class="anchor" aria-label="anchor" href="#zoogon-500"></a></h2>
 <div class="section level3">

@@ -147,13 +147,14 @@ and the number of unique taxa included.
 
 If you need to publish the archive to GBIF:
 
-- Production: supply your real organization/installation keys and a
-  public DwC-A URL to
-  [`register_gbif_dataset()`](https://ioledc.github.io/ZOOGoN-40Y/reference/register_gbif_dataset.md).
-- Test: use the GBIF-Test demo helper
+- Production: call `register_gbif_dataset(title, description)` —
+  credentials, org/install keys, and endpoint URL are read from
+  environment variables via `inst/config.yml` (`GBIF_ENDPOINT_URL`,
+  `GBIF_ORG_KEY`, `GBIF_INSTALL_KEY`, `GBIF_USERNAME`, `GBIF_PASSWORD`).
+- Test: call
   [`register_gbif_dataset_test()`](https://ioledc.github.io/ZOOGoN-40Y/reference/register_gbif_dataset_test.md)
-  with the demo credentials and a public DwC-A URL to check the flow
-  safely.
+  — same pattern targeting the GBIF-Test sandbox; configure the
+  `GBIF_TEST_*` variables (see `.env.example`).
 
 ## Limitations and next steps
 
