@@ -232,92 +232,31 @@ add_gbif_license_block <- function(
 
 #' Register a hosted archive on GBIF
 #'
-#' Create a dataset entry in GBIF and point it to your public DwC-A zip.
-#' You must supply valid GBIF organization and installation UUIDs and a
-#' URL that anyone can download.
+#' Create a dataset entry on GBIF and point it to your public DwC-A zip.
+#' Credentials and keys are read from \code{inst/config.yml} (\code{gbif$production}).
+#' Reads \code{GBIF_ENDPOINT_URL}, \code{GBIF_USERNAME}, \code{GBIF_PASSWORD},
+#' \code{GBIF_ORG_KEY}, and \code{GBIF_INSTALL_KEY} from the environment.
 #'
-#' @param endpoint_url Public URL to the DwC-A zip file.
-#' @param organization_key GBIF publishing organization UUID.
-#' @param installation_key GBIF installation UUID (e.g., from IPT).
 #' @param title Dataset title.
 #' @param description Brief dataset description.
-#' @param username GBIF account username.
-#' @param password GBIF account password.
 #' @param license GBIF license code. Default: "CC_BY_NC_4_0".
 #' @param language ISO language code. Default: "eng".
 #' @param type Dataset type. Default: "OCCURRENCE".
 #'
-#' @return Parsed JSON response from GBIF.
+#' @return List with `dataset_key`, `registration`, and `endpoint`.
 #' @export
 register_gbif_dataset <- function(
-  endpoint_url,
-  organization_key,
-  installation_key,
   title,
   description,
-  username,
-  password,
   license = "CC_BY_NC_4_0",
   language = "eng",
   type = "OCCURRENCE"
 ) {
-  payload <- list(
-    title = title,
-    description = description,
-    language = language,
-    type = type,
-    publishingOrganizationKey = organization_key,
-    installationKey = installation_key,
-    license = license,
-    endpoints = list(list(
-      type = "DWC_ARCHIVE",
-      url = endpoint_url
-    ))
-  )
-
-  resp <- httr2::request(
-    sprintf("https://api.gbif.org/v1/organization/%s/dataset", organization_key)
-  ) |>
-    httr2::req_auth_basic(username, password) |>
-    httr2::req_body_json(payload) |>
-    httr2::req_perform() |>
-    httr2::resp_check_status()
-
-  httr2::resp_body_json(resp)
-}
-
-#' GBIF-Test demo flow (fixed keys and credentials)
-#'
-#' Runs the GBIF-Test demo recipe: creates a dataset with the documented demo
-#' org/install keys and adds your DwC-A URL as the endpoint. No lookups needed.
-#' Use only on GBIF-Test with the demo credentials.
-#'
-#' @param endpoint_url Public URL to the DwC-A zip file.
-#' @param title Dataset title.
-#' @param description Brief dataset description.
-#' @param type Dataset type. Default: "OCCURRENCE".
-#' @param license License URL. Default: "http://creativecommons.org/publicdomain/zero/1.0/legalcode".
-#' @param language ISO language code. Default: "eng".
-#'
-#' @return List with `dataset_key`, `registration`, and `endpoint`.
-#' @export
-register_gbif_dataset_test <- function(
-  endpoint_url,
-  title = "Example dataset registration",
-  description = "Minimal metadata; overwritten after GBIF fetches the archive.",
-  type = "OCCURRENCE",
-  license = "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
-  language = "eng"
-) {
-  base_url <- "https://api.gbif-test.org/v1"
-  user <- "ws_client_demo"
-  pass <- "Demo123"
-  org_key <- "0a16da09-7719-40de-8d4f-56a15ed52fb6"
-  install_key <- "92d76df5-3de1-4c89-be03-7a17abad962a"
+  conf <- read_config()$gbif$production
 
   reg_payload <- list(
-    publishingOrganizationKey = org_key,
-    installationKey = install_key,
+    publishingOrganizationKey = conf$organization_key,
+    installationKey = conf$installation_key,
     type = type,
     title = title,
     description = description,
@@ -325,8 +264,8 @@ register_gbif_dataset_test <- function(
     license = license
   )
 
-  reg_resp <- httr2::request(paste0(base_url, "/dataset")) |>
-    httr2::req_auth_basic(user, pass) |>
+  reg_resp <- httr2::request(paste0(conf$base_url, "/dataset")) |>
+    httr2::req_auth_basic(conf$username, conf$password) |>
     httr2::req_body_json(reg_payload) |>
     httr2::req_perform() |>
     httr2::resp_check_status()
@@ -344,16 +283,79 @@ register_gbif_dataset_test <- function(
     )
   }
 
-  endpoint_payload <- list(
-    type = "DWC_ARCHIVE",
-    url = endpoint_url
+  endpoint_resp <- httr2::request(
+    sprintf("%s/dataset/%s/endpoint", conf$base_url, dataset_key)
+  ) |>
+    httr2::req_auth_basic(conf$username, conf$password) |>
+    httr2::req_body_json(list(type = "DWC_ARCHIVE", url = conf$endpoint_url)) |>
+    httr2::req_perform() |>
+    httr2::resp_check_status()
+
+  list(
+    dataset_key = dataset_key,
+    registration = reg_body,
+    endpoint = httr2::resp_body_json(endpoint_resp)
+  )
+}
+
+#' GBIF-Test registration flow
+#'
+#' Registers a dataset on the GBIF-Test sandbox using credentials and keys from
+#' \code{inst/config.yml} (\code{gbif$test}). Reads \code{GBIF_TEST_ENDPOINT_URL},
+#' \code{GBIF_TEST_USER}, \code{GBIF_TEST_PASSWORD}, \code{GBIF_TEST_ORG_KEY},
+#' and \code{GBIF_TEST_INSTALL_KEY} from the environment.
+#'
+#' @param title Dataset title.
+#' @param description Brief dataset description.
+#' @param type Dataset type. Default: "OCCURRENCE".
+#' @param license License URL. Default: "http://creativecommons.org/publicdomain/zero/1.0/legalcode".
+#' @param language ISO language code. Default: "eng".
+#'
+#' @return List with `dataset_key`, `registration`, and `endpoint`.
+#' @export
+register_gbif_dataset_test <- function(
+  title = "Example dataset registration",
+  description = "Minimal metadata; overwritten after GBIF fetches the archive.",
+  type = "OCCURRENCE",
+  license = "http://creativecommons.org/publicdomain/zero/1.0/legalcode",
+  language = "eng"
+) {
+  conf <- read_config()$gbif$test
+
+  reg_payload <- list(
+    publishingOrganizationKey = conf$organization_key,
+    installationKey = conf$installation_key,
+    type = type,
+    title = title,
+    description = description,
+    language = language,
+    license = license
   )
 
+  reg_resp <- httr2::request(paste0(conf$base_url, "/dataset")) |>
+    httr2::req_auth_basic(conf$username, conf$password) |>
+    httr2::req_body_json(reg_payload) |>
+    httr2::req_perform() |>
+    httr2::resp_check_status()
+
+  reg_body <- httr2::resp_body_json(reg_resp)
+  dataset_key <- if (is.list(reg_body) && !is.null(reg_body$key)) {
+    reg_body$key
+  } else if (is.character(reg_body) && length(reg_body) == 1) {
+    reg_body
+  } else {
+    stop(
+      "Unexpected registration response: ",
+      httr2::resp_body_string(reg_resp),
+      call. = FALSE
+    )
+  }
+
   endpoint_resp <- httr2::request(
-    sprintf("%s/dataset/%s/endpoint", base_url, dataset_key)
+    sprintf("%s/dataset/%s/endpoint", conf$base_url, dataset_key)
   ) |>
-    httr2::req_auth_basic(user, pass) |>
-    httr2::req_body_json(endpoint_payload) |>
+    httr2::req_auth_basic(conf$username, conf$password) |>
+    httr2::req_body_json(list(type = "DWC_ARCHIVE", url = conf$endpoint_url)) |>
     httr2::req_perform() |>
     httr2::resp_check_status()
 
@@ -364,6 +366,7 @@ register_gbif_dataset_test <- function(
   )
   # https://registry.gbif-test.org/dataset/{dataset_key}
 }
+
 
 #' Render ZooGoN MC Survey Report
 #'
@@ -428,13 +431,16 @@ render_report <- function(output_dir = "/home") {
   logger::log_success("Report saved as: {dest_path}", namespace = "ZooGoN")
 
   upload_sharepoint_file(
-    file_path       = dest_path,
+    file_path = dest_path,
     remote_filename = prefix,
-    options         = conf$storage$sharepoint$credentials,
-    bucket          = conf$storage$sharepoint$buckets$reports_bucket,
-    format          = "html"
+    options = conf$storage$sharepoint$credentials,
+    bucket = conf$storage$sharepoint$buckets$reports_bucket,
+    format = "html"
   )
-  logger::log_success("Report uploaded to SharePoint reports bucket.", namespace = "ZooGoN")
+  logger::log_success(
+    "Report uploaded to SharePoint reports bucket.",
+    namespace = "ZooGoN"
+  )
 
   invisible(NULL)
 }

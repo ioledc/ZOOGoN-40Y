@@ -2,10 +2,9 @@
 % Please edit documentation in R/export.R
 \name{register_gbif_dataset_test}
 \alias{register_gbif_dataset_test}
-\title{GBIF-Test demo flow (fixed keys and credentials)}
+\title{GBIF-Test registration flow}
 \usage{
 register_gbif_dataset_test(
-  endpoint_url,
   title = "Example dataset registration",
   description = "Minimal metadata; overwritten after GBIF fetches the archive.",
   type = "OCCURRENCE",
@@ -14,8 +13,6 @@ register_gbif_dataset_test(
 )
 }
 \arguments{
-\item{endpoint_url}{Public URL to the DwC-A zip file.}
-
 \item{title}{Dataset title.}
 
 \item{description}{Brief dataset description.}
@@ -30,7 +27,8 @@ register_gbif_dataset_test(
 List with \code{dataset_key}, \code{registration}, and \code{endpoint}.
 }
 \description{
-Runs the GBIF-Test demo recipe: creates a dataset with the documented demo
-org/install keys and adds your DwC-A URL as the endpoint. No lookups needed.
-Use only on GBIF-Test with the demo credentials.
+Registers a dataset on the GBIF-Test sandbox using credentials and keys from
+\code{inst/config.yml} (\code{gbif$test}). Reads \code{GBIF_TEST_ENDPOINT_URL},
+\code{GBIF_TEST_USER}, \code{GBIF_TEST_PASSWORD}, \code{GBIF_TEST_ORG_KEY},
+and \code{GBIF_TEST_INSTALL_KEY} from the environment.
 }

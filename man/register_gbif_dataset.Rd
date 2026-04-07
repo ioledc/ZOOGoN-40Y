@@ -5,32 +5,17 @@
 \title{Register a hosted archive on GBIF}
 \usage{
 register_gbif_dataset(
-  endpoint_url,
-  organization_key,
-  installation_key,
   title,
   description,
-  username,
-  password,
   license = "CC_BY_NC_4_0",
   language = "eng",
   type = "OCCURRENCE"
 )
 }
 \arguments{
-\item{endpoint_url}{Public URL to the DwC-A zip file.}
-
-\item{organization_key}{GBIF publishing organization UUID.}
-
-\item{installation_key}{GBIF installation UUID (e.g., from IPT).}
-
 \item{title}{Dataset title.}
 
 \item{description}{Brief dataset description.}
-
-\item{username}{GBIF account username.}
-
-\item{password}{GBIF account password.}
 
 \item{license}{GBIF license code. Default: "CC_BY_NC_4_0".}
 
@@ -39,10 +24,11 @@ register_gbif_dataset(
 \item{type}{Dataset type. Default: "OCCURRENCE".}
 }
 \value{
-Parsed JSON response from GBIF.
+List with \code{dataset_key}, \code{registration}, and \code{endpoint}.
 }
 \description{
-Create a dataset entry in GBIF and point it to your public DwC-A zip.
-You must supply valid GBIF organization and installation UUIDs and a
-URL that anyone can download.
+Create a dataset entry on GBIF and point it to your public DwC-A zip.
+Credentials and keys are read from \code{inst/config.yml} (\code{gbif$production}).
+Reads \code{GBIF_ENDPOINT_URL}, \code{GBIF_USERNAME}, \code{GBIF_PASSWORD},
+\code{GBIF_ORG_KEY}, and \code{GBIF_INSTALL_KEY} from the environment.
 }

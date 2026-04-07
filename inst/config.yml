@@ -19,7 +19,7 @@ default:
   storage:
     sharepoint:
       buckets:
-        automation_bucket: zoogon_mc-dev
+        automation_bucket: zoogon_mc-prod
         legacy_bucket: legacy_data
         unmatched_bucket: worms_unmatched
         darwin_core_bucket: darwincore_archives
@@ -29,6 +29,22 @@ default:
         client_id: !expr Sys.getenv('SHAREPOINT_CLIENT_ID')
         tenant_id: !expr Sys.getenv('SHAREPOINT_TENANT_ID')
         client_secret: !expr Sys.getenv('SHAREPOINT_CLIENT_SECRET')
+
+  gbif:
+    test:
+      base_url: "https://api.gbif-test.org/v1"
+      endpoint_url: !expr Sys.getenv('GBIF_TEST_ENDPOINT_URL')
+      username: !expr Sys.getenv('GBIF_TEST_USER')
+      password: !expr Sys.getenv('GBIF_TEST_PASSWORD')
+      organization_key: !expr Sys.getenv('GBIF_TEST_ORG_KEY')
+      installation_key: !expr Sys.getenv('GBIF_TEST_INSTALL_KEY')
+    production:
+      base_url: "https://api.gbif.org/v1"
+      endpoint_url: !expr Sys.getenv('GBIF_ENDPOINT_URL')
+      username: !expr Sys.getenv('GBIF_USERNAME')
+      password: !expr Sys.getenv('GBIF_PASSWORD')
+      organization_key: !expr Sys.getenv('GBIF_ORG_KEY')
+      installation_key: !expr Sys.getenv('GBIF_INSTALL_KEY')
 
 production:
   storage:

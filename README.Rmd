@@ -147,8 +147,8 @@ ZooGoN ensures compatibility with international biodiversity data standards:
 ## Publishing to GBIF (optional)
 
 - Build a Darwin Core Archive and EML with `format_to_DC_archive()` (writes the zip and uploads it to SharePoint). This reads the Darwin Core tables produced by `format_to_dc()`.
-- Production registration: use `register_gbif_dataset()` with your real GBIF organization key, installation key, credentials, and a public DwC-A URL.
-- Test registration: use `register_gbif_dataset_test()` with the GBIF-Test demo credentials (ws_client_demo/Demo123) and your public DwC-A URL to exercise the flow safely.
+- Production registration: use `register_gbif_dataset(title, description)` — credentials, org/install keys, and endpoint URL are read from environment variables via `inst/config.yml` (`GBIF_ENDPOINT_URL`, `GBIF_ORG_KEY`, `GBIF_INSTALL_KEY`, `GBIF_USERNAME`, `GBIF_PASSWORD`).
+- Test registration: use `register_gbif_dataset_test()` — same pattern targeting the GBIF-Test sandbox; set the `GBIF_TEST_*` environment variables (see `.env.example`).
 
 ## Contributing
 

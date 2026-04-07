@@ -209,8 +209,19 @@ format_to_dc <- function(
       countryCode = "IT",
       institutionCode = "SZN",
       datasetName = paste0(
-        "Zooplankton data at LTER MareChiara site in the Gulf of Naples from 1984-",
-        max(lubridate::year(.data$eventDate))
+        "Zooplankton data from LTER MareChiara site in the Gulf of Naples, Mediterranean Sea, (",
+        paste0(
+          min(lubridate::month(event_ext$eventDate, label = TRUE)),
+          " ",
+          min(lubridate::year(event_ext$eventDate))
+        ),
+        "-",
+        paste0(
+          max(lubridate::month(event_ext$eventDate, label = TRUE)),
+          " ",
+          max(lubridate::year(event_ext$eventDate))
+        ),
+        ")"
       ),
       locality = "MareChiara station, Gulf of Naples",
       stateProvince = "Campania",
