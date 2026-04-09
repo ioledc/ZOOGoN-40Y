@@ -233,6 +233,8 @@ Merge, harmonize, and convert zooplankton data
 
 - [`format_to_tidy()`](https://ioledc.github.io/ZOOGoN-40Y/reference/format_to_tidy.md)
   : Merge all zooplankton datasets into an analysis-ready tidy table
+- [`tidy_to_wide()`](https://ioledc.github.io/ZOOGoN-40Y/reference/tidy_to_wide.md)
+  : Pivot tidy zooplankton data to a wide species-by-sample matrix
 - [`format_to_dc()`](https://ioledc.github.io/ZOOGoN-40Y/reference/format_to_dc.md)
   : Convert legacy LTER-MareChiara zooplankton data to Darwin Core
   format
