@@ -52,6 +52,14 @@ ingest_legacy_84_15 <- function() {
       date = lubridate::as_date(as.numeric(.data$date), origin = "1899-12-30"),
       sample_id = janitor::make_clean_names(.data$sample_id),
       sample_id = stringr::str_replace_all(.data$sample_id, "_", "")
+    ) |>
+    # fix wrong date for mc994
+    dplyr::mutate(
+      date = dplyr::if_else(
+        .data$sample_id == "mc994",
+        as.Date("2012-01-31"),
+        .data$date
+      )
     )
 
   logger::log_info(
