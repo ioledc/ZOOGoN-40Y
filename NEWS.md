@@ -1,3 +1,32 @@
+# ZooGoN 5.2.0
+
+## Automation
+
+* **New CI job `ingest-legacy-data`**: Added a GitHub Actions job that runs
+  `ingest_legacy_84_15()` and `ingest_legacy_16_20()` on every pipeline
+  trigger. The `merge-data` job now depends on both `ingest-legacy-data` and
+  `process-kobo-surveys`, ensuring legacy and ongoing data are always refreshed
+  before merging.
+
+## Storage refactor
+
+* **`ingest_legacy_84_15()` and `ingest_legacy_16_20()`**: Outputs are now
+  written to the `automation_bucket` using versioned file prefixes defined in
+  `inst/config.yml` (`legacy-84-15` and `legacy-16-20`). Previously, files
+  were written locally and then uploaded to the separate
+  `legacy_data_processed` bucket with hardcoded filenames (`McZoo_84-15`,
+  `McZoo_16-20`). The upload now uses the standard pipe-walk pattern
+  consistent with the rest of the pipeline.
+
+* **`format_to_tidy()`**: Now reads legacy datasets from the `automation_bucket`
+  using the config-defined prefixes, replacing the previous approach of reading
+  hardcoded filenames from the `legacy_bucket_processed` bucket.
+
+* **`inst/config.yml`**: Added `ingestion.legacy_84_15.file_prefix`
+  (`"legacy-84-15"`) and `ingestion.legacy_16_20.file_prefix`
+  (`"legacy-16-20"`). Removed the now-unused `legacy_bucket_processed` bucket
+  entry.
+
 # ZooGoN 5.1.0
 
 ## Automation

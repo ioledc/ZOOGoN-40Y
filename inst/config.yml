@@ -12,6 +12,10 @@ default:
         file_prefix: "preprocessed-surveys"
       darwincore:
         file_prefix: "dc-formatted-surveys"
+    legacy_84_15:
+      file_prefix: "legacy-84-15"
+    legacy_16_20:
+      file_prefix: "legacy-16-20"
     tidy_data:
       file_prefix: "tidy-data"
     wide_data:
@@ -23,7 +27,6 @@ default:
       buckets:
         automation_bucket: zoogon_mc-dev
         legacy_bucket: legacy_data
-        legacy_bucket_processed: legacy_data_processed
         unmatched_bucket: worms_unmatched
         darwin_core_bucket: darwincore_archives
         reports_bucket: reports

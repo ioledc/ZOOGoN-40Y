@@ -7,13 +7,13 @@
 ingest_legacy_84_15()
 }
 \value{
-Invisible NULL. Outputs are uploaded to SharePoint as
-\verb{McZoo_84-15.parquet} and \verb{McZoo_84-15.csv}.
+Invisible NULL. Outputs are uploaded to SharePoint as versioned CSV
+and Parquet files (prefix: \code{legacy-84-15}) to the automation bucket.
 }
 \description{
 Downloads, validates, and harmonizes the 1984-2015 legacy zooplankton dataset
 from SharePoint. Taxa are matched against the WoRMS database and the output
-is written in both Parquet and CSV formats to the hot storage bucket.
+is written in both Parquet and CSV formats to the automation bucket.
 }
 \details{
 The function performs the following steps:
@@ -30,7 +30,7 @@ taxon; unmatched taxa are flagged with \code{match_type = "no_match"}.
 metadata, pivoting date columns to long format.
 \item Standardises life-stage codes.
 \item Aggregates duplicate records by summing \code{Abundance}.
-\item Uploads tidy data to the hot storage bucket in Parquet and CSV formats.
+\item Uploads tidy data to the automation bucket in Parquet and CSV formats.
 }
 }
 \note{

@@ -52,6 +52,25 @@ jobs:
           cache-from: type=registry,ref=ghcr.io/ioledc/zoogon-40y/r-runner-zoogon-mc:buildcache
           cache-to: type=registry,ref=ghcr.io/ioledc/zoogon-40y/r-runner-zoogon-mc:buildcache,mode=max
 
+
+  ingest-legacy-data:
+    name: Ingest legacy data
+    needs: build-container
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/ioledc/zoogon-40y/r-runner-zoogon-mc:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Set env to production
+        if: endsWith(github.ref, '/main')
+        run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
+      - name: Call ingest_legacy_84_15()
+        run: Rscript -e 'ZooGoN::ingest_legacy_84_15()'
+      - name: Call ingest_legacy_16_20()
+        run: Rscript -e 'ZooGoN::ingest_legacy_16_20()'
+
   ingest-kobo-surveys:
     name: Ingest KoBo surveys
     needs: build-container
@@ -86,7 +105,7 @@ jobs:
 
   merge-data:
     name: Merge datasets & store tidy data
-    needs: process-kobo-surveys
+    needs: [ingest-legacy-data, process-kobo-surveys]
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/ioledc/zoogon-40y/r-runner-zoogon-mc:latest

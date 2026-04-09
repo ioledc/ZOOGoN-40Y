@@ -22,13 +22,16 @@ format_to_tidy <- function() {
     "Downloading legacy datasets from hot storage...",
     namespace = "ZooGoN"
   )
+
   legacy_84_20 <-
-    c("McZoo_84-15.parquet", "McZoo_16-20.parquet") |>
+    c(
+      conf$ingestion$legacy_84_15$file_prefix,
+      conf$ingestion$legacy_16_20$file_prefix
+    ) |>
     purrr::map(
       download_sharepoint_file,
       options = conf$storage$sharepoint$credentials,
-      bucket = conf$storage$sharepoint$buckets$legacy_bucket_processed,
-      filename = TRUE
+      bucket = conf$storage$sharepoint$buckets$automation_bucket
     ) |>
     dplyr::bind_rows()
   logger::log_debug(

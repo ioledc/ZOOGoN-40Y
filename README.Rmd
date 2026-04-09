@@ -60,19 +60,23 @@ ZooGoN provides a fully automated data pipeline that processes zooplankton data 
 ```{r pipeline, eval = FALSE}
 library(ZooGoN)
 
-# 1. Ingest field surveys from KoboToolbox
+# 1. Ingest and reprocess legacy datasets (1984-2015 and 2016-2020)
+ingest_legacy_84_15()
+ingest_legacy_16_20()
+
+# 2. Ingest field surveys from KoboToolbox
 ingest_surveys()
 
-# 2. Preprocess and standardize survey data
+# 3. Preprocess and standardize survey data
 preprocess_surveys()
 
-# 3. Merge legacy + ongoing data into an analysis-ready dataset
+# 4. Merge legacy + ongoing data into an analysis-ready dataset
 format_to_tidy()
 
-# 4. Convert tidy data to Darwin Core format (Event, Occurrence, eMoF)
+# 5. Convert tidy data to Darwin Core format (Event, Occurrence, eMoF)
 format_to_dc()
 
-# 5. Build Darwin Core Archive with EML metadata and upload
+# 6. Build Darwin Core Archive with EML metadata and upload
 format_to_DC_archive()
 ```
 

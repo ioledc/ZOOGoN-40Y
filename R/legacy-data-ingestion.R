@@ -2,10 +2,10 @@
 #'
 #' Downloads, validates, and harmonizes the 1984-2015 legacy zooplankton dataset
 #' from SharePoint. Taxa are matched against the WoRMS database and the output
-#' is written in both Parquet and CSV formats to the hot storage bucket.
+#' is written in both Parquet and CSV formats to the automation bucket.
 #'
-#' @return Invisible NULL. Outputs are uploaded to SharePoint as
-#'   `McZoo_84-15.parquet` and `McZoo_84-15.csv`.
+#' @return Invisible NULL. Outputs are uploaded to SharePoint as versioned CSV
+#'   and Parquet files (prefix: `legacy-84-15`) to the automation bucket.
 #'
 #' @details
 #' The function performs the following steps:
@@ -21,7 +21,7 @@
 #'    metadata, pivoting date columns to long format.
 #' 6. Standardises life-stage codes.
 #' 7. Aggregates duplicate records by summing `Abundance`.
-#' 8. Uploads tidy data to the hot storage bucket in Parquet and CSV formats.
+#' 8. Uploads tidy data to the automation bucket in Parquet and CSV formats.
 #'
 #' @note Unmatched taxa (no WoRMS hit) are reported to the console and excluded
 #'   from the final export. Curators should review them and add corrections to
@@ -361,28 +361,16 @@ ingest_legacy_84_15 <- function() {
     "Uploading legacy 1984-2015 data (CSV + Parquet)...",
     namespace = "ZooGoN"
   )
-  formats <- c("parquet", "csv")
-
-  purrr::walk(formats, function(fmt) {
-    filename <- paste0("McZoo_84-15.", fmt)
-
-    # Write locally
-    if (fmt == "parquet") {
-      arrow::write_parquet(tidy_data, filename)
-    } else {
-      readr::write_csv2(tidy_data, filename)
-    }
-
-    # Upload to SharePoint
-    upload_sharepoint_df(
-      data = tidy_data,
-      prefix = filename,
-      bucket = conf$storage$sharepoint$buckets$legacy_bucket_processed,
-      options = conf$storage$sharepoint$credentials,
-      format = fmt,
-      filename = TRUE
+  c("csv", "parquet") |>
+    purrr::walk(
+      ~ upload_sharepoint_df(
+        data = tidy_data,
+        prefix = conf$ingestion$legacy_84_15$file_prefix,
+        options = conf$storage$sharepoint$credentials,
+        bucket = conf$storage$sharepoint$buckets$automation_bucket,
+        format = .
+      )
     )
-  })
 
   logger::log_success("ingest_legacy_84_15 complete", namespace = "ZooGoN")
 }
@@ -392,10 +380,10 @@ ingest_legacy_84_15 <- function() {
 #'
 #' Downloads, validates, and harmonizes the 2016-2020 legacy zooplankton dataset
 #' from SharePoint. Taxa are matched against the WoRMS database and the output
-#' is written in both Parquet and CSV formats to the hot storage bucket.
+#' is written in both Parquet and CSV formats to the automation bucket.
 #'
-#' @return Invisible NULL. Outputs are uploaded to SharePoint as
-#'   `McZoo_16-20.parquet` and `McZoo_16-20.csv`.
+#' @return Invisible NULL. Outputs are uploaded to SharePoint as versioned CSV
+#'   and Parquet files (prefix: `legacy-16-20`) to the automation bucket.
 #'
 #' @details
 #' The function performs the following steps:
@@ -411,7 +399,7 @@ ingest_legacy_84_15 <- function() {
 #'    metadata.
 #' 6. Standardises life-stage codes and converts abundance to numeric.
 #' 7. Aggregates duplicate records by summing `Abundance`.
-#' 8. Uploads tidy data to the hot storage bucket in Parquet and CSV formats.
+#' 8. Uploads tidy data to the automation bucket in Parquet and CSV formats.
 #'
 #' @note Unmatched taxa (no WoRMS hit) are reported to the console and excluded
 #'   from the final export. Curators should review them and add corrections to
@@ -716,26 +704,17 @@ ingest_legacy_16_20 <- function() {
     "Uploading legacy 2016-2020 data (CSV + Parquet)...",
     namespace = "ZooGoN"
   )
-  formats <- c("parquet", "csv")
 
-  purrr::walk(formats, function(fmt) {
-    filename <- paste0("McZoo_16-20.", fmt)
-
-    if (fmt == "parquet") {
-      arrow::write_parquet(tidy_data, filename)
-    } else {
-      readr::write_csv2(tidy_data, filename)
-    }
-
-    upload_sharepoint_df(
-      data = tidy_data,
-      prefix = filename,
-      bucket = conf$storage$sharepoint$buckets$legacy_bucket_processed,
-      options = conf$storage$sharepoint$credentials,
-      format = fmt,
-      filename = TRUE
+  c("csv", "parquet") |>
+    purrr::walk(
+      ~ upload_sharepoint_df(
+        data = tidy_data,
+        prefix = conf$ingestion$legacy_16_20$file_prefix,
+        options = conf$storage$sharepoint$credentials,
+        bucket = conf$storage$sharepoint$buckets$automation_bucket,
+        format = .
+      )
     )
-  })
 
   logger::log_success("ingest_legacy_16_20 complete", namespace = "ZooGoN")
 }
