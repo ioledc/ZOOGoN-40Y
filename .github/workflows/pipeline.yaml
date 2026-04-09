@@ -85,7 +85,7 @@ jobs:
         run: Rscript -e 'ZooGoN::preprocess_surveys()'
 
   merge-data:
-    name: Merge data & store tidy data
+    name: Merge datasets & store tidy data
     needs: process-kobo-surveys
     runs-on: ubuntu-latest
     container:
@@ -133,7 +133,7 @@ jobs:
         run: Rscript -e 'ZooGoN::tidy_to_wide()'
 
   render-report:
-    name: Render adn store report
+    name: Render and store report
     needs: merge-data
     runs-on: ubuntu-latest
     container:

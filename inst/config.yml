@@ -23,6 +23,7 @@ default:
       buckets:
         automation_bucket: zoogon_mc-dev
         legacy_bucket: legacy_data
+        legacy_bucket_processed: legacy_data_processed
         unmatched_bucket: worms_unmatched
         darwin_core_bucket: darwincore_archives
         reports_bucket: reports

@@ -636,6 +636,7 @@ get_content_type <- function(format) {
     csv     = "text/csv",
     tsv     = "text/tab-separated-values",
     parquet = "application/vnd.apache.parquet",
+    xlsx    = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     rds     = "application/octet-stream",
     zip     = "application/zip",
     html    = "text/html",

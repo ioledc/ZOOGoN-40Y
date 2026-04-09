@@ -27,7 +27,7 @@ format_to_tidy <- function() {
     purrr::map(
       download_sharepoint_file,
       options = conf$storage$sharepoint$credentials,
-      bucket = conf$storage$sharepoint$buckets$legacy_bucket,
+      bucket = conf$storage$sharepoint$buckets$legacy_bucket_processed,
       filename = TRUE
     ) |>
     dplyr::bind_rows()
