@@ -52,6 +52,7 @@ reference:
     desc: "Merge, harmonize, and convert zooplankton data"
     contents:
       - format_to_tidy
+      - tidy_to_wide
       - format_to_dc
       - build_emof_occurrence
       - build_emof_events

@@ -518,3 +518,139 @@ build_emof_events <- function(data = NULL) {
       )
   )
 }
+
+
+#' Pivot tidy zooplankton data to a wide species-by-sample matrix
+#'
+#' Reads the analysis-ready tidy dataset from SharePoint and pivots it so that
+#' each sampling event becomes a column and each row represents a unique
+#' taxon-life stage combination. Full taxonomic classification (Phylum through
+#' Species) is fetched from WoRMS and prepended to the matrix. The result is
+#' uploaded as an Excel workbook to the reports bucket on SharePoint.
+#'
+#' @return Invisible NULL. The wide-format dataset is uploaded as an XLSX file
+#'   to the SharePoint reports bucket.
+#'
+#' @details
+#' **Input data:**
+#'
+#' Reads the latest versioned tidy Parquet file from the SharePoint automation
+#' bucket (prefix defined by \code{conf$ingestion$tidy_data$file_prefix}).
+#' Expects the columns \code{eventID}, \code{eventDate}, \code{lsid},
+#' \code{scientificName}, \code{Abundance}, and \code{lifeStage}.
+#'
+#' **Wide pivot:**
+#'
+#' Sample columns are named \code{<eventID>__<eventDate>}, sorted
+#' chronologically. Cell values are abundance in ind/m³. Rows represent unique
+#' taxon-life stage combinations; missing cells indicate absence.
+#'
+#' **Taxonomic enrichment:**
+#'
+#' AphiaIDs are extracted from the WoRMS LSID field and used to query the WoRMS
+#' API (\code{worrms::wm_classification}) for full classification. The
+#' following ranks are prepended as leading columns:
+#' \itemize{
+#'   \item Phylum, Subphylum, Class, Subclass
+#'   \item Order, Suborder, Family, Subfamily
+#'   \item Genus, Species
+#' }
+#'
+#' @examples
+#' \dontrun{
+#' tidy_to_wide()
+#' }
+#'
+#' @keywords workflow processing
+#' @export
+tidy_to_wide <- function() {
+  conf <- read_config()
+
+  tidy_data <-
+    download_sharepoint_file(
+      prefix = conf$ingestion$tidy_data$file_prefix,
+      options = conf$storage$sharepoint$credentials,
+      bucket = conf$storage$sharepoint$buckets$automation_bucket,
+      format = "parquet"
+    )
+
+  wide_df <-
+    tidy_data |>
+    dplyr::mutate(
+      aphiaid = stringr::str_extract(.data$lsid, "[0-9]+"),
+      id = paste0(.data$eventID, "__", .data$eventDate)
+    ) |>
+    dplyr::arrange(.data$eventDate) |>
+    dplyr::select(
+      "id",
+      "scientificName",
+      "aphiaid",
+      abundance = "Abundance",
+      "lifeStage"
+    ) |>
+    tidyr::pivot_wider(
+      names_from = "id",
+      values_from = "abundance",
+      names_sort = FALSE
+    )
+
+  ranks <-
+    as.integer(unique(wide_df$aphiaid)) |>
+    purrr::set_names() |>
+    purrr::map(worrms::wm_classification) |>
+    dplyr::bind_rows(.id = "parent") |>
+    dplyr::select(-c("AphiaID")) |>
+    tidyr::pivot_wider(
+      names_from = "rank",
+      values_from = "scientificname"
+    ) |>
+    dplyr::select(
+      "parent",
+      "Phylum",
+      "Subphylum",
+      "Class",
+      "Subclass",
+      "Order",
+      "Suborder",
+      "Family",
+      "Subfamily",
+      "Genus",
+      "Species"
+    )
+
+  final_wide <-
+    wide_df |>
+    dplyr::left_join(ranks, by = c("aphiaid" = "parent")) |>
+    dplyr::select(
+      "scientificName",
+      "aphiaid",
+      "Phylum",
+      "Subphylum",
+      "Class",
+      "Subclass",
+      "Order",
+      "Suborder",
+      "Family",
+      "Subfamily",
+      "Genus",
+      "Species",
+      "lifeStage",
+      dplyr::everything()
+    )
+
+  logger::log_info(
+    "Uploading wide format data (xlsx)...",
+    namespace = "ZooGoN"
+  )
+  "xlsx" |>
+    purrr::walk(
+      ~ upload_sharepoint_df(
+        data = final_wide,
+        prefix = conf$ingestion$wide_data$file_prefix,
+        options = conf$storage$sharepoint$credentials,
+        bucket = conf$storage$sharepoint$buckets$reports_bucket,
+        format = .
+      )
+    )
+  logger::log_success("tidy_to_wide complete", namespace = "ZooGoN")
+}

@@ -53,7 +53,7 @@ jobs:
           cache-to: type=registry,ref=ghcr.io/ioledc/zoogon-40y/r-runner-zoogon-mc:buildcache,mode=max
 
   ingest-kobo-surveys:
-    name: Ingest MC kobo surveys
+    name: Ingest KoBo surveys
     needs: build-container
     runs-on: ubuntu-latest
     container:
@@ -69,7 +69,7 @@ jobs:
         run: Rscript -e 'ZooGoN::ingest_surveys()'
 
   process-kobo-surveys:
-    name: Process MC kobo surveys
+    name: Process KoBo surveys
     needs: ingest-kobo-surveys
     runs-on: ubuntu-latest
     container:
@@ -85,7 +85,7 @@ jobs:
         run: Rscript -e 'ZooGoN::preprocess_surveys()'
 
   merge-data:
-    name: Merge legacy and ongoing data
+    name: Merge data & store tidy data
     needs: process-kobo-surveys
     runs-on: ubuntu-latest
     container:
@@ -115,9 +115,25 @@ jobs:
         run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
       - name: Call format_to_DC_archive()
         run: Rscript -e 'ZooGoN::format_to_DC_archive()'
-    
+
+  export-wide:
+    name: Store wide format data
+    needs: merge-data
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/ioledc/zoogon-40y/r-runner-zoogon-mc:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Set env to production
+        if: endsWith(github.ref, '/main')
+        run: echo "R_CONFIG_ACTIVE=production" >> $GITHUB_ENV
+      - name: Call tidy_to_wide()
+        run: Rscript -e 'ZooGoN::tidy_to_wide()'
+
   render-report:
-    name: Render MC survey report
+    name: Render adn store report
     needs: merge-data
     runs-on: ubuntu-latest
     container:
@@ -140,4 +156,3 @@ jobs:
         with:
           name: ZooGoN-report-${{ github.run_id }}
           path: /home/interactive-report__*.html
-          retention-days: 90

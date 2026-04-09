@@ -14,12 +14,14 @@ default:
         file_prefix: "dc-formatted-surveys"
     tidy_data:
       file_prefix: "tidy-data"
+    wide_data:
+      file_prefix: "wide-data"
     reports:
       file_prefix: "interactive-report"
   storage:
     sharepoint:
       buckets:
-        automation_bucket: zoogon_mc-prod
+        automation_bucket: zoogon_mc-dev
         legacy_bucket: legacy_data
         unmatched_bucket: worms_unmatched
         darwin_core_bucket: darwincore_archives
