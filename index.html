@@ -30,7 +30,7 @@
 
     <a class="navbar-brand me-2" href="index.html">ZooGoN</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">5.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">5.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -118,19 +118,23 @@
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/ioledc/ZOOGoN-40Y" class="external-link">ZooGoN</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># 1. Ingest field surveys from KoboToolbox</span></span>
+<span><span class="co"># 1. Ingest and reprocess legacy datasets (1984-2015 and 2016-2020)</span></span>
+<span><span class="fu"><a href="reference/ingest_legacy_84_15.html">ingest_legacy_84_15</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/ingest_legacy_16_20.html">ingest_legacy_16_20</a></span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># 2. Ingest field surveys from KoboToolbox</span></span>
 <span><span class="fu"><a href="reference/ingest_surveys.html">ingest_surveys</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># 2. Preprocess and standardize survey data</span></span>
+<span><span class="co"># 3. Preprocess and standardize survey data</span></span>
 <span><span class="fu"><a href="reference/preprocess_surveys.html">preprocess_surveys</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># 3. Merge legacy + ongoing data into an analysis-ready dataset</span></span>
+<span><span class="co"># 4. Merge legacy + ongoing data into an analysis-ready dataset</span></span>
 <span><span class="fu"><a href="reference/format_to_tidy.html">format_to_tidy</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># 4. Convert tidy data to Darwin Core format (Event, Occurrence, eMoF)</span></span>
+<span><span class="co"># 5. Convert tidy data to Darwin Core format (Event, Occurrence, eMoF)</span></span>
 <span><span class="fu"><a href="reference/format_to_dc.html">format_to_dc</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># 5. Build Darwin Core Archive with EML metadata and upload</span></span>
+<span><span class="co"># 6. Build Darwin Core Archive with EML metadata and upload</span></span>
 <span><span class="fu"><a href="reference/format_to_DC_archive.html">format_to_DC_archive</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p>The pipeline produces OBIS-compliant Darwin Core tables: - <strong>Event Extension</strong>: Sampling event metadata with geographic coordinates - <strong>Occurrence Extension</strong>: Species occurrences with WoRMS LSIDs - <strong>eMoF Extension</strong>: Measurements with BODC NERC Vocabulary standards</p>
 <p>All steps are also run automatically via GitHub Actions on a scheduled basis.</p>

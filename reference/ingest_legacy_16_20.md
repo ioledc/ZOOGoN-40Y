@@ -2,7 +2,7 @@
 
 Downloads, validates, and harmonizes the 2016-2020 legacy zooplankton
 dataset from SharePoint. Taxa are matched against the WoRMS database and
-the output is written in both Parquet and CSV formats to the hot storage
+the output is written in both Parquet and CSV formats to the automation
 bucket.
 
 ## Usage
@@ -13,8 +13,8 @@ ingest_legacy_16_20()
 
 ## Value
 
-Invisible NULL. Outputs are uploaded to SharePoint as
-`McZoo_16-20.parquet` and `McZoo_16-20.csv`.
+Invisible NULL. Outputs are uploaded to SharePoint as versioned CSV and
+Parquet files (prefix: `legacy-16-20`) to the automation bucket.
 
 ## Details
 
@@ -42,7 +42,7 @@ The function performs the following steps:
 
 7.  Aggregates duplicate records by summing `Abundance`.
 
-8.  Uploads tidy data to the hot storage bucket in Parquet and CSV
+8.  Uploads tidy data to the automation bucket in Parquet and CSV
     formats.
 
 ## Note

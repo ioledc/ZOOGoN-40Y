@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">ZooGoN</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">5.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">5.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -36,6 +36,20 @@
       <small>Source: <a href="https://github.com/ioledc/ZOOGoN-40Y/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="5.2.0" id="zoogon-520">ZooGoN 5.2.0<a class="anchor" aria-label="anchor" href="#zoogon-520"></a></h2>
+<div class="section level3">
+<h3 id="automation-5-2-0">Automation<a class="anchor" aria-label="anchor" href="#automation-5-2-0"></a></h3>
+<ul><li>
+<strong>New CI job <code>ingest-legacy-data</code></strong>: Added a GitHub Actions job that runs <code><a href="../reference/ingest_legacy_84_15.html">ingest_legacy_84_15()</a></code> and <code><a href="../reference/ingest_legacy_16_20.html">ingest_legacy_16_20()</a></code> on every pipeline trigger. The <code>merge-data</code> job now depends on both <code>ingest-legacy-data</code> and <code>process-kobo-surveys</code>, ensuring legacy and ongoing data are always refreshed before merging.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="storage-refactor-5-2-0">Storage refactor<a class="anchor" aria-label="anchor" href="#storage-refactor-5-2-0"></a></h3>
+<ul><li><p><strong><code><a href="../reference/ingest_legacy_84_15.html">ingest_legacy_84_15()</a></code> and <code><a href="../reference/ingest_legacy_16_20.html">ingest_legacy_16_20()</a></code></strong>: Outputs are now written to the <code>automation_bucket</code> using versioned file prefixes defined in <code>inst/config.yml</code> (<code>legacy-84-15</code> and <code>legacy-16-20</code>). Previously, files were written locally and then uploaded to the separate <code>legacy_data_processed</code> bucket with hardcoded filenames (<code>McZoo_84-15</code>, <code>McZoo_16-20</code>). The upload now uses the standard pipe-walk pattern consistent with the rest of the pipeline.</p></li>
+<li><p><strong><code><a href="../reference/format_to_tidy.html">format_to_tidy()</a></code></strong>: Now reads legacy datasets from the <code>automation_bucket</code> using the config-defined prefixes, replacing the previous approach of reading hardcoded filenames from the <code>legacy_bucket_processed</code> bucket.</p></li>
+<li><p><strong><code>inst/config.yml</code></strong>: Added <code>ingestion.legacy_84_15.file_prefix</code> (<code>"legacy-84-15"</code>) and <code>ingestion.legacy_16_20.file_prefix</code> (<code>"legacy-16-20"</code>). Removed the now-unused <code>legacy_bucket_processed</code> bucket entry.</p></li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="5.1.0" id="zoogon-510">ZooGoN 5.1.0<a class="anchor" aria-label="anchor" href="#zoogon-510"></a></h2>
 <div class="section level3">
