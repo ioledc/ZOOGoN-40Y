@@ -123,11 +123,27 @@ get_metadata <- function(event_df = NULL) {
   eml_obj <- list(
     dataset = list(
       title = paste0(
-        "Zooplankton data at LTER MareChiara site in the Gulf of Naples from 1984-",
-        max(lubridate::year(event_df$eventDate))
+        "Zooplankton data from LTER MareChiara site in the Gulf of Naples, Mediterranean Sea, (",
+        paste0(
+          min(lubridate::month(event_df$eventDate, label = TRUE)),
+          " ",
+          min(lubridate::year(event_df$eventDate))
+        ),
+        "-",
+        paste0(
+          max(lubridate::month(event_df$eventDate, label = TRUE)),
+          " ",
+          max(lubridate::year(event_df$eventDate))
+        ),
+        ")"
       ),
       abstract = list(
-        para = "Zooplankton vertical tows 0-50 m at LTER-MareChiara, 1984-2024."
+        para = paste0(
+          "Zooplankton vertical tows 0-50 m at LTER-MareChiara, ",
+          min(lubridate::year(event_df$eventDate)),
+          "-",
+          max(lubridate::year(event_df$eventDate))
+        )
       ),
       creator = me,
       contact = me,

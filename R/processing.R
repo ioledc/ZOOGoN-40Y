@@ -284,8 +284,19 @@ format_to_dc <- function(
 
   metadata_df <- tibble::tibble(
     dataset_title = paste0(
-      "Zooplankton data at LTER MareChiara site in the Gulf of Naples from 1984-",
-      max(lubridate::year(merged_data$eventDate))
+      "Zooplankton data from LTER MareChiara site in the Gulf of Naples, Mediterranean Sea, (",
+      paste0(
+        min(lubridate::month(merged_data$eventDate, label = TRUE)),
+        " ",
+        min(lubridate::year(merged_data$eventDate))
+      ),
+      "-",
+      paste0(
+        max(lubridate::month(merged_data$eventDate, label = TRUE)),
+        " ",
+        max(lubridate::year(merged_data$eventDate))
+      ),
+      ")"
     ),
     contact = "Dr. Iole Di Capua (iole.dicapua@szn.it)",
     institution = "Stazione Zoologica Anton Dohrn",

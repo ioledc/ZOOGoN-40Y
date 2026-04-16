@@ -62,12 +62,16 @@ df <-
 
 # Plot 1: Abundance
 df |>
-  ggplot(aes(x = week, y = year, fill = tot_zoo)) +
+  dplyr::mutate(
+    tot_zoo_capped = dplyr::if_else(tot_zoo > 12000, NA_real_, tot_zoo)
+  ) |>
+  ggplot(aes(x = week, y = year, fill = tot_zoo_capped)) +
   geom_tile(color = "white") +
   scale_fill_distiller(
     palette = "YlGnBu",
     direction = 1,
-    labels = label_comma()
+    labels = label_comma(),
+    na.value = "#d73027" # ← single color for out-of-scale tiles
   ) +
   scale_y_continuous(breaks = seq(1984, 2024, by = 4), expand = c(0, 0)) +
   scale_x_continuous(breaks = seq(1, 53, by = 5), expand = c(0, 0)) +
@@ -81,7 +85,12 @@ df |>
     axis.text = element_text(color = "black"),
     axis.ticks = element_line(color = "black")
   ) +
-  labs(fill = expression(Abundance ~ (ind %.% m^-3)), y = "Year", x = "Week") + # x = NULL
+  labs(
+    fill = expression(Abundance ~ (ind %.% m^-3)),
+    y = "Year",
+    x = "Week"
+    #caption = "Red tiles indicate values > 20,000 ind·m⁻³ (out of scale)"
+  ) +
   guides(fill = guide_colorbar(title.position = "top", title.hjust = 0.5))
 
 # # Plot 2: N Species
