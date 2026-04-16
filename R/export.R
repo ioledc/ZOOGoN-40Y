@@ -68,6 +68,8 @@ format_to_DC_archive <- function() {
     emlLocation = basename(eml_path)
   )
 
+  fix_meta_xml(zip_file)
+
   logger::log_info("Uploading archive to SharePoint...", namespace = "ZooGoN")
   sp_conn <- connect_to_sharepoint(conf$storage$sharepoint$credentials)
   remote_path <- file.path(
@@ -139,10 +141,24 @@ get_metadata <- function(event_df = NULL) {
       ),
       abstract = list(
         para = paste0(
-          "Zooplankton vertical tows 0-50 m at LTER-MareChiara, ",
+          "This dataset contains zooplankton community data collected at the ",
+          "Long-Term Ecological Research (LTER) station MareChiara, located in ",
+          "the Gulf of Naples, Mediterranean Sea (40.81\u00b0N, 14.25\u00b0E), ",
+          "operated by the Stazione Zoologica Anton Dohrn (SZN). ",
+          "Samples were collected through vertical net tows from 50 m depth to ",
+          "the surface using an Indian Ocean net (pre-2016) and a WP2 plankton ",
+          "net (from 2016 onwards). ",
+          "Zooplankton abundance is expressed as individuals per cubic metre. ",
+          "The dataset covers the period ",
           min(lubridate::year(event_df$eventDate)),
-          "-",
-          max(lubridate::year(event_df$eventDate))
+          "\u2013",
+          max(lubridate::year(event_df$eventDate)),
+          " and includes taxonomic identifications with WoRMS LSIDs, ",
+          "life-stage and sex annotations, and sampling instrument metadata ",
+          "following BODC NERC Vocabulary Server standards. ",
+          "Data are structured according to the Darwin Core Event core with ",
+          "Occurrence and Extended Measurement or Fact (eMoF) extensions, ",
+          "following OBIS data standards."
         )
       ),
       creator = me,
@@ -244,6 +260,124 @@ add_gbif_license_block <- function(
 
   xml2::write_xml(doc, eml_path)
   invisible(eml_path)
+}
+
+#' Patch a Darwin Core Archive's meta.xml for OBIS compatibility
+#'
+#' Post-processes the meta.xml inside a DwC-A zip to fix two issues that
+#' LivingNorwayR does not handle automatically:
+#' \enumerate{
+#'   \item Corrects the eMoF \code{rowType} to the OBIS URI
+#'     (\code{http://rs.iobis.org/obis/terms/ExtendedMeasurementOrFact})
+#'     if the legacy TDWG URI is found.
+#'   \item Adds \code{<field>} mappings for columns present in the CSV files
+#'     but absent from meta.xml -- specifically \code{eventType} (Event core)
+#'     and \code{eventDate} (eMoF extension), which LivingNorwayR's term
+#'     database does not recognise.
+#' }
+#' The zip is modified in place; a backup is removed on success.
+#'
+#' @param zip_file Path to the DwC-A zip file.
+#' @return Invisibly returns \code{zip_file}.
+#' @keywords internal
+fix_meta_xml <- function(zip_file) {
+  # Column names to DwC term IRIs not known to LivingNorwayR auto-map
+  extra_terms <- list(
+    eventType = "http://rs.tdwg.org/dwc/terms/eventType",
+    eventDate = "http://rs.tdwg.org/dwc/terms/eventDate"
+  )
+
+  tmp_dir <- tempfile("dwca_fix_")
+  dir.create(tmp_dir)
+  on.exit(unlink(tmp_dir, recursive = TRUE), add = TRUE)
+
+  utils::unzip(zip_file, exdir = tmp_dir)
+  meta_path <- file.path(tmp_dir, "meta.xml")
+
+  if (!file.exists(meta_path)) {
+    logger::log_warn(
+      "meta.xml not found in archive -- skipping meta.xml fix",
+      namespace = "ZooGoN"
+    )
+    return(invisible(zip_file))
+  }
+
+  doc <- xml2::read_xml(meta_path)
+
+  # Collect <core> and <extension> nodes
+  section_nodes <- c(
+    xml2::xml_find_all(doc, "//core"),
+    xml2::xml_find_all(doc, "//extension")
+  )
+
+  for (node in section_nodes) {
+    # 1. Fix eMoF rowType
+    row_type <- xml2::xml_attr(node, "rowType")
+    if (identical(row_type, "http://rs.tdwg.org/dwc/terms/MeasurementOrFact")) {
+      xml2::xml_set_attr(
+        node,
+        "rowType",
+        "http://rs.iobis.org/obis/terms/ExtendedMeasurementOrFact"
+      )
+      logger::log_info(
+        "meta.xml: corrected eMoF rowType to ExtendedMeasurementOrFact",
+        namespace = "ZooGoN"
+      )
+    }
+
+    # 2. Add field mappings for unmapped columns
+    loc_node <- xml2::xml_find_first(node, ".//files/location")
+    if (inherits(loc_node, "xml_missing")) {
+      next
+    }
+
+    csv_path <- file.path(tmp_dir, xml2::xml_text(loc_node))
+    if (!file.exists(csv_path)) {
+      next
+    }
+
+    headers <- names(utils::read.csv(csv_path, nrow = 0, check.names = FALSE))
+    field_nodes <- xml2::xml_find_all(node, "field")
+    mapped_idx <- as.integer(xml2::xml_attr(field_nodes, "index"))
+    mapped_terms <- xml2::xml_attr(field_nodes, "term")
+
+    for (col_name in names(extra_terms)) {
+      term_iri <- extra_terms[[col_name]]
+      col_idx <- which(headers == col_name) - 1L # 0-based
+
+      if (length(col_idx) != 1) {
+        next
+      }
+      if (col_idx %in% mapped_idx || term_iri %in% mapped_terms) {
+        next
+      }
+
+      new_field <- xml2::read_xml(
+        sprintf('<field index="%d" term="%s"/>', col_idx, term_iri)
+      )
+      xml2::xml_add_child(node, new_field)
+      logger::log_info(
+        "meta.xml: added missing field '{col_name}' (index {col_idx})",
+        namespace = "ZooGoN"
+      )
+    }
+  }
+
+  xml2::write_xml(doc, meta_path)
+
+  # Rezip in place — resolve to absolute path before setwd so utils::zip
+  # writes outside tmp_dir (otherwise the file gets deleted by on.exit cleanup)
+  zip_abs <- normalizePath(zip_file, mustWork = FALSE)
+  bak      <- paste0(zip_abs, ".bak")
+  file.rename(zip_abs, bak)
+  old_wd <- setwd(tmp_dir)
+  on.exit(setwd(old_wd), add = TRUE)
+  all_files <- list.files(tmp_dir, recursive = TRUE, full.names = FALSE)
+  utils::zip(zipfile = zip_abs, files = all_files)
+  setwd(old_wd)
+  file.remove(bak)
+
+  invisible(zip_file)
 }
 
 #' Register a hosted archive on GBIF
