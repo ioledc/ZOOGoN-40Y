@@ -211,6 +211,7 @@ format_to_dc <- function(
       continent = "Europe",
       countryCode = "IT",
       institutionCode = "SZN",
+      institutionID = "https://www.gbif.org/grscicoll/institution/062f9cd2-ba0e-48ef-8028-dddbbf2140c5",
       datasetName = paste0(
         "Zooplankton data from LTER MareChiara site in the Gulf of Naples, Mediterranean Sea, (",
         paste0(
@@ -253,11 +254,17 @@ format_to_dc <- function(
     dplyr::distinct()
 
   occurrence_table <- full_table |>
-    dplyr::mutate(basisOfRecord = "PreservedSpecimen") |>
+    dplyr::mutate(
+      basisOfRecord  = "PreservedSpecimen",
+      collectionCode = "SZN-ZOO",
+      collectionID   = "https://www.gbif.org/grscicoll/collection/297d51b2-acd8-4d0c-8f9e-6971c200646f"
+    ) |>
     dplyr::select(
       "eventID",
       "occurrenceID",
       "basisOfRecord",
+      "collectionCode",
+      "collectionID",
       "scientificName",
       scientificNameID = "lsid",
       "occurrenceStatus"
