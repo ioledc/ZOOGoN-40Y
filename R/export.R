@@ -281,10 +281,17 @@ add_gbif_license_block <- function(
 #' @return Invisibly returns \code{zip_file}.
 #' @keywords internal
 fix_meta_xml <- function(zip_file) {
-  # Column names to DwC term IRIs not known to LivingNorwayR auto-map
+  # Column names to DwC/OBIS term IRIs not auto-mapped by LivingNorwayR.
+  # eventType -- newer DwC term absent from LivingNorwayR's event member list.
+  # occurrenceID / eventDate / *ID -- not mapped by initializeGBIFMeasurementOrFact
+  #   (basic MeasurementOrFact skips OBIS extension terms and eventDate).
   extra_terms <- list(
-    eventType = "http://rs.tdwg.org/dwc/terms/eventType",
-    eventDate = "http://rs.tdwg.org/dwc/terms/eventDate"
+    eventType          = "http://rs.tdwg.org/dwc/terms/eventType",
+    occurrenceID       = "http://rs.tdwg.org/dwc/terms/occurrenceID",
+    eventDate          = "http://rs.tdwg.org/dwc/terms/eventDate",
+    measurementTypeID  = "http://rs.iobis.org/obis/terms/measurementTypeID",
+    measurementValueID = "http://rs.iobis.org/obis/terms/measurementValueID",
+    measurementUnitID  = "http://rs.iobis.org/obis/terms/measurementUnitID"
   )
 
   tmp_dir <- tempfile("dwca_fix_")
@@ -304,10 +311,11 @@ fix_meta_xml <- function(zip_file) {
 
   doc <- xml2::read_xml(meta_path)
 
-  # Collect <core> and <extension> nodes
+  # Collect <core> and <extension> nodes — use local-name() because the
+  # document has a default namespace that bare XPath names don't match
   section_nodes <- c(
-    xml2::xml_find_all(doc, "//core"),
-    xml2::xml_find_all(doc, "//extension")
+    xml2::xml_find_all(doc, "//*[local-name()='core']"),
+    xml2::xml_find_all(doc, "//*[local-name()='extension']")
   )
 
   for (node in section_nodes) {
@@ -326,7 +334,9 @@ fix_meta_xml <- function(zip_file) {
     }
 
     # 2. Add field mappings for unmapped columns
-    loc_node <- xml2::xml_find_first(node, ".//files/location")
+    loc_node <- xml2::xml_find_first(
+      node, ".//*[local-name()='files']/*[local-name()='location']"
+    )
     if (inherits(loc_node, "xml_missing")) {
       next
     }
@@ -336,9 +346,11 @@ fix_meta_xml <- function(zip_file) {
       next
     }
 
-    headers <- names(utils::read.csv(csv_path, nrow = 0, check.names = FALSE))
-    field_nodes <- xml2::xml_find_all(node, "field")
-    mapped_idx <- as.integer(xml2::xml_attr(field_nodes, "index"))
+    sep     <- xml2::xml_attr(node, "fieldsTerminatedBy")
+    sep     <- if (is.na(sep) || sep == "\\t") "\t" else sep
+    headers <- names(utils::read.csv(csv_path, nrow = 0, sep = sep, check.names = FALSE))
+    field_nodes  <- xml2::xml_find_all(node, "*[local-name()='field']")
+    mapped_idx   <- as.integer(xml2::xml_attr(field_nodes, "index"))
     mapped_terms <- xml2::xml_attr(field_nodes, "term")
 
     for (col_name in names(extra_terms)) {
