@@ -161,6 +161,12 @@ get_metadata <- function(event_df = NULL) {
           "following OBIS data standards."
         )
       ),
+      pubDate = format(Sys.Date(), "%Y-%m-%d"),
+      language = "eng",
+      keywordSet = list(
+        keyword = list("zooplankton", "LTER", "Mediterranean", "time series"),
+        keywordThesaurus = "N/A"
+      ),
       creator = me,
       contact = me,
       coverage = list(
@@ -281,17 +287,51 @@ add_gbif_license_block <- function(
 #' @return Invisibly returns \code{zip_file}.
 #' @keywords internal
 fix_meta_xml <- function(zip_file) {
-  # Column names to DwC/OBIS term IRIs not auto-mapped by LivingNorwayR.
-  # eventType -- newer DwC term absent from LivingNorwayR's event member list.
-  # occurrenceID / eventDate / *ID -- not mapped by initializeGBIFMeasurementOrFact
-  #   (basic MeasurementOrFact skips OBIS extension terms and eventDate).
-  extra_terms <- list(
-    eventType          = "http://rs.tdwg.org/dwc/terms/eventType",
-    occurrenceID       = "http://rs.tdwg.org/dwc/terms/occurrenceID",
-    eventDate          = "http://rs.tdwg.org/dwc/terms/eventDate",
-    measurementTypeID  = "http://rs.iobis.org/obis/terms/measurementTypeID",
+  # Complete column-name -> term IRI lookup for all DwC/OBIS terms used in
+  # this archive.  Used both to add missing mappings and to rebuild the eMoF
+  # field list from scratch (LivingNorwayR's basic MeasurementOrFact emitter
+  # produces wrong indices when extra columns precede the recognised terms).
+  all_terms <- list(
+    # Event core
+    eventID = "http://rs.tdwg.org/dwc/terms/eventID",
+    eventDate = "http://rs.tdwg.org/dwc/terms/eventDate",
+    eventType = "http://rs.tdwg.org/dwc/terms/eventType",
+    decimalLatitude = "http://rs.tdwg.org/dwc/terms/decimalLatitude",
+    decimalLongitude = "http://rs.tdwg.org/dwc/terms/decimalLongitude",
+    geodeticDatum = "http://rs.tdwg.org/dwc/terms/geodeticDatum",
+    continent = "http://rs.tdwg.org/dwc/terms/continent",
+    countryCode = "http://rs.tdwg.org/dwc/terms/countryCode",
+    institutionCode = "http://rs.tdwg.org/dwc/terms/institutionCode",
+    institutionID = "http://rs.tdwg.org/dwc/terms/institutionID",
+    datasetName = "http://rs.tdwg.org/dwc/terms/datasetName",
+    locality = "http://rs.tdwg.org/dwc/terms/locality",
+    stateProvince = "http://rs.tdwg.org/dwc/terms/stateProvince",
+    waterBody = "http://rs.tdwg.org/dwc/terms/waterBody",
+    maximumDepthInMeters = "http://rs.tdwg.org/dwc/terms/maximumDepthInMeters",
+    minimumDepthInMeters = "http://rs.tdwg.org/dwc/terms/minimumDepthInMeters",
+    samplingProtocol = "http://rs.tdwg.org/dwc/terms/samplingProtocol",
+    # Occurrence extension
+    occurrenceID = "http://rs.tdwg.org/dwc/terms/occurrenceID",
+    basisOfRecord = "http://rs.tdwg.org/dwc/terms/basisOfRecord",
+    collectionCode = "http://rs.tdwg.org/dwc/terms/collectionCode",
+    collectionID = "http://rs.tdwg.org/dwc/terms/collectionID",
+    scientificName = "http://rs.tdwg.org/dwc/terms/scientificName",
+    scientificNameID = "http://rs.tdwg.org/dwc/terms/scientificNameID",
+    occurrenceStatus = "http://rs.tdwg.org/dwc/terms/occurrenceStatus",
+    # eMoF extension (OBIS terms for *ID fields)
+    measurementType = "http://rs.tdwg.org/dwc/terms/measurementType",
+    measurementTypeID = "http://rs.iobis.org/obis/terms/measurementTypeID",
+    measurementValue = "http://rs.tdwg.org/dwc/terms/measurementValue",
     measurementValueID = "http://rs.iobis.org/obis/terms/measurementValueID",
-    measurementUnitID  = "http://rs.iobis.org/obis/terms/measurementUnitID"
+    measurementUnit = "http://rs.tdwg.org/dwc/terms/measurementUnit",
+    measurementUnitID = "http://rs.iobis.org/obis/terms/measurementUnitID"
+  )
+
+  # Row types whose field list we rebuild entirely from the CSV headers
+  # (LivingNorwayR basic MoF emitter produces wrong indices for these)
+  rebuild_row_types <- c(
+    "http://rs.tdwg.org/dwc/terms/MeasurementOrFact",
+    "http://rs.iobis.org/obis/terms/ExtendedMeasurementOrFact"
   )
 
   tmp_dir <- tempfile("dwca_fix_")
@@ -311,8 +351,7 @@ fix_meta_xml <- function(zip_file) {
 
   doc <- xml2::read_xml(meta_path)
 
-  # Collect <core> and <extension> nodes — use local-name() because the
-  # document has a default namespace that bare XPath names don't match
+  # use local-name() — document has a default namespace bare XPath names miss
   section_nodes <- c(
     xml2::xml_find_all(doc, "//*[local-name()='core']"),
     xml2::xml_find_all(doc, "//*[local-name()='extension']")
@@ -327,15 +366,16 @@ fix_meta_xml <- function(zip_file) {
         "rowType",
         "http://rs.iobis.org/obis/terms/ExtendedMeasurementOrFact"
       )
+      row_type <- "http://rs.iobis.org/obis/terms/ExtendedMeasurementOrFact"
       logger::log_info(
         "meta.xml: corrected eMoF rowType to ExtendedMeasurementOrFact",
         namespace = "ZooGoN"
       )
     }
 
-    # 2. Add field mappings for unmapped columns
     loc_node <- xml2::xml_find_first(
-      node, ".//*[local-name()='files']/*[local-name()='location']"
+      node,
+      ".//*[local-name()='files']/*[local-name()='location']"
     )
     if (inherits(loc_node, "xml_missing")) {
       next
@@ -346,32 +386,76 @@ fix_meta_xml <- function(zip_file) {
       next
     }
 
-    sep     <- xml2::xml_attr(node, "fieldsTerminatedBy")
-    sep     <- if (is.na(sep) || sep == "\\t") "\t" else sep
-    headers <- names(utils::read.csv(csv_path, nrow = 0, sep = sep, check.names = FALSE))
-    field_nodes  <- xml2::xml_find_all(node, "*[local-name()='field']")
-    mapped_idx   <- as.integer(xml2::xml_attr(field_nodes, "index"))
-    mapped_terms <- xml2::xml_attr(field_nodes, "term")
+    sep <- xml2::xml_attr(node, "fieldsTerminatedBy")
+    sep <- if (is.na(sep) || sep == "\\t") "\t" else sep
+    headers <- names(utils::read.csv(
+      csv_path,
+      nrow = 0,
+      sep = sep,
+      check.names = FALSE
+    ))
 
-    for (col_name in names(extra_terms)) {
-      term_iri <- extra_terms[[col_name]]
-      col_idx <- which(headers == col_name) - 1L # 0-based
+    if (row_type %in% rebuild_row_types) {
+      # 2a. eMoF: drop all existing <field> elements and regenerate from
+      #     scratch so that indices always match the actual CSV columns.
+      xml2::xml_remove(xml2::xml_find_all(node, "*[local-name()='field']"))
 
-      if (length(col_idx) != 1) {
-        next
+      # Per DwC Text Guide spec, the coreid column must NOT also appear as a
+      # <field> element in extension nodes — only <coreid index="N"/> declares it.
+      coreid_node <- xml2::xml_find_first(node, "*[local-name()='coreid']")
+      coreid_idx <- if (!inherits(coreid_node, "xml_missing")) {
+        as.integer(xml2::xml_attr(coreid_node, "index"))
+      } else {
+        NA_integer_
       }
-      if (col_idx %in% mapped_idx || term_iri %in% mapped_terms) {
-        next
-      }
 
-      new_field <- xml2::read_xml(
-        sprintf('<field index="%d" term="%s"/>', col_idx, term_iri)
-      )
-      xml2::xml_add_child(node, new_field)
+      for (i in seq_along(headers)) {
+        col_idx <- i - 1L
+        if (!is.na(coreid_idx) && col_idx == coreid_idx) {
+          next
+        } # skip coreid col
+
+        col_name <- headers[[i]]
+        term_iri <- all_terms[[col_name]]
+        if (is.null(term_iri)) {
+          next
+        } # unknown column — skip
+
+        new_field <- xml2::xml_add_child(node, "field")
+        xml2::xml_set_attr(new_field, "index", as.character(col_idx))
+        xml2::xml_set_attr(new_field, "term", term_iri)
+      }
       logger::log_info(
-        "meta.xml: added missing field '{col_name}' (index {col_idx})",
+        "meta.xml: rebuilt eMoF field mappings ({length(headers)} columns)",
         namespace = "ZooGoN"
       )
+    } else {
+      # 2b. Event / Occurrence cores: keep existing mappings, just add any
+      #     columns that are present in the CSV but absent from meta.xml.
+      field_nodes <- xml2::xml_find_all(node, "*[local-name()='field']")
+      mapped_idx <- as.integer(xml2::xml_attr(field_nodes, "index"))
+      mapped_terms <- xml2::xml_attr(field_nodes, "term")
+
+      for (i in seq_along(headers)) {
+        col_name <- headers[[i]]
+        term_iri <- all_terms[[col_name]]
+        if (is.null(term_iri)) {
+          next
+        }
+
+        col_idx <- i - 1L
+        if (col_idx %in% mapped_idx || term_iri %in% mapped_terms) {
+          next
+        }
+
+        new_field <- xml2::xml_add_child(node, "field")
+        xml2::xml_set_attr(new_field, "index", as.character(col_idx))
+        xml2::xml_set_attr(new_field, "term", term_iri)
+        logger::log_info(
+          "meta.xml: added missing field '{col_name}' (index {col_idx})",
+          namespace = "ZooGoN"
+        )
+      }
     }
   }
 
@@ -380,7 +464,7 @@ fix_meta_xml <- function(zip_file) {
   # Rezip in place — resolve to absolute path before setwd so utils::zip
   # writes outside tmp_dir (otherwise the file gets deleted by on.exit cleanup)
   zip_abs <- normalizePath(zip_file, mustWork = FALSE)
-  bak      <- paste0(zip_abs, ".bak")
+  bak <- paste0(zip_abs, ".bak")
   file.rename(zip_abs, bak)
   old_wd <- setwd(tmp_dir)
   on.exit(setwd(old_wd), add = TRUE)
