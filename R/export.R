@@ -41,8 +41,12 @@ format_to_DC_archive <- function() {
 
   EML::write_eml(eml_obj, eml_path)
   add_gbif_license_block(eml_path)
-  EML::eml_validate(eml_path)
-  #TODO: Validate EML properly
+  if (!isTRUE(EML::eml_validate(eml_path))) {
+    stop(
+      "EML validation failed -- check mc_eml.xml before uploading",
+      call. = FALSE
+    )
+  }
   logger::log_debug("EML validated successfully", namespace = "ZooGoN")
 
   metadata <- LivingNorwayR::initializeDwCMetadata(
@@ -164,14 +168,44 @@ get_metadata <- function(event_df = NULL) {
       pubDate = format(Sys.Date(), "%Y-%m-%d"),
       language = "eng",
       keywordSet = list(
-        keyword = list("zooplankton", "LTER", "Mediterranean", "time series"),
-        keywordThesaurus = "N/A"
+        list(
+          keyword = list("zooplankton", "LTER", "Mediterranean", "time series"),
+          keywordThesaurus = "N/A"
+        ),
+        list(
+          keyword = list(
+            "Gulf of Naples",
+            "Copepoda",
+            "long-term monitoring",
+            "biodiversity",
+            "Digital Twin of the Ocean"
+          ),
+          keywordThesaurus = "N/A"
+        )
       ),
-      creator = me,
-      contact = me,
+      additionalInfo = list(
+        list(
+          para = paste0(
+            "There is a gap in the time series between 1990 and 1 March 1995 ",
+            "due to a sampling interruption."
+          )
+        ),
+        list(
+          para = paste0(
+            "The ZooGoN R package (v3.0.0) used for data processing and archive ",
+            "generation is available at https://github.com/ioledc/ZOOGoN-40Y ",
+            "(GPL >= 3)."
+          )
+        )
+      ),
+      intellectualRights = list(para = "CC-BY-NC"),
       coverage = list(
         geographicCoverage = list(
-          geographicDescription = "Gulf of Naples, LTER-MareChiara station",
+          geographicDescription = paste0(
+            "Fixed sampling station MareChiara (LTER-MC), Gulf of Naples, Italy, ",
+            "approximately 2 nautical miles offshore, along the ~75 m isobath, at the ",
+            "boundary between eutrophied coastal waters and oligotrophic Tyrrhenian waters."
+          ),
           boundingCoordinates = list(
             westBoundingCoordinate = 14.25,
             eastBoundingCoordinate = 14.25,
@@ -184,9 +218,171 @@ get_metadata <- function(event_df = NULL) {
             beginDate = list(calendarDate = begin_date),
             endDate = list(calendarDate = end_date)
           )
+        ),
+        taxonomicCoverage = list(
+          generalTaxonomicCoverage = paste0(
+            "Marine mesozooplankton collected in the Gulf of Naples. The dataset includes ",
+            "418 taxa from multiple phyla. Copepoda is the most diverse group (335 taxa across ",
+            "6 orders: Calanoida, Cyclopoida, Harpacticoida, Mormonilloida, Siphonostomatoida, ",
+            "Monstrilloida), with 149 species identified. Other groups include Appendicularia, ",
+            "Chaetognatha (Sagittoidea), Thaliacea, Hydrozoa, Siphonophora, Mollusca, ",
+            "Malacostraca, Echinodermata, Annelida (Polychaeta), Ctenophora, Bryozoa, and ",
+            "meroplanktonic larvae. Taxonomic identifications follow WoRMS nomenclature."
+          ),
+          taxonomicClassification = list(
+            list(taxonRankName = "Class", taxonRankValue = "Copepoda"),
+            list(taxonRankName = "Class", taxonRankValue = "Appendicularia"),
+            list(taxonRankName = "Class", taxonRankValue = "Sagittoidea"),
+            list(taxonRankName = "Class", taxonRankValue = "Thaliacea"),
+            list(taxonRankName = "Class", taxonRankValue = "Hydrozoa"),
+            list(taxonRankName = "Class", taxonRankValue = "Malacostraca"),
+            list(taxonRankName = "Phylum", taxonRankValue = "Mollusca"),
+            list(taxonRankName = "Phylum", taxonRankValue = "Echinodermata"),
+            list(taxonRankName = "Phylum", taxonRankValue = "Annelida"),
+            list(taxonRankName = "Phylum", taxonRankValue = "Ctenophora"),
+            list(taxonRankName = "Phylum", taxonRankValue = "Bryozoa")
+          )
         )
       ),
-      intellectualRights = list(para = "CC-BY-NC")
+      purpose = list(
+        para = paste0(
+          "The dataset was created to establish a sustained flow of zooplankton biodiversity data ",
+          "from the LTER MareChiara station to international data infrastructures, in support of ",
+          "the Digital Twin of the Ocean initiative (DTO-BioFlow). It supports biodiversity ",
+          "assessment, long-term ecological studies, and the development, calibration, and ",
+          "validation of ecosystem models and data-driven simulations in the Mediterranean Sea."
+        )
+      ),
+      creator = me,
+      contact = me,
+      methods = list(
+        methodStep = list(
+          list(
+            description = list(
+              para = paste0(
+                "Zooplankton samples were collected at the fixed LTER station MareChiara ",
+                "(Gulf of Naples, 40.81°N, 14.25°E) aboard the Research Vessel R/V Vettoria. ",
+                "Vertical net tows were performed from 50 m depth to the surface at a retrieval speed ",
+                "of 0.7-1.0 m/s. Two net types were used: an Indian Ocean standard net ",
+                "(mouth area 1 m2, diameter 113 cm, mesh aperture 200 µm) from 26 January 1984 ",
+                "to 2 February 2016, and a WP2 standard net (mouth area 0.25 m2, diameter 57 cm, ",
+                "mesh aperture 200 µm) from 18 February 2016 onwards. Sampling frequency was ",
+                "fortnightly (1984–1991), weekly (1995–2016), and fortnightly to monthly ",
+                "(2016–2024). There is a gap in the time series between 1990 and 1 March 1995. ",
+                "From 2016, a calibrated flowmeter (Hydrobios and MF315) was used to measure filtered ",
+                "water volume; from 1984 to 2016, volume was calculated as V = A x L ",
+                "(net mouth area x tow length)."
+              )
+            ),
+            instrumentation = list(
+              "Indian Ocean standard net: mouth area 1 m2, diameter 113 cm, mesh aperture 200 um (1984-2016)",
+              "WP2 standard net: mouth area 0.25 m2, diameter 57 cm, mesh aperture 200 um (2016-2024)",
+              "Flowmeter Hydrobios and MF315 (from 2016 onwards)"
+            )
+          ),
+          list(
+            description = list(
+              para = paste0(
+                "Two samples were collected at each sampling event: one for species composition and ",
+                "abundance analysis, one for whole mesozooplankton biomass. Samples for species ",
+                "analysis were preserved in seawater-formalin solution (approximately 4% formaldehyde ",
+                "buffered with sodium borate) from 1984 to 1998, and in 95% ethanol stored at 4°C ",
+                "from 1998 onwards."
+              )
+            ),
+            instrumentation = list("Stereomicroscope Leica M165C")
+          ),
+          list(
+            description = list(
+              para = paste0(
+                "Samples were pre-filtered through a 200 µm sieve. Sub-samples were obtained using ",
+                "a Stempel pipette (2-3 replicates of 2.5 or 5 mL), yielding a coefficient of ",
+                "variation of 7-9%. Organisms were counted in a Mini-Bogorov Chamber (10 mL) under ",
+                "a stereomicroscope (Leica M165C). At least 100 specimens of the most abundant ",
+                "taxonomic groups were counted (targeting +/-20% precision at 95% confidence). Rare ",
+                "species found in the remaining sample were noted qualitatively at 0.02 ind. m-3. ",
+                "Zooplankton abundance was expressed as individuals per cubic metre: n x k / V, where ",
+                "n = individuals counted in sub-sample, k = fraction of sample analyzed, ",
+                "V = volume filtered (m3)."
+              )
+            )
+          ),
+          list(
+            description = list(
+              para = paste0(
+                "Taxonomic names were harmonized against the World Register of Marine Species (WoRMS) ",
+                "using the worrms R package. Historical data (1984–2020) were migrated from local ",
+                "storage and digitized; data from 2021 onwards were collected via digital survey forms ",
+                "(KoBoToolbox). Processing and archiving were automated via the ZooGoN R package ",
+                "(v3.0.0). Quality control included: inter-operator verification of approximately 5% ",
+                "of samples; regular calibration of optical instruments; flowmeter verification ",
+                "(minimum 120 revolutions per tow) prior to each deployment."
+              )
+            )
+          )
+        ),
+        sampling = list(
+          studyExtent = list(
+            description = list(
+              para = paste0(
+                "Fixed sampling station MareChiara, Gulf of Naples, Italy, approximately 2 nautical ",
+                "miles offshore, along the ~75 m isobath, at the boundary between eutrophied coastal ",
+                "waters and oligotrophic Tyrrhenian waters. Temporal extent: ",
+                format(as.Date(begin_date), "%d %B %Y"),
+                " to ",
+                format(as.Date(end_date), "%d %B %Y"),
+                "."
+              )
+            )
+          ),
+          samplingDescription = list(
+            para = "Vertical net tows from 50 m depth to the surface using standardized plankton nets."
+          )
+        )
+      ),
+      project = list(
+        title = "Long-Term Ecological Research MareChiara",
+        personnel = list(
+          individualName = list(givenName = "Iole", surName = "Di Capua"),
+          organizationName = "Stazione Zoologica Anton Dohrn",
+          electronicMailAddress = "iole.dicapua@szn.it",
+          role = "principalInvestigator"
+        ),
+        abstract = list(
+          para = paste0(
+            "The MareChiara Research Program was established in 1984 by the Stazione Zoologica ",
+            "Anton Dohrn (SZN) at a fixed station in the Gulf of Naples, Italy. Since 2006 the site ",
+            "has been part of the Long-Term Ecological Research network ",
+            "(LTER-MareChiara, LTER-MC; LTER EU-IT061). The ZOOGoN-40Y dataset integrates ",
+            "zooplankton data collected over four decades (",
+            min(lubridate::year(event_df$eventDate)),
+            "–",
+            max(lubridate::year(event_df$eventDate)),
+            "), supported by the DTO-BioFlow ",
+            "Financial Support to Third Parties grant under the European Union Horizon Europe ",
+            "Programme, aimed at establishing a sustained flow of biodiversity data to the Digital ",
+            "Twin of the Ocean."
+          )
+        ),
+        award = list(
+          funderName = "European Commission",
+          title = "Digital Twin of the Ocean - BioFlow (DTO-BioFlow)"
+        ),
+        designDescription = list(
+          description = list(para = paste0(
+            "Long-term fixed-station monitoring design. Zooplankton sampled by vertical net tows ",
+            "at a single geographic station (MareChiara, Gulf of Naples) at regular intervals since ",
+            min(lubridate::year(event_df$eventDate)),
+            ". Sampling frequency ranged from fortnightly ",
+            "to weekly depending on the period. The dataset covers ",
+            format(nrow(event_df), big.mark = ","),
+            " individual sampling tows across ",
+            max(lubridate::year(event_df$eventDate)) -
+              min(lubridate::year(event_df$eventDate)),
+            " years."
+          ))
+        )
+      )
     )
   )
   eml_obj
@@ -212,19 +408,14 @@ get_metadata <- function(event_df = NULL) {
 #'
 #' @return Invisibly returns \code{eml_path}.
 #'
-#' @examples
-#' \dontrun{
-#' eml_path <- "mc_eml.xml"
-#' add_gbif_license_block(eml_path)
-#' }
-#'
-#' @export
+#' @keywords internal
 add_gbif_license_block <- function(
   eml_path,
   url = "http://creativecommons.org/licenses/by-nc/4.0/legalcode",
   title = "Creative Commons Attribution Non Commercial (CC-BY-NC) 4.0 License"
 ) {
   doc <- xml2::read_xml(eml_path)
+  xml2::xml_set_attr(xml2::xml_root(doc), "scope", "system")
   dataset <- xml2::xml_find_first(doc, ".//dataset")
 
   # 1. Remove any existing <intellectualRights>

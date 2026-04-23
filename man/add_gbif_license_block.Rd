@@ -33,10 +33,4 @@ to the chosen license URL. The new block is inserted before
 \code{<coverage>} (or \code{<contact>} if \code{<coverage>} is
 missing) to satisfy the GBIF EML profile element order.
 }
-\examples{
-\dontrun{
-eml_path <- "mc_eml.xml"
-add_gbif_license_block(eml_path)
-}
-
-}
+\keyword{internal}
