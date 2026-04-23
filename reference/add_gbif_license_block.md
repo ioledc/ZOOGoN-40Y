@@ -37,12 +37,3 @@ add_gbif_license_block(
 ## Value
 
 Invisibly returns `eml_path`.
-
-## Examples
-
-``` r
-if (FALSE) { # \dontrun{
-eml_path <- "mc_eml.xml"
-add_gbif_license_block(eml_path)
-} # }
-```
