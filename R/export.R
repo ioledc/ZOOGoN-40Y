@@ -261,14 +261,14 @@ get_metadata <- function(event_df = NULL) {
             description = list(
               para = paste0(
                 "Zooplankton samples were collected at the fixed LTER station MareChiara ",
-                "(Gulf of Naples, 40.81°N, 14.25°E) aboard the Research Vessel R/V Vettoria. ",
+                "(Gulf of Naples, 40.81\u00b0N, 14.25\u00b0E) aboard the Research Vessel R/V Vettoria. ",
                 "Vertical net tows were performed from 50 m depth to the surface at a retrieval speed ",
                 "of 0.7-1.0 m/s. Two net types were used: an Indian Ocean standard net ",
-                "(mouth area 1 m2, diameter 113 cm, mesh aperture 200 µm) from 26 January 1984 ",
+                "(mouth area 1 m2, diameter 113 cm, mesh aperture 200 \u00b5m) from 26 January 1984 ",
                 "to 2 February 2016, and a WP2 standard net (mouth area 0.25 m2, diameter 57 cm, ",
-                "mesh aperture 200 µm) from 18 February 2016 onwards. Sampling frequency was ",
-                "fortnightly (1984–1991), weekly (1995–2016), and fortnightly to monthly ",
-                "(2016–2024). There is a gap in the time series between 1990 and 1 March 1995. ",
+                "mesh aperture 200 \u00b5m) from 18 February 2016 onwards. Sampling frequency was ",
+                "fortnightly (1984\u20131991), weekly (1995\u20132016), and fortnightly to monthly ",
+                "(2016\u20132024). There is a gap in the time series between 1990 and 1 March 1995. ",
                 "From 2016, a calibrated flowmeter (Hydrobios and MF315) was used to measure filtered ",
                 "water volume; from 1984 to 2016, volume was calculated as V = A x L ",
                 "(net mouth area x tow length)."
@@ -286,7 +286,7 @@ get_metadata <- function(event_df = NULL) {
                 "Two samples were collected at each sampling event: one for species composition and ",
                 "abundance analysis, one for whole mesozooplankton biomass. Samples for species ",
                 "analysis were preserved in seawater-formalin solution (approximately 4% formaldehyde ",
-                "buffered with sodium borate) from 1984 to 1998, and in 95% ethanol stored at 4°C ",
+                "buffered with sodium borate) from 1984 to 1998, and in 95% ethanol stored at 4\u00b0C ",
                 "from 1998 onwards."
               )
             ),
@@ -295,7 +295,7 @@ get_metadata <- function(event_df = NULL) {
           list(
             description = list(
               para = paste0(
-                "Samples were pre-filtered through a 200 µm sieve. Sub-samples were obtained using ",
+                "Samples were pre-filtered through a 200 \u00b5m sieve. Sub-samples were obtained using ",
                 "a Stempel pipette (2-3 replicates of 2.5 or 5 mL), yielding a coefficient of ",
                 "variation of 7-9%. Organisms were counted in a Mini-Bogorov Chamber (10 mL) under ",
                 "a stereomicroscope (Leica M165C). At least 100 specimens of the most abundant ",
@@ -311,7 +311,7 @@ get_metadata <- function(event_df = NULL) {
             description = list(
               para = paste0(
                 "Taxonomic names were harmonized against the World Register of Marine Species (WoRMS) ",
-                "using the worrms R package. Historical data (1984–2020) were migrated from local ",
+                "using the worrms R package. Historical data (1984\u20132020) were migrated from local ",
                 "storage and digitized; data from 2021 onwards were collected via digital survey forms ",
                 "(KoBoToolbox). Processing and archiving were automated via the ZooGoN R package ",
                 "(v3.0.0). Quality control included: inter-operator verification of approximately 5% ",
@@ -356,7 +356,7 @@ get_metadata <- function(event_df = NULL) {
             "(LTER-MareChiara, LTER-MC; LTER EU-IT061). The ZOOGoN-40Y dataset integrates ",
             "zooplankton data collected over four decades (",
             min(lubridate::year(event_df$eventDate)),
-            "–",
+            "\u2013",
             max(lubridate::year(event_df$eventDate)),
             "), supported by the DTO-BioFlow ",
             "Financial Support to Third Parties grant under the European Union Horizon Europe ",
@@ -369,18 +369,20 @@ get_metadata <- function(event_df = NULL) {
           title = "Digital Twin of the Ocean - BioFlow (DTO-BioFlow)"
         ),
         designDescription = list(
-          description = list(para = paste0(
-            "Long-term fixed-station monitoring design. Zooplankton sampled by vertical net tows ",
-            "at a single geographic station (MareChiara, Gulf of Naples) at regular intervals since ",
-            min(lubridate::year(event_df$eventDate)),
-            ". Sampling frequency ranged from fortnightly ",
-            "to weekly depending on the period. The dataset covers ",
-            format(nrow(event_df), big.mark = ","),
-            " individual sampling tows across ",
-            max(lubridate::year(event_df$eventDate)) -
+          description = list(
+            para = paste0(
+              "Long-term fixed-station monitoring design. Zooplankton sampled by vertical net tows ",
+              "at a single geographic station (MareChiara, Gulf of Naples) at regular intervals since ",
               min(lubridate::year(event_df$eventDate)),
-            " years."
-          ))
+              ". Sampling frequency ranged from fortnightly ",
+              "to weekly depending on the period. The dataset covers ",
+              format(nrow(event_df), big.mark = ","),
+              " individual sampling tows across ",
+              max(lubridate::year(event_df$eventDate)) -
+                min(lubridate::year(event_df$eventDate)),
+              " years."
+            )
+          )
         )
       )
     )
@@ -542,7 +544,7 @@ fix_meta_xml <- function(zip_file) {
 
   doc <- xml2::read_xml(meta_path)
 
-  # use local-name() — document has a default namespace bare XPath names miss
+  # use local-name() -- document has a default namespace bare XPath names miss
   section_nodes <- c(
     xml2::xml_find_all(doc, "//*[local-name()='core']"),
     xml2::xml_find_all(doc, "//*[local-name()='extension']")
@@ -592,7 +594,7 @@ fix_meta_xml <- function(zip_file) {
       xml2::xml_remove(xml2::xml_find_all(node, "*[local-name()='field']"))
 
       # Per DwC Text Guide spec, the coreid column must NOT also appear as a
-      # <field> element in extension nodes — only <coreid index="N"/> declares it.
+      # <field> element in extension nodes -- only <coreid index="N"/> declares it.
       coreid_node <- xml2::xml_find_first(node, "*[local-name()='coreid']")
       coreid_idx <- if (!inherits(coreid_node, "xml_missing")) {
         as.integer(xml2::xml_attr(coreid_node, "index"))
@@ -610,7 +612,7 @@ fix_meta_xml <- function(zip_file) {
         term_iri <- all_terms[[col_name]]
         if (is.null(term_iri)) {
           next
-        } # unknown column — skip
+        } # unknown column -- skip
 
         new_field <- xml2::xml_add_child(node, "field")
         xml2::xml_set_attr(new_field, "index", as.character(col_idx))
@@ -652,7 +654,7 @@ fix_meta_xml <- function(zip_file) {
 
   xml2::write_xml(doc, meta_path)
 
-  # Rezip in place — resolve to absolute path before setwd so utils::zip
+  # Rezip in place -- resolve to absolute path before setwd so utils::zip
   # writes outside tmp_dir (otherwise the file gets deleted by on.exit cleanup)
   zip_abs <- normalizePath(zip_file, mustWork = FALSE)
   bak <- paste0(zip_abs, ".bak")
