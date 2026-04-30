@@ -115,6 +115,26 @@ get_metadata <- function(event_df = NULL) {
     electronicMailAddress = "iole.dicapua@szn.it"
   )
 
+  creators <- list(
+    me,
+    list(
+      individualName = list(
+        givenName = "Andrea",
+        surName = "Marcucci"
+      ),
+      organizationName = "Stazione Zoologica Anton Dohrn",
+      electronicMailAddress = "andrea.marcucci@szn.it"
+    ),
+    list(
+      individualName = list(
+        givenName = "Lorenzo",
+        surName = "Longobardi"
+      ),
+      organizationName = "WorldFish (CGIAR)",
+      electronicMailAddress = "l.longobardi@cgiar.org"
+    )
+  )
+
   begin_date <- if (!is.null(event_df)) {
     min(event_df$eventDate, na.rm = TRUE)
   } else {
@@ -253,7 +273,7 @@ get_metadata <- function(event_df = NULL) {
           "validation of ecosystem models and data-driven simulations in the Mediterranean Sea."
         )
       ),
-      creator = me,
+      creator = creators,
       contact = me,
       methods = list(
         methodStep = list(
@@ -506,8 +526,6 @@ fix_meta_xml <- function(zip_file) {
     # Occurrence extension
     occurrenceID = "http://rs.tdwg.org/dwc/terms/occurrenceID",
     basisOfRecord = "http://rs.tdwg.org/dwc/terms/basisOfRecord",
-    collectionCode = "http://rs.tdwg.org/dwc/terms/collectionCode",
-    collectionID = "http://rs.tdwg.org/dwc/terms/collectionID",
     scientificName = "http://rs.tdwg.org/dwc/terms/scientificName",
     scientificNameID = "http://rs.tdwg.org/dwc/terms/scientificNameID",
     occurrenceStatus = "http://rs.tdwg.org/dwc/terms/occurrenceStatus",

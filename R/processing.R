@@ -204,14 +204,14 @@ format_to_dc <- function(
     dplyr::distinct() |>
     dplyr::mutate(
       eventDate = as.character(.data$eventDate),
-      eventType = "Site Visit",
+      eventType = "Sample",
       decimalLatitude = 40.81,
       decimalLongitude = 14.25,
       geodeticDatum = "WGS84",
       continent = "Europe",
       countryCode = "IT",
       institutionCode = "SZN",
-      institutionID = "https://www.gbif.org/grscicoll/institution/062f9cd2-ba0e-48ef-8028-dddbbf2140c5",
+      institutionID = "https://ror.org/03v5jj203",
       datasetName = paste0(
         "Zooplankton data from LTER MareChiara site in the Gulf of Naples, Mediterranean Sea, (",
         paste0(
@@ -232,7 +232,7 @@ format_to_dc <- function(
       waterBody = "Tyrrhenian Sea",
       maximumDepthInMeters = 50,
       minimumDepthInMeters = 0,
-      samplingProtocol = "Vertical tow 0-50m depth"
+      samplingProtocol = "Vertical zooplankton net tow from 50 m depth to surface"
     )
 
   # Create Darwin Core Occurrence extension
@@ -255,16 +255,12 @@ format_to_dc <- function(
 
   occurrence_table <- full_table |>
     dplyr::mutate(
-      basisOfRecord  = "PreservedSpecimen",
-      collectionCode = "SZN-ZOO",
-      collectionID   = "https://www.gbif.org/grscicoll/collection/297d51b2-acd8-4d0c-8f9e-6971c200646f"
+      basisOfRecord = "HumanObservation"
     ) |>
     dplyr::select(
       "eventID",
       "occurrenceID",
       "basisOfRecord",
-      "collectionCode",
-      "collectionID",
       "scientificName",
       scientificNameID = "lsid",
       "occurrenceStatus"
