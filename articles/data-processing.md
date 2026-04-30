@@ -1,6 +1,7 @@
 # LTER-MareChiara Data Processing Workflow
 
 ``` r
+
 library(ZooGoN)
 library(dplyr)
 ```
@@ -51,6 +52,7 @@ report render (4b) run in parallel — both start as soon as the merged
 dataset is available.
 
 ``` r
+
 # 0a. Ingest legacy dataset 1984-2015 (run once or when source data changes)
 ingest_legacy_84_15()
 
@@ -156,6 +158,7 @@ are adapting the pipeline to a different dataset.
 The pipeline expects legacy files containing at least:
 
 ``` r
+
 # Example of expected input data structure:
 #
 # # A tibble: 350,112 × 6
@@ -206,6 +209,7 @@ produces three tables following OBIS standards:
 The legacy input data already includes WoRMS validation:
 
 ``` r
+
 # WoRMS LSIDs are already present in the input data:
 # - scientificNameID contains WoRMS LSID URNs
 # - Format: "urn:lsid:marinespecies.org:taxname:XXXXXX"
@@ -218,6 +222,7 @@ The legacy input data already includes WoRMS validation:
 The eMoF table uses BODC NERC Vocabulary Server standards:
 
 ``` r
+
 # 1. Individual counts:
 #    measurementTypeID: "https://vocab.nerc.ac.uk/collection/S06/current/S0600002/"
 #    measurementUnitID: "http://vocab.nerc.ac.uk/collection/P06/current/UPMM/"
@@ -234,6 +239,7 @@ The eMoF table uses BODC NERC Vocabulary Server standards:
 #### OBIS Compliance
 
 ``` r
+
 # The three-table structure is OBIS-compliant:
 # 1. Event table (core): Sampling event metadata
 # 2. Occurrence table (extension): Links to events via eventID

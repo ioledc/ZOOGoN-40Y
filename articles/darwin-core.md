@@ -1,6 +1,7 @@
 # Darwin Core Output for LTER-MareChiara Legacy Data
 
 ``` r
+
 library(ZooGoN)
 library(dplyr)
 ```
@@ -57,6 +58,7 @@ table.
 ## Running the conversion
 
 ``` r
+
 # Convert tidy data to Darwin Core format
 # Tables are uploaded to SharePoint automatically
 format_to_dc()
@@ -74,6 +76,7 @@ internally, so in the automated pipeline it is the only function you
 need to run:
 
 ``` r
+
 # Build DwC-A zip (runs format_to_dc() internally) and upload to SharePoint
 format_to_DC_archive()
 ```
@@ -86,6 +89,7 @@ format_to_DC_archive()
 builds one row per unique event with fixed station metadata.
 
 ``` r
+
 # After downloading the DC tables from SharePoint:
 # event_table %>%
 #   select(eventID, eventDate, decimalLatitude, decimalLongitude, samplingProtocol) %>%

@@ -39,6 +39,7 @@ You can install the development version of ZooGoN from
 [GitHub](https://github.com/) with:
 
 ``` r
+
 # install.packages("pak")
 pak::pak("ioledc/ZOOGoN-40Y")
 ```
@@ -52,6 +53,7 @@ zooplankton data from field collection to Darwin Core Archive. Each step
 reads its input from SharePoint and uploads results back automatically:
 
 ``` r
+
 library(ZooGoN)
 
 # 1. Ingest and reprocess legacy datasets (1984-2015 and 2016-2020)
@@ -87,6 +89,7 @@ basis.
 Upload and download data to/from Microsoft SharePoint:
 
 ``` r
+
 # Upload data with automatic versioning
 upload_sharepoint_df(
   data = my_data,
@@ -108,6 +111,7 @@ data <- download_sharepoint_file(
 Retrieve field survey data from KoboToolbox:
 
 ``` r
+
 # Ingest surveys from KoboToolbox and upload to SharePoint
 ingest_surveys()
 
@@ -124,12 +128,12 @@ survey_data <- get_kobo_data(
 The LTER-MareChiara zooplankton dataset represents one of the longest
 continuous time series in the Mediterranean Sea:
 
-| Period    | Frequency      | Samples | Net Type                    | Fixation          |
-|-----------|----------------|---------|-----------------------------|-------------------|
-| 1984-1990 | Biweekly       | 156     | Indian Ocean (200μm, 113cm) | Formaldehyde 2-4% |
-| 1991-1994 | *Interruption* | \-      | \-                          | \-                |
-| 1995-2015 | Weekly         | 1,092   | Indian Ocean (200μm, 113cm) | Formaldehyde 2-4% |
-| 2016-2024 | Weekly         | 258     | WP2 (200μm, 70cm)           | Ethanol 96%       |
+| Period | Frequency | Samples | Net Type | Fixation |
+|----|----|----|----|----|
+| 1984-1990 | Biweekly | 156 | Indian Ocean (200μm, 113cm) | Formaldehyde 2-4% |
+| 1991-1994 | *Interruption* | \- | \- | \- |
+| 1995-2015 | Weekly | 1,092 | Indian Ocean (200μm, 113cm) | Formaldehyde 2-4% |
+| 2016-2024 | Weekly | 258 | WP2 (200μm, 70cm) | Ethanol 96% |
 
 **Total: 1,506 samples • 148 copepod species • 61 other taxa**
 
@@ -178,6 +182,7 @@ This package is part of the DTO-BioFlow project timeline (2025-2026):
 ## Citation
 
 ``` r
+
 citation("ZooGoN")
 ```
 
