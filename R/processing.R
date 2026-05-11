@@ -57,7 +57,9 @@ format_to_tidy <- function() {
 
   tidy_data <-
     legacy_84_20 |>
-    dplyr::bind_rows(ongoing_landings)
+    dplyr::bind_rows(ongoing_landings) |>
+    dplyr::filter(.data$Abundance > 0)
+
   logger::log_info(
     "Merged tidy dataset: {nrow(tidy_data)} rows",
     namespace = "ZooGoN"

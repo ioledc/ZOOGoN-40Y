@@ -1,3 +1,9 @@
+# ZooGoN 5.3.0
+
+## Bug fixes and data quality improvements
+
+* **`format_to_tidy()`**: Remove 0 abundance entries from whole dataset to remove redundancy and improve  clarity
+
 # ZooGoN 5.2.0
 
 ## Automation
